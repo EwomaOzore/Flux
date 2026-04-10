@@ -1,3 +1,4 @@
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useMemo } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, View as RNView } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
@@ -17,6 +18,7 @@ const ACCENTS = ['tint', 'accentBlue', 'accentViolet', 'accentAmber', 'accentRos
 export default function TimelineScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
+  const tabBarHeight = useBottomTabBarHeight();
   const budgetForRollup = useBudgetStore(
     useShallow((s) => ({
       netSalary: s.netSalary,
@@ -116,7 +118,11 @@ export default function TimelineScreen() {
         data={rollups}
         keyExtractor={(r) => r.month}
         renderItem={renderItem}
-        contentContainerStyle={[styles.list, rollups.length === 0 && styles.listEmpty]}
+        contentContainerStyle={[
+          styles.list,
+          rollups.length === 0 && styles.listEmpty,
+          { paddingBottom: Math.max(40, tabBarHeight + spacing.md) },
+        ]}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <RNView
@@ -155,7 +161,6 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: spacing.lg,
-    paddingBottom: 40,
   },
   listEmpty: {
     flexGrow: 1,

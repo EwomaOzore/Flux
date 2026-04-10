@@ -1,3 +1,4 @@
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View as RNView } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
@@ -14,6 +15,7 @@ import { rollupForCurrentPayday, useBudgetStore } from '@/src/state/budgetStore'
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
+  const tabBarHeight = useBottomTabBarHeight();
   const paydayMonth = currentPaydayMonthId();
   const budgetForRollup = useBudgetStore(
     useShallow((s) => ({
@@ -34,7 +36,10 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[
+        styles.scroll,
+        { paddingBottom: Math.max(spacing.xl, tabBarHeight + spacing.md) },
+      ]}
       style={{ backgroundColor: palette.background }}
       showsVerticalScrollIndicator={false}>
       <RNView style={styles.decorTop}>

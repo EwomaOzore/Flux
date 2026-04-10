@@ -1,17 +1,32 @@
 import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
+import Colors from '@/constants/Colors';
+import { radii, spacing } from '@/constants/theme';
+import { useColorScheme } from '@/components/useColorScheme';
 
 export default function NotFoundScreen() {
+  const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme ?? 'light'];
+
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <View style={styles.container}>
         <Text style={styles.title}>This screen does not exist.</Text>
 
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to home screen!</Text>
+        <Link href="/" asChild>
+          <Pressable
+            style={({ pressed }) => [
+              styles.link,
+              {
+                backgroundColor: palette.tint,
+                opacity: pressed ? 0.9 : 1,
+              },
+            ]}>
+            <Text style={styles.linkText}>Go to home</Text>
+          </Pressable>
         </Link>
       </View>
     </>
@@ -23,18 +38,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: spacing.xl,
+    gap: spacing.lg,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   link: {
-    marginTop: 15,
-    paddingVertical: 15,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radii.lg,
   },
   linkText: {
-    fontSize: 14,
-    color: '#2e78b7',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
   },
 });

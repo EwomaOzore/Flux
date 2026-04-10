@@ -8,20 +8,17 @@ import {
   View as RNView,
 } from 'react-native';
 
+import { MonthPickerField } from '@/components/MonthPickerField';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
+import { cardElevation, radii, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
-import type { MonthId } from '@/src/domain/month';
+import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
+import { currentPaydayMonthId, type MonthId } from '@/src/domain/month';
 import { useBudgetStore } from '@/src/state/budgetStore';
 
-function parseMoney(raw: string): number {
-  const cleaned = raw.replace(/,/g, '').trim();
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? Math.round(n) : 0;
-}
-
-function isMonthId(raw: string): raw is MonthId {
-  return /^\d{4}-\d{2}$/.test(raw);
+function moneyDraftFromText(text: string): string {
+  return formatNgn(parseNgnInput(text));
 }
 
 export default function PlanScreen() {
@@ -30,226 +27,205 @@ export default function PlanScreen() {
 
   const netSalary = useBudgetStore((s) => s.netSalary);
   const staplesPerMonth = useBudgetStore((s) => s.staplesPerMonth);
-  const iphoneBalanceMonths = useBudgetStore((s) => s.iphoneBalanceMonths);
-  const iphoneFirstBalanceMonth = useBudgetStore((s) => s.iphoneFirstBalanceMonth);
-  const planFromMonth = useBudgetStore((s) => s.planFromMonth);
-  const planToMonth = useBudgetStore((s) => s.planToMonth);
 
   const setNetSalary = useBudgetStore((s) => s.setNetSalary);
   const setStaplesPerMonth = useBudgetStore((s) => s.setStaplesPerMonth);
-  const setIPhoneBalanceMonths = useBudgetStore((s) => s.setIPhoneBalanceMonths);
-  const setIPhoneFirstBalanceMonth = useBudgetStore((s) => s.setIPhoneFirstBalanceMonth);
-  const setPlanRange = useBudgetStore((s) => s.setPlanRange);
   const addLine = useBudgetStore((s) => s.addLine);
-  const resetDemoScenario = useBudgetStore((s) => s.resetDemoScenario);
+  const resetBudget = useBudgetStore((s) => s.resetBudget);
 
-  const [netDraft, setNetDraft] = useState(String(netSalary));
-  const [staplesDraft, setStaplesDraft] = useState(String(staplesPerMonth));
-  const [fromDraft, setFromDraft] = useState<string>(planFromMonth);
-  const [toDraft, setToDraft] = useState<string>(planToMonth);
-  const [firstIphoneDraft, setFirstIphoneDraft] = useState<string>(iphoneFirstBalanceMonth);
+  const [netDraft, setNetDraft] = useState(() => formatNgn(netSalary));
+  const [staplesDraft, setStaplesDraft] = useState(() => formatNgn(staplesPerMonth));
 
-  const [addMonth, setAddMonth] = useState<string>(planFromMonth);
+  const [addMonth, setAddMonth] = useState<MonthId>(() => currentPaydayMonthId());
   const [addLabel, setAddLabel] = useState('New payday item');
-  const [addAmount, setAddAmount] = useState('0');
+  const [addAmount, setAddAmount] = useState(() => formatNgn(0));
 
   const inputStyle = useMemo(
     () => ({
-      borderColor: colorScheme === 'dark' ? '#444' : '#d1d5db',
+      borderColor: palette.borderStrong,
       color: palette.text,
-      backgroundColor: colorScheme === 'dark' ? '#0b0b0c' : '#fff',
+      backgroundColor: palette.surfaceMuted,
     }),
-    [colorScheme, palette.text]
+    [palette.borderStrong, palette.text, palette.surfaceMuted]
   );
 
   const commitCore = () => {
-    setNetSalary(parseMoney(netDraft));
-    setStaplesPerMonth(parseMoney(staplesDraft));
-    if (isMonthId(fromDraft) && isMonthId(toDraft)) {
-      setPlanRange(fromDraft, toDraft);
-    }
-    if (isMonthId(firstIphoneDraft)) {
-      setIPhoneFirstBalanceMonth(firstIphoneDraft);
-    }
+    const net = parseNgnInput(netDraft);
+    const staples = parseNgnInput(staplesDraft);
+    setNetSalary(net);
+    setStaplesPerMonth(staples);
+    setNetDraft(formatNgn(net));
+    setStaplesDraft(formatNgn(staples));
   };
 
-  const onReset = () => {
-    Alert.alert('Reset to demo scenario?', 'This replaces income, staples, and all payday line items.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reset',
-        style: 'destructive',
-        onPress: () => {
-          resetDemoScenario();
-          const s = useBudgetStore.getState();
-          setNetDraft(String(s.netSalary));
-          setStaplesDraft(String(s.staplesPerMonth));
-          setFromDraft(s.planFromMonth);
-          setToDraft(s.planToMonth);
-          setFirstIphoneDraft(s.iphoneFirstBalanceMonth);
-          setAddMonth(s.planFromMonth);
+  const onStartOver = () => {
+    Alert.alert(
+      'Start over?',
+      'This clears all payday line items and sets net pay and staples to ₦0.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start over',
+          style: 'destructive',
+          onPress: () => {
+            resetBudget();
+            const s = useBudgetStore.getState();
+            setNetDraft(formatNgn(s.netSalary));
+            setStaplesDraft(formatNgn(s.staplesPerMonth));
+            setAddMonth(currentPaydayMonthId());
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const onAddLine = () => {
     commitCore();
-    if (!isMonthId(addMonth)) {
-      Alert.alert('Check the month', 'Use YYYY-MM, e.g. 2026-05.');
-      return;
-    }
-    const amount = parseMoney(addAmount);
+    const amount = parseNgnInput(addAmount);
     if (amount <= 0) {
       Alert.alert('Amount needed', 'Enter a positive amount.');
       return;
     }
-    addLine({ month: addMonth as MonthId, label: addLabel.trim() || 'Payday item', amount });
-    setAddAmount('0');
+    addLine({ month: addMonth, label: addLabel.trim() || 'Payday item', amount });
+    setAddAmount(formatNgn(0));
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll} style={{ backgroundColor: palette.background }}>
+    <ScrollView
+      contentContainerStyle={styles.scroll}
+      style={{ backgroundColor: palette.background }}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}>
       <View style={styles.container}>
-        <Text style={styles.title}>Plan</Text>
-        <Text style={styles.caption}>
-          Edits auto-save. Commit core fields before adding line items so your range stays consistent.
-        </Text>
-
-        <Field label="Net take-home (each payday)">
-          <TextInput
-            value={netDraft}
-            onChangeText={setNetDraft}
-            onEndEditing={commitCore}
-            keyboardType="number-pad"
-            style={[styles.input, inputStyle]}
-            placeholder="1585333"
-            placeholderTextColor="#9ca3af"
-          />
-        </Field>
-
-        <Field label="Staples for the month between paydays">
-          <TextInput
-            value={staplesDraft}
-            onChangeText={setStaplesDraft}
-            onEndEditing={commitCore}
-            keyboardType="number-pad"
-            style={[styles.input, inputStyle]}
-            placeholder="256250"
-            placeholderTextColor="#9ca3af"
-          />
-        </Field>
-
-        <Field label="Timeline range (YYYY-MM)">
-          <RNView style={styles.row}>
-            <TextInput
-              value={fromDraft}
-              onChangeText={setFromDraft}
-              onEndEditing={commitCore}
-              autoCapitalize="none"
-              style={[styles.input, styles.half, inputStyle]}
-              placeholder="2026-04"
-              placeholderTextColor="#9ca3af"
-            />
-            <Text style={styles.dash}>→</Text>
-            <TextInput
-              value={toDraft}
-              onChangeText={setToDraft}
-              onEndEditing={commitCore}
-              autoCapitalize="none"
-              style={[styles.input, styles.half, inputStyle]}
-              placeholder="2026-12"
-              placeholderTextColor="#9ca3af"
-            />
-          </RNView>
-        </Field>
-
-        <Text style={styles.section}>iPhone balance split</Text>
-        <Text style={styles.hint}>
-          Recomputes rows whose IDs start with <Text style={{ fontWeight: '800' }}>iphone-bal</Text>. Other line
-          items are untouched.
-        </Text>
-
-        <Field label="First balance month (YYYY-MM)">
-          <TextInput
-            value={firstIphoneDraft}
-            onChangeText={setFirstIphoneDraft}
-            onEndEditing={commitCore}
-            autoCapitalize="none"
-            style={[styles.input, inputStyle]}
-            placeholder="2026-06"
-            placeholderTextColor="#9ca3af"
-          />
-        </Field>
-
-        <RNView style={styles.segment}>
-          {([2, 3] as const).map((m) => {
-            const selected = iphoneBalanceMonths === m;
-            return (
-              <Pressable
-                key={m}
-                onPress={() => {
-                  commitCore();
-                  setIPhoneBalanceMonths(m);
-                }}
-                style={[
-                  styles.segmentBtn,
-                  {
-                    borderColor: selected ? palette.tint : inputStyle.borderColor,
-                    backgroundColor: selected ? `${palette.tint}22` : 'transparent',
-                  },
-                ]}>
-                <Text style={{ fontWeight: '700', color: palette.text }}>{m} months</Text>
-              </Pressable>
-            );
-          })}
+        <RNView style={styles.titleBlock}>
+          <RNView style={[styles.titleAccent, { backgroundColor: palette.tint }]} />
+          <Text style={styles.title}>Plan</Text>
+          <Text style={[styles.caption, { color: palette.textSecondary }]}>
+            Enter your net pay and staples, then add loans, purchases, and other payday outflows by month. The timeline
+            only shows months where you have items.
+          </Text>
         </RNView>
 
-        <Text style={styles.section}>Add payday outflow</Text>
-        <Field label="Month (YYYY-MM)">
-          <TextInput
-            value={addMonth}
-            onChangeText={setAddMonth}
-            autoCapitalize="none"
-            style={[styles.input, inputStyle]}
-            placeholder="2026-05"
-            placeholderTextColor="#9ca3af"
-          />
-        </Field>
-        <Field label="Label">
-          <TextInput
-            value={addLabel}
-            onChangeText={setAddLabel}
-            style={[styles.input, inputStyle]}
-            placeholder="Description"
-            placeholderTextColor="#9ca3af"
-          />
-        </Field>
-        <Field label="Amount">
-          <TextInput
-            value={addAmount}
-            onChangeText={setAddAmount}
-            keyboardType="number-pad"
-            style={[styles.input, inputStyle]}
-            placeholder="100000"
-            placeholderTextColor="#9ca3af"
-          />
-        </Field>
+        <SectionCard palette={palette} colorScheme={colorScheme} title="Income" subtitle="Net pay & staples">
+          <Field label="Net take-home (each payday)">
+            <TextInput
+              value={netDraft}
+              onChangeText={(t) => setNetDraft(moneyDraftFromText(t))}
+              onEndEditing={commitCore}
+              keyboardType="number-pad"
+              style={[styles.input, styles.inputMoney, inputStyle]}
+              placeholder={formatNgn(0)}
+              placeholderTextColor={palette.textMuted}
+            />
+          </Field>
+
+          <Field label="Staples for the month between paydays">
+            <TextInput
+              value={staplesDraft}
+              onChangeText={(t) => setStaplesDraft(moneyDraftFromText(t))}
+              onEndEditing={commitCore}
+              keyboardType="number-pad"
+              style={[styles.input, styles.inputMoney, inputStyle]}
+              placeholder={formatNgn(0)}
+              placeholderTextColor={palette.textMuted}
+            />
+          </Field>
+        </SectionCard>
+
+        <SectionCard palette={palette} colorScheme={colorScheme} title="Add payday outflow" subtitle="One-off or recurring">
+          <Field label="Month">
+            <MonthPickerField
+              value={addMonth}
+              onChange={setAddMonth}
+              palette={palette}
+              triggerStyle={[styles.input, inputStyle]}
+            />
+          </Field>
+          <Field label="Label">
+            <TextInput
+              value={addLabel}
+              onChangeText={setAddLabel}
+              style={[styles.input, inputStyle]}
+              placeholder="Description"
+              placeholderTextColor={palette.textMuted}
+            />
+          </Field>
+          <Field label="Amount">
+            <TextInput
+              value={addAmount}
+              onChangeText={(t) => setAddAmount(moneyDraftFromText(t))}
+              keyboardType="number-pad"
+              style={[styles.input, styles.inputMoney, inputStyle]}
+              placeholder={formatNgn(0)}
+              placeholderTextColor={palette.textMuted}
+            />
+          </Field>
+
+          <Pressable
+            onPress={onAddLine}
+            style={({ pressed }) => [
+              styles.primaryBtn,
+              {
+                backgroundColor: palette.tint,
+                opacity: pressed ? 0.9 : 1,
+              },
+              cardElevation(colorScheme),
+            ]}>
+            <Text style={styles.primaryBtnText}>Add item</Text>
+          </Pressable>
+        </SectionCard>
 
         <Pressable
-          onPress={onAddLine}
+          onPress={onStartOver}
           style={({ pressed }) => [
-            styles.primaryBtn,
-            { backgroundColor: palette.tint, opacity: pressed ? 0.85 : 1 },
+            styles.dangerBtn,
+            {
+              borderColor: palette.danger,
+              backgroundColor: palette.dangerMuted,
+              opacity: pressed ? 0.88 : 1,
+            },
           ]}>
-          <Text style={styles.primaryBtnText}>Add item</Text>
-        </Pressable>
-
-        <Pressable onPress={onReset} style={({ pressed }) => [styles.dangerBtn, { opacity: pressed ? 0.75 : 1 }]}>
-          <Text style={styles.dangerBtnText}>Reset demo scenario</Text>
+          <Text style={[styles.dangerBtnText, { color: palette.danger }]}>Start over</Text>
         </Pressable>
       </View>
     </ScrollView>
+  );
+}
+
+function SectionCard({
+  title,
+  subtitle,
+  children,
+  palette,
+  colorScheme,
+}: {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+  palette: (typeof Colors)['light'];
+  colorScheme: 'light' | 'dark' | null | undefined;
+}) {
+  return (
+    <RNView
+      style={[
+        styles.sectionCard,
+        {
+          backgroundColor: palette.surface,
+          borderColor: palette.border,
+        },
+        cardElevation(colorScheme),
+      ]}>
+      <RNView style={styles.sectionHead}>
+        <RNView style={[styles.sectionIcon, { backgroundColor: palette.tintMuted }]}>
+          <RNView style={[styles.sectionDot, { backgroundColor: palette.tint }]} />
+        </RNView>
+        <RNView style={{ flex: 1 }}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={[styles.sectionSub, { color: palette.textMuted }]}>{subtitle}</Text>
+        </RNView>
+      </RNView>
+      <RNView style={styles.sectionBody}>{children}</RNView>
+    </RNView>
   );
 }
 
@@ -265,96 +241,115 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
-    paddingBottom: 40,
+    paddingBottom: 48,
   },
   container: {
-    padding: 20,
+    padding: spacing.lg,
     maxWidth: 560,
     width: '100%',
     alignSelf: 'center',
-    gap: 10,
+    gap: spacing.lg,
+  },
+  titleBlock: {
+    marginBottom: spacing.xs,
+  },
+  titleAccent: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    marginBottom: spacing.sm,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '800',
-    letterSpacing: -0.6,
+    letterSpacing: -0.8,
   },
   caption: {
     fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.75,
-    marginBottom: 6,
+    lineHeight: 21,
+    marginTop: spacing.sm,
+  },
+  sectionCard: {
+    borderRadius: radii.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    padding: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  sectionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  sectionSub: {
+    fontSize: 13,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  sectionBody: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: 4,
   },
   field: {
     gap: 6,
-    marginTop: 10,
+    marginTop: spacing.md,
   },
   fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    opacity: 0.72,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    opacity: 0.75,
   },
   input: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
     fontSize: 16,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  half: {
-    flex: 1,
-  },
-  dash: {
-    opacity: 0.55,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  section: {
-    marginTop: 18,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  hint: {
-    fontSize: 13,
-    lineHeight: 18,
-    opacity: 0.68,
-  },
-  segment: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
-  },
-  segmentBtn: {
-    flex: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
+  inputMoney: {
+    fontVariant: ['tabular-nums'],
   },
   primaryBtn: {
-    marginTop: 12,
-    borderRadius: 12,
-    paddingVertical: 14,
+    marginTop: spacing.md,
+    borderRadius: radii.lg,
+    paddingVertical: 16,
     alignItems: 'center',
   },
   primaryBtnText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '800',
+    letterSpacing: 0.2,
   },
   dangerBtn: {
-    marginTop: 10,
-    paddingVertical: 12,
+    marginTop: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   dangerBtnText: {
-    color: '#ef4444',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

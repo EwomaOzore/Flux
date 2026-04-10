@@ -20,9 +20,9 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   titleEmphasis: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
 });

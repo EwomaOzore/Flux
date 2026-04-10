@@ -1,17 +1,30 @@
+import { useMemo } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, View as RNView } from 'react-native';
+import { useShallow } from 'zustand/react/shallow';
 
 import { MoneyText } from '@/components/MoneyText';
 import { Text, View } from '@/components/Themed';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
+import { cardElevation, hairlineBorder, radii, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
-import { selectRollupsForStore, useBudgetStore } from '@/src/state/budgetStore';
+import { formatMonthIdDisplay } from '@/src/domain/month';
+import { computeRollups, useBudgetStore } from '@/src/state/budgetStore';
 import type { MonthRollup } from '@/src/domain/types';
+
+const ACCENTS = ['tint', 'accentBlue', 'accentViolet', 'accentAmber', 'accentRose'] as const;
 
 export default function TimelineScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
-  const rollups = useBudgetStore((s) => selectRollupsForStore(s));
+  const budgetForRollup = useBudgetStore(
+    useShallow((s) => ({
+      netSalary: s.netSalary,
+      staplesPerMonth: s.staplesPerMonth,
+      lines: s.lines,
+    }))
+  );
+  const rollups = useMemo(() => computeRollups(budgetForRollup), [budgetForRollup]);
   const deleteLine = useBudgetStore((s) => s.deleteLine);
 
   const onDelete = (id: string, label: string) => {
@@ -21,46 +34,73 @@ export default function TimelineScreen() {
     ]);
   };
 
-  const renderItem = ({ item }: { item: MonthRollup }) => {
-    const cushionColor = item.cushionAfterStaples >= 0 ? '#059669' : '#dc2626';
+  const renderItem = ({ item, index }: { item: MonthRollup; index: number }) => {
+    const accentKey = ACCENTS[index % ACCENTS.length];
+    const accentColor = palette[accentKey];
+    const positive = item.cushionAfterStaples >= 0;
+    const cushionColor = positive ? palette.success : palette.danger;
+    const cushionBg = positive ? palette.successMuted : palette.dangerMuted;
+
     return (
       <RNView
         style={[
           styles.card,
           {
-            borderColor: colorScheme === 'dark' ? '#333' : '#e5e7eb',
-            backgroundColor: colorScheme === 'dark' ? '#111' : '#fff',
+            backgroundColor: palette.surface,
+            borderColor: palette.border,
           },
+          cardElevation(colorScheme),
         ]}>
-        <RNView style={styles.cardHeader}>
-          <Text style={styles.month}>{item.month}</Text>
-          <RNView style={styles.cushionPill}>
-            <Text style={[styles.cushionLabel, { color: cushionColor }]}>After staples</Text>
-            <MoneyText amount={item.cushionAfterStaples} style={{ color: cushionColor, fontWeight: '700' }} />
-          </RNView>
-        </RNView>
-
-        <RNView style={styles.metaRow}>
-          <Text style={styles.metaMuted}>Payday outflows</Text>
-          <MoneyText amount={item.totalPaydayOutflow} style={styles.metaValue} />
-        </RNView>
-
-        {item.lines.map((l) => (
-          <RNView key={l.id} style={styles.lineRow}>
-            <Text style={styles.lineLabel}>{l.label}</Text>
-            <RNView style={styles.lineRight}>
-              <MoneyText amount={l.amount} style={styles.lineAmount} />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${l.label}`}
-                onPress={() => onDelete(l.id, l.label)}
-                hitSlop={10}
-                style={({ pressed }) => [styles.trash, { opacity: pressed ? 0.45 : 1 }]}>
-                <FontAwesome name="trash" size={16} color="#ef4444" />
-              </Pressable>
+        <RNView style={[styles.cardAccent, { backgroundColor: accentColor }]} />
+        <RNView style={styles.cardInner}>
+          <RNView style={styles.cardHeader}>
+            <RNView style={[styles.monthPill, { backgroundColor: palette.tintMuted }]}>
+              <Text style={[styles.monthPillText, { color: palette.tintStrong }]}>
+                {formatMonthIdDisplay(item.month)}
+              </Text>
+            </RNView>
+            <RNView style={[styles.cushionBlock, { backgroundColor: cushionBg }]}>
+              <Text style={[styles.cushionLabel, { color: cushionColor }]}>After staples</Text>
+              <MoneyText amount={item.cushionAfterStaples} style={{ color: cushionColor, fontWeight: '800' }} />
             </RNView>
           </RNView>
-        ))}
+
+          <RNView style={[styles.metaRow, { borderColor: palette.border }]}>
+            <Text style={[styles.metaMuted, { color: palette.textMuted }]}>Payday outflows</Text>
+            <MoneyText amount={item.totalPaydayOutflow} style={[styles.metaValue, { color: palette.text }]} />
+          </RNView>
+
+          {item.lines.map((l, lineIdx) => (
+            <RNView
+              key={l.id}
+              style={[
+                styles.lineRow,
+                lineIdx > 0 && {
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                  borderTopColor: palette.border,
+                },
+              ]}>
+              <RNView style={[styles.lineAccent, { backgroundColor: accentColor }]} />
+              <Text style={[styles.lineLabel, { color: palette.text }]}>{l.label}</Text>
+              <RNView style={styles.lineRight}>
+                <MoneyText amount={l.amount} style={[styles.lineAmount, { color: palette.textSecondary }]} />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${l.label}`}
+                  onPress={() => onDelete(l.id, l.label)}
+                  hitSlop={10}
+                  style={({ pressed }) => [
+                    styles.trash,
+                    {
+                      backgroundColor: pressed ? palette.dangerMuted : palette.surfaceMuted,
+                    },
+                  ]}>
+                  <FontAwesome name="trash" size={15} color={palette.danger} />
+                </Pressable>
+              </RNView>
+            </RNView>
+          ))}
+        </RNView>
       </RNView>
     );
   };
@@ -71,11 +111,33 @@ export default function TimelineScreen() {
         data={rollups}
         keyExtractor={(r) => r.month}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, rollups.length === 0 && styles.listEmpty]}
+        showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <Text style={[styles.intro, { color: palette.text }]}>
-            Each card is one payday at month-end. Cushion is what&apos;s left after your staples between paydays.
-          </Text>
+          <RNView
+            style={[
+              styles.introCard,
+              {
+                backgroundColor: palette.infoMuted,
+                borderColor: palette.border,
+              },
+              hairlineBorder(palette.border),
+            ]}>
+            <Text style={[styles.introTitle, { color: palette.info }]}>How to read this</Text>
+            <Text style={[styles.intro, { color: palette.textSecondary }]}>
+              Each card is a month where you added a payday outflow. Cushion is what&apos;s left after your staples for
+              that payday. Add items in Plan — months appear here automatically.
+            </Text>
+          </RNView>
+        }
+        ListEmptyComponent={
+          <RNView style={styles.emptyState}>
+            <Text style={[styles.emptyTitle, { color: palette.text }]}>No months yet</Text>
+            <Text style={[styles.emptyBody, { color: palette.textMuted }]}>
+              Add a payday outflow in Plan (rent, loan, purchase, etc.). That month will show up here with your cushion
+              for that payday.
+            </Text>
+          </RNView>
         }
       />
     </View>
@@ -87,79 +149,134 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   list: {
-    padding: 16,
-    paddingBottom: 32,
+    padding: spacing.lg,
+    paddingBottom: 40,
+  },
+  listEmpty: {
+    flexGrow: 1,
+  },
+  emptyState: {
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.sm,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: spacing.sm,
+  },
+  emptyBody: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  introCard: {
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  introTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
   },
   intro: {
-    marginBottom: 8,
     fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.78,
+    lineHeight: 21,
   },
   card: {
+    borderRadius: radii.xl,
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  cardAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 5,
+  },
+  cardInner: {
+    paddingLeft: spacing.lg + 2,
+    paddingRight: spacing.md,
+    paddingVertical: spacing.md,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.md,
     alignItems: 'flex-start',
   },
-  month: {
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+  monthPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radii.full,
   },
-  cushionPill: {
+  monthPillText: {
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  cushionBlock: {
     alignItems: 'flex-end',
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    minWidth: 120,
   },
   cushionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     marginBottom: 2,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 12,
-    marginBottom: 8,
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   metaMuted: {
     fontSize: 13,
-    opacity: 0.65,
+    fontWeight: '600',
   },
   metaValue: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
   lineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingVertical: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#00000012',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  lineAccent: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
   },
   lineLabel: {
     flex: 1,
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 19,
+    fontWeight: '500',
   },
   lineRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm,
   },
   lineAmount: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
   trash: {
-    padding: 6,
+    padding: 8,
+    borderRadius: radii.sm,
   },
 });

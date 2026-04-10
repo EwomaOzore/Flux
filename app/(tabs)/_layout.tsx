@@ -1,7 +1,7 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -11,17 +11,42 @@ function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
 }) {
-  return <FontAwesome size={24} style={{ marginBottom: -2 }} {...props} />;
+  return <FontAwesome size={22} style={{ marginBottom: -1 }} {...props} />;
 }
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme ?? 'light'];
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: palette.tint,
+        tabBarInactiveTintColor: palette.tabIconDefault,
+        tabBarStyle: {
+          backgroundColor: palette.tabBarBackground,
+          borderTopColor: palette.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          paddingTop: 6,
+          height: 60,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.2,
+        },
         headerShown: useClientOnlyValue(false, true),
+        headerStyle: {
+          backgroundColor: palette.headerBackground,
+        },
+        headerTitleStyle: {
+          fontWeight: '700',
+          fontSize: 18,
+          letterSpacing: -0.3,
+          color: palette.text,
+        },
+        headerShadowVisible: false,
+        headerTintColor: palette.tint,
       }}>
       <Tabs.Screen
         name="index"
@@ -31,7 +56,7 @@ export default function TabLayout() {
           headerRight: () => (
             <Link href="/modal" asChild>
               <Pressable hitSlop={12} style={{ marginRight: 14 }} accessibilityRole="button" accessibilityLabel="About">
-                <FontAwesome name="question-circle" size={22} color={Colors[colorScheme ?? 'light'].text} />
+                <FontAwesome name="question-circle" size={22} color={palette.textSecondary} />
               </Pressable>
             </Link>
           ),

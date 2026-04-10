@@ -1,7 +1,5 @@
 import type { MonthId } from './month';
 
-export type IPhoneBalanceMonths = 2 | 3;
-
 export interface PaydayLine {
   id: string;
   month: MonthId;

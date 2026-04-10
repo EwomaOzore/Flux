@@ -89,6 +89,7 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
       return;
     }
     addBill({ label: newLabel.trim() || 'Bill', amount });
+    setNewLabel('');
     setNewAmount('');
   }, [addBill, newAmount, newLabel]);
 

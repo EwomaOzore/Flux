@@ -16,7 +16,7 @@ import {
 } from '@/components/ui';
 import { radii } from '@/constants/theme';
 import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
-import { currentPaydayMonthId, type MonthId } from '@/src/domain/month';
+import { currentPaydayMonthId, formatMonthIdDisplay, type MonthId } from '@/src/domain/month';
 import { totalBillsAmount } from '@/src/domain/types';
 import { useBudgetStore } from '@/src/state/budgetStore';
 
@@ -99,8 +99,14 @@ export default function PlanScreen() {
       Alert.alert('Amount needed', 'Enter a positive amount.');
       return;
     }
-    addLine({ month: addMonth, label: addLabel.trim() || 'Payday item', amount });
+    const label = addLabel.trim() || 'Payday item';
+    addLine({ month: addMonth, label, amount });
+    setAddLabel('');
     setAddAmount('');
+    Alert.alert(
+      'Added',
+      `“${label}” for ${formatMonthIdDisplay(addMonth)} was added. It will show on Home and Timeline.`,
+    );
   };
 
   const billsSummary =

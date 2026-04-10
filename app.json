@@ -39,7 +39,14 @@
     },
     "plugins": [
       "expo-router",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Flux uses your photos to attach receipt images for expenses.",
+          "cameraPermission": "Flux uses the camera to scan receipts and add payday expenses."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

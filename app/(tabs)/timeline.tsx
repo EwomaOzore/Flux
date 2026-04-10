@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, View as RNView } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
+import { DeferLineToNextMonthButton } from '@/components/DeferLineToNextMonthButton';
 import { MoneyText } from '@/components/MoneyText';
 import { Text, View } from '@/components/Themed';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -91,6 +92,7 @@ export default function TimelineScreen() {
               <Text style={[styles.lineLabel, { color: palette.text }]}>{l.label}</Text>
               <RNView style={styles.lineRight}>
                 <MoneyText amount={l.amount} style={[styles.lineAmount, { color: palette.textSecondary }]} />
+                <DeferLineToNextMonthButton line={l} />
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${l.label}`}

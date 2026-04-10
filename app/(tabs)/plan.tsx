@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, View as RNView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { BillsBottomSheet } from '@/components/BillsBottomSheet';
+import { ReceiptScanSheet } from '@/components/ReceiptScanSheet';
 import { MonthPickerField } from '@/components/MonthPickerField';
 import { Text } from '@/components/Themed';
 import {
@@ -14,7 +15,7 @@ import {
   SectionCard,
   useFluxPalette,
 } from '@/components/ui';
-import { radii } from '@/constants/theme';
+import { radii, spacing } from '@/constants/theme';
 import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
 import { currentPaydayMonthId, formatMonthIdDisplay, type MonthId } from '@/src/domain/month';
 import { totalBillsAmount } from '@/src/domain/types';
@@ -38,6 +39,7 @@ export default function PlanScreen() {
 
   const [netDraft, setNetDraft] = useState(() => (netSalary > 0 ? formatNgn(netSalary) : ''));
   const [billsOpen, setBillsOpen] = useState(false);
+  const [receiptScanOpen, setReceiptScanOpen] = useState(false);
 
   const [addMonth, setAddMonth] = useState<MonthId>(() => currentPaydayMonthId());
   const [addLabel, setAddLabel] = useState('');
@@ -158,6 +160,24 @@ export default function PlanScreen() {
           </FormField>
         </SectionCard>
 
+        <SectionCard
+          title="Receipt scan"
+          subtitle="Photo or clipboard — add an expense from a receipt for the selected month.">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityHint="Opens camera or photo library to scan a receipt"
+            onPress={() => setReceiptScanOpen(true)}
+            style={({ pressed }) => [
+              styles.scanTrigger,
+              monthTriggerStyle,
+              { opacity: pressed ? 0.9 : 1 },
+            ]}>
+            <FontAwesome name="camera" size={20} color={palette.tint} />
+            <Text style={[styles.scanTriggerText, { color: palette.text }]}>Scan or import receipt</Text>
+            <FontAwesome name="chevron-right" size={14} color={palette.textMuted} />
+          </Pressable>
+        </SectionCard>
+
         <SectionCard title="Add payday outflow" subtitle="One-off or recurring by month">
           <FormField label="Month">
             <MonthPickerField value={addMonth} onChange={setAddMonth} palette={palette} triggerStyle={monthTriggerStyle} />
@@ -186,6 +206,12 @@ export default function PlanScreen() {
       </ScreenScroll>
 
       <BillsBottomSheet visible={billsOpen} onClose={() => setBillsOpen(false)} />
+      <ReceiptScanSheet
+        visible={receiptScanOpen}
+        onClose={() => setReceiptScanOpen(false)}
+        month={addMonth}
+        onMonthChange={setAddMonth}
+      />
     </>
   );
 }
@@ -209,6 +235,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginTop: 12,
+  },
+  scanTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    minHeight: 50,
+  },
+  scanTriggerText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
   },
   billsTrigger: {
     flexDirection: 'row',

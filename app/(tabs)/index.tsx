@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View as RNView } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
+import { DeferLineToNextMonthButton } from '@/components/DeferLineToNextMonthButton';
 import { MoneyText } from '@/components/MoneyText';
 import { Text, View } from '@/components/Themed';
 import Colors, { type ThemePalette } from '@/constants/Colors';
@@ -139,6 +140,7 @@ export default function HomeScreen() {
                 ]}>
                 <RNView style={[styles.lineDot, { backgroundColor: palette.accentViolet }]} />
                 <Text style={[styles.lineLabel, { color: palette.text }]}>{l.label}</Text>
+                <DeferLineToNextMonthButton line={l} />
                 <MoneyText amount={-l.amount} style={[styles.lineAmount, { color: palette.danger }]} />
               </RNView>
             ))}

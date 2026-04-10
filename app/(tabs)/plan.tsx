@@ -1,18 +1,18 @@
-import { type ReactNode, useMemo, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View as RNView,
-} from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, StyleSheet, View as RNView } from 'react-native';
 
 import { MonthPickerField } from '@/components/MonthPickerField';
-import { Text, View } from '@/components/Themed';
-import Colors from '@/constants/Colors';
-import { cardElevation, radii, spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { Text } from '@/components/Themed';
+import {
+  DangerOutlineButton,
+  FluxTextInput,
+  FormField,
+  PrimaryButton,
+  ScreenScroll,
+  SectionCard,
+  useFluxPalette,
+} from '@/components/ui';
+import { radii } from '@/constants/theme';
 import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
 import { currentPaydayMonthId, type MonthId } from '@/src/domain/month';
 import { useBudgetStore } from '@/src/state/budgetStore';
@@ -22,8 +22,7 @@ function moneyDraftFromText(text: string): string {
 }
 
 export default function PlanScreen() {
-  const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme ?? 'light'];
+  const { palette } = useFluxPalette();
 
   const netSalary = useBudgetStore((s) => s.netSalary);
   const staplesPerMonth = useBudgetStore((s) => s.staplesPerMonth);
@@ -40,13 +39,14 @@ export default function PlanScreen() {
   const [addLabel, setAddLabel] = useState('New payday item');
   const [addAmount, setAddAmount] = useState(() => formatNgn(0));
 
-  const inputStyle = useMemo(
+  const monthTriggerStyle = useMemo(
     () => ({
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radii.md,
       borderColor: palette.borderStrong,
-      color: palette.text,
       backgroundColor: palette.surfaceMuted,
     }),
-    [palette.borderStrong, palette.text, palette.surfaceMuted]
+    [palette.borderStrong, palette.surfaceMuted]
   );
 
   const commitCore = () => {
@@ -91,173 +91,74 @@ export default function PlanScreen() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scroll}
-      style={{ backgroundColor: palette.background }}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.container}>
-        <RNView style={styles.titleBlock}>
-          <RNView style={[styles.titleAccent, { backgroundColor: palette.tint }]} />
-          <Text style={styles.title}>Plan</Text>
-          <Text style={[styles.caption, { color: palette.textSecondary }]}>
-            Enter your net pay and staples, then add loans, purchases, and other payday outflows by month. The timeline
-            only shows months where you have items.
-          </Text>
-        </RNView>
-
-        <SectionCard palette={palette} colorScheme={colorScheme} title="Income" subtitle="Net pay & staples">
-          <Field label="Net take-home (each payday)">
-            <TextInput
-              value={netDraft}
-              onChangeText={(t) => setNetDraft(moneyDraftFromText(t))}
-              onEndEditing={commitCore}
-              keyboardType="number-pad"
-              style={[styles.input, styles.inputMoney, inputStyle]}
-              placeholder={formatNgn(0)}
-              placeholderTextColor={palette.textMuted}
-            />
-          </Field>
-
-          <Field label="Staples for the month between paydays">
-            <TextInput
-              value={staplesDraft}
-              onChangeText={(t) => setStaplesDraft(moneyDraftFromText(t))}
-              onEndEditing={commitCore}
-              keyboardType="number-pad"
-              style={[styles.input, styles.inputMoney, inputStyle]}
-              placeholder={formatNgn(0)}
-              placeholderTextColor={palette.textMuted}
-            />
-          </Field>
-        </SectionCard>
-
-        <SectionCard palette={palette} colorScheme={colorScheme} title="Add payday outflow" subtitle="One-off or recurring">
-          <Field label="Month">
-            <MonthPickerField
-              value={addMonth}
-              onChange={setAddMonth}
-              palette={palette}
-              triggerStyle={[styles.input, inputStyle]}
-            />
-          </Field>
-          <Field label="Label">
-            <TextInput
-              value={addLabel}
-              onChangeText={setAddLabel}
-              style={[styles.input, inputStyle]}
-              placeholder="Description"
-              placeholderTextColor={palette.textMuted}
-            />
-          </Field>
-          <Field label="Amount">
-            <TextInput
-              value={addAmount}
-              onChangeText={(t) => setAddAmount(moneyDraftFromText(t))}
-              keyboardType="number-pad"
-              style={[styles.input, styles.inputMoney, inputStyle]}
-              placeholder={formatNgn(0)}
-              placeholderTextColor={palette.textMuted}
-            />
-          </Field>
-
-          <Pressable
-            onPress={onAddLine}
-            style={({ pressed }) => [
-              styles.primaryBtn,
-              {
-                backgroundColor: palette.tint,
-                opacity: pressed ? 0.9 : 1,
-              },
-              cardElevation(colorScheme),
-            ]}>
-            <Text style={styles.primaryBtnText}>Add item</Text>
-          </Pressable>
-        </SectionCard>
-
-        <Pressable
-          onPress={onStartOver}
-          style={({ pressed }) => [
-            styles.dangerBtn,
-            {
-              borderColor: palette.danger,
-              backgroundColor: palette.dangerMuted,
-              opacity: pressed ? 0.88 : 1,
-            },
-          ]}>
-          <Text style={[styles.dangerBtnText, { color: palette.danger }]}>Start over</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
-  );
-}
-
-function SectionCard({
-  title,
-  subtitle,
-  children,
-  palette,
-  colorScheme,
-}: {
-  title: string;
-  subtitle: string;
-  children: ReactNode;
-  palette: (typeof Colors)['light'];
-  colorScheme: 'light' | 'dark' | null | undefined;
-}) {
-  return (
-    <RNView
-      style={[
-        styles.sectionCard,
-        {
-          backgroundColor: palette.surface,
-          borderColor: palette.border,
-        },
-        cardElevation(colorScheme),
-      ]}>
-      <RNView style={styles.sectionHead}>
-        <RNView style={[styles.sectionIcon, { backgroundColor: palette.tintMuted }]}>
-          <RNView style={[styles.sectionDot, { backgroundColor: palette.tint }]} />
-        </RNView>
-        <RNView style={{ flex: 1 }}>
-          <Text style={styles.sectionTitle}>{title}</Text>
-          <Text style={[styles.sectionSub, { color: palette.textMuted }]}>{subtitle}</Text>
-        </RNView>
+    <ScreenScroll>
+      <RNView style={styles.titleBlock}>
+        <RNView style={[styles.titleAccent, { backgroundColor: palette.tint }]} />
+        <Text style={styles.title}>Plan</Text>
+        <Text style={[styles.caption, { color: palette.textSecondary }]}>
+          Enter your net pay and staples, then add loans, purchases, and other payday outflows by month. The timeline
+          only shows months where you have items.
+        </Text>
       </RNView>
-      <RNView style={styles.sectionBody}>{children}</RNView>
-    </RNView>
-  );
-}
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <RNView style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      {children}
-    </RNView>
+      <SectionCard title="Income" subtitle="Net pay & staples">
+        <FormField label="Net take-home (each payday)">
+          <FluxTextInput
+            value={netDraft}
+            onChangeText={(t) => setNetDraft(moneyDraftFromText(t))}
+            onEndEditing={commitCore}
+            keyboardType="number-pad"
+            money
+            placeholder={formatNgn(0)}
+          />
+        </FormField>
+
+        <FormField label="Staples for the month between paydays">
+          <FluxTextInput
+            value={staplesDraft}
+            onChangeText={(t) => setStaplesDraft(moneyDraftFromText(t))}
+            onEndEditing={commitCore}
+            keyboardType="number-pad"
+            money
+            placeholder={formatNgn(0)}
+          />
+        </FormField>
+      </SectionCard>
+
+      <SectionCard title="Add payday outflow" subtitle="One-off or recurring">
+        <FormField label="Month">
+          <MonthPickerField value={addMonth} onChange={setAddMonth} palette={palette} triggerStyle={monthTriggerStyle} />
+        </FormField>
+        <FormField label="Label">
+          <FluxTextInput value={addLabel} onChangeText={setAddLabel} placeholder="Description" />
+        </FormField>
+        <FormField label="Amount">
+          <FluxTextInput
+            value={addAmount}
+            onChangeText={(t) => setAddAmount(moneyDraftFromText(t))}
+            keyboardType="number-pad"
+            money
+            placeholder={formatNgn(0)}
+          />
+        </FormField>
+
+        <PrimaryButton label="Add item" onPress={onAddLine} />
+      </SectionCard>
+
+      <DangerOutlineButton label="Start over" onPress={onStartOver} />
+    </ScreenScroll>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flexGrow: 1,
-    paddingBottom: 48,
-  },
-  container: {
-    padding: spacing.lg,
-    maxWidth: 560,
-    width: '100%',
-    alignSelf: 'center',
-    gap: spacing.lg,
-  },
   titleBlock: {
-    marginBottom: spacing.xs,
+    marginBottom: 0,
   },
   titleAccent: {
     width: 40,
     height: 4,
     borderRadius: 2,
-    marginBottom: spacing.sm,
+    marginBottom: 12,
   },
   title: {
     fontSize: 32,
@@ -267,89 +168,6 @@ const styles = StyleSheet.create({
   caption: {
     fontSize: 14,
     lineHeight: 21,
-    marginTop: spacing.sm,
-  },
-  sectionCard: {
-    borderRadius: radii.xl,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-  },
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    padding: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  sectionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-  sectionSub: {
-    fontSize: 13,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  sectionBody: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    gap: 4,
-  },
-  field: {
-    gap: 6,
-    marginTop: spacing.md,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    opacity: 0.75,
-  },
-  input: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    fontSize: 16,
-  },
-  inputMoney: {
-    fontVariant: ['tabular-nums'],
-  },
-  primaryBtn: {
-    marginTop: spacing.md,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  primaryBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-  },
-  dangerBtn: {
-    marginTop: spacing.sm,
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  dangerBtnText: {
-    fontSize: 15,
-    fontWeight: '800',
+    marginTop: 12,
   },
 });

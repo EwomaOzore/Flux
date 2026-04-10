@@ -1,6 +1,13 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { type ReactNode } from 'react';
-import { ScrollView, StyleSheet, type ScrollViewProps } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  type ScrollViewProps,
+} from 'react-native';
 
 import { View } from '@/components/Themed';
 import { spacing } from '@/constants/theme';
@@ -14,23 +21,33 @@ type Props = {
 export function ScreenScroll({ children, ...scrollProps }: Props) {
   const { palette } = useFluxPalette();
   const tabBarHeight = useBottomTabBarHeight();
+  const headerHeight = useHeaderHeight();
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.background }}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: Math.max(48, tabBarHeight + spacing.md) },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-      {...scrollProps}>
-      <View style={styles.inner}>{children}</View>
-    </ScrollView>
+    <KeyboardAvoidingView
+      style={styles.kav}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={headerHeight}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: palette.background }}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(48, tabBarHeight + spacing.md) },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        {...scrollProps}>
+        <View style={styles.inner}>{children}</View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  kav: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
   },

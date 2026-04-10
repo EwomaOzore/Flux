@@ -23,6 +23,7 @@ import { totalBillsAmount } from '@/src/domain/types';
 import { useBudgetStore } from '@/src/state/budgetStore';
 
 function moneyDraftFromText(text: string): string {
+  if (!text.replace(/\D/g, '')) return '';
   return formatNgn(parseNgnInput(text));
 }
 
@@ -69,25 +70,26 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
   const addBill = useBudgetStore((s) => s.addBill);
   const deleteBill = useBudgetStore((s) => s.deleteBill);
 
-  const [newLabel, setNewLabel] = useState('Rent');
-  const [newAmount, setNewAmount] = useState(() => formatNgn(0));
+  const [newLabel, setNewLabel] = useState('');
+  const [newAmount, setNewAmount] = useState('');
 
   const sum = useMemo(() => totalBillsAmount(billItems), [billItems]);
 
   useEffect(() => {
     if (visible) {
-      setNewAmount(formatNgn(0));
+      setNewLabel('');
+      setNewAmount('');
     }
   }, [visible]);
 
   const onAdd = useCallback(() => {
-    const amount = parseNgnInput(newAmount);
+    const amount = parseNgnInput(newAmount || '0');
     if (amount <= 0) {
       Alert.alert('Amount needed', 'Enter a positive amount.');
       return;
     }
     addBill({ label: newLabel.trim() || 'Bill', amount });
-    setNewAmount(formatNgn(0));
+    setNewAmount('');
   }, [addBill, newAmount, newLabel]);
 
   const onDelete = useCallback(
@@ -115,7 +117,8 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
             hairlineBorder(palette.border),
           ]}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
             style={[styles.kav, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
             <Pressable
               onPress={() => setExpanded((v) => !v)}
@@ -145,6 +148,7 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
             <ScrollView
               style={styles.scroll}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               showsVerticalScrollIndicator={false}>
               {billItems.length > 0 ? (
                 <View style={[styles.list, { borderColor: palette.border }]}>
@@ -180,7 +184,11 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
               )}
 
               <FormField label="What is it?">
-                <FluxTextInput value={newLabel} onChangeText={setNewLabel} placeholder="e.g. Rent, electricity" />
+                <FluxTextInput
+                  value={newLabel}
+                  onChangeText={setNewLabel}
+                  placeholder="e.g. Rent, electricity, subscriptions"
+                />
               </FormField>
               <FormField label="Amount">
                 <FluxTextInput
@@ -188,7 +196,7 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
                   onChangeText={(t) => setNewAmount(moneyDraftFromText(t))}
                   keyboardType="number-pad"
                   money
-                  placeholder={formatNgn(0)}
+                  placeholder="e.g. ₦25,000"
                 />
               </FormField>
 

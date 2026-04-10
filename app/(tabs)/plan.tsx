@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View as RNView } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -20,7 +20,9 @@ import { currentPaydayMonthId, type MonthId } from '@/src/domain/month';
 import { totalBillsAmount } from '@/src/domain/types';
 import { useBudgetStore } from '@/src/state/budgetStore';
 
+/** Formatted naira while typing; empty when user clears digits so placeholder shows. */
 function moneyDraftFromText(text: string): string {
+  if (!text.replace(/\D/g, '')) return '';
   return formatNgn(parseNgnInput(text));
 }
 
@@ -34,14 +36,27 @@ export default function PlanScreen() {
   const addLine = useBudgetStore((s) => s.addLine);
   const resetBudget = useBudgetStore((s) => s.resetBudget);
 
-  const [netDraft, setNetDraft] = useState(() => formatNgn(netSalary));
+  const [netDraft, setNetDraft] = useState(() => (netSalary > 0 ? formatNgn(netSalary) : ''));
   const [billsOpen, setBillsOpen] = useState(false);
 
   const [addMonth, setAddMonth] = useState<MonthId>(() => currentPaydayMonthId());
-  const [addLabel, setAddLabel] = useState('New payday item');
-  const [addAmount, setAddAmount] = useState(() => formatNgn(0));
+  const [addLabel, setAddLabel] = useState('');
+  const [addAmount, setAddAmount] = useState('');
 
   const billsSum = useMemo(() => totalBillsAmount(billItems), [billItems]);
+
+  useEffect(() => {
+    const hydrateNetDraft = () => {
+      const n = useBudgetStore.getState().netSalary;
+      setNetDraft(n > 0 ? formatNgn(n) : '');
+    };
+    if (useBudgetStore.persist.hasHydrated()) {
+      hydrateNetDraft();
+    }
+    return useBudgetStore.persist.onFinishHydration(() => {
+      hydrateNetDraft();
+    });
+  }, []);
 
   const monthTriggerStyle = useMemo(
     () => ({
@@ -54,9 +69,9 @@ export default function PlanScreen() {
   );
 
   const commitNet = () => {
-    const net = parseNgnInput(netDraft);
+    const net = parseNgnInput(netDraft || '0');
     setNetSalary(net);
-    setNetDraft(formatNgn(net));
+    setNetDraft(net > 0 ? formatNgn(net) : '');
   };
 
   const onStartOver = () => {
@@ -68,8 +83,10 @@ export default function PlanScreen() {
         onPress: () => {
           resetBudget();
           const s = useBudgetStore.getState();
-          setNetDraft(formatNgn(s.netSalary));
+          setNetDraft(s.netSalary > 0 ? formatNgn(s.netSalary) : '');
           setAddMonth(currentPaydayMonthId());
+          setAddLabel('');
+          setAddAmount('');
         },
       },
     ]);
@@ -77,13 +94,13 @@ export default function PlanScreen() {
 
   const onAddLine = () => {
     commitNet();
-    const amount = parseNgnInput(addAmount);
+    const amount = parseNgnInput(addAmount || '0');
     if (amount <= 0) {
       Alert.alert('Amount needed', 'Enter a positive amount.');
       return;
     }
     addLine({ month: addMonth, label: addLabel.trim() || 'Payday item', amount });
-    setAddAmount(formatNgn(0));
+    setAddAmount('');
   };
 
   const billsSummary =
@@ -111,7 +128,7 @@ export default function PlanScreen() {
               onEndEditing={commitNet}
               keyboardType="number-pad"
               money
-              placeholder={formatNgn(0)}
+              placeholder="e.g. ₦400,000 (after tax)"
             />
           </FormField>
 
@@ -140,7 +157,11 @@ export default function PlanScreen() {
             <MonthPickerField value={addMonth} onChange={setAddMonth} palette={palette} triggerStyle={monthTriggerStyle} />
           </FormField>
           <FormField label="Label">
-            <FluxTextInput value={addLabel} onChangeText={setAddLabel} placeholder="Description" />
+            <FluxTextInput
+              value={addLabel}
+              onChangeText={setAddLabel}
+              placeholder="e.g. Rent, loan, major purchase"
+            />
           </FormField>
           <FormField label="Amount">
             <FluxTextInput
@@ -148,7 +169,7 @@ export default function PlanScreen() {
               onChangeText={(t) => setAddAmount(moneyDraftFromText(t))}
               keyboardType="number-pad"
               money
-              placeholder={formatNgn(0)}
+              placeholder="e.g. ₦85,000"
             />
           </FormField>
 

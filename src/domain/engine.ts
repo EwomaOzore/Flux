@@ -15,7 +15,7 @@ export function sortedUniqueLineMonths(lines: PaydayLine[]): MonthId[] {
 export function buildRollupsForMonths(
   months: MonthId[],
   netSalary: number,
-  staplesPerMonth: number,
+  billsTotal: number,
   lines: PaydayLine[]
 ): MonthRollup[] {
   const linesByMonth = new Map<MonthId, PaydayLine[]>();
@@ -29,16 +29,17 @@ export function buildRollupsForMonths(
   return months.map((month) => {
     const monthLines = (linesByMonth.get(month) ?? []).slice().sort((a, b) => a.label.localeCompare(b.label));
     const totalPaydayOutflow = monthLines.reduce((s, l) => s + l.amount, 0);
-    const remainderBeforeStaples = netSalary - totalPaydayOutflow;
-    const cushionAfterStaples = remainderBeforeStaples - staplesPerMonth;
+    const remainderBeforeBills = netSalary - totalPaydayOutflow;
+    const cushionAfterBills = remainderBeforeBills - billsTotal;
 
     return {
       month,
       income: netSalary,
       lines: monthLines,
       totalPaydayOutflow,
-      remainderBeforeStaples,
-      cushionAfterStaples,
+      billsTotal,
+      remainderBeforeBills,
+      cushionAfterBills,
     };
   });
 }

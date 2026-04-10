@@ -18,7 +18,7 @@ export default function HomeScreen() {
   const budgetForRollup = useBudgetStore(
     useShallow((s) => ({
       netSalary: s.netSalary,
-      staplesPerMonth: s.staplesPerMonth,
+      billItems: s.billItems,
       lines: s.lines,
     }))
   );
@@ -26,9 +26,8 @@ export default function HomeScreen() {
     () => rollupForCurrentPayday(budgetForRollup),
     [budgetForRollup, paydayMonth]
   );
-  const { staplesPerMonth } = budgetForRollup;
 
-  const cushion = roll?.cushionAfterStaples ?? 0;
+  const cushion = roll?.cushionAfterBills ?? 0;
   const positive = cushion >= 0;
   const cushionColor = positive ? palette.success : palette.danger;
   const cushionBg = positive ? palette.successMuted : palette.dangerMuted;
@@ -67,10 +66,10 @@ export default function HomeScreen() {
           <RNView style={[styles.heroAccent, { backgroundColor: palette.tint }]} />
           <RNView style={[styles.cushionBadge, { backgroundColor: cushionBg }]}>
             <Text style={[styles.cushionBadgeLabel, { color: cushionColor }]}>
-              {positive ? 'Healthy cushion' : 'Below staples'}
+              {positive ? 'Healthy cushion' : 'Below bills'}
             </Text>
           </RNView>
-          <Text style={[styles.heroLabel, { color: palette.textSecondary }]}>Cushion after staples</Text>
+          <Text style={[styles.heroLabel, { color: palette.textSecondary }]}>Cushion after bills</Text>
           <MoneyText amount={cushion} variant="titleEmphasis" style={{ color: cushionColor }} />
           <RNView style={styles.statRow}>
             <StatChip
@@ -81,8 +80,8 @@ export default function HomeScreen() {
               palette={palette}
             />
             <StatChip
-              label="Staples"
-              value={formatNgn(staplesPerMonth)}
+              label="Bills"
+              value={formatNgn(roll?.billsTotal ?? 0)}
               accent={palette.accentViolet}
               muted={palette.tintMuted}
               palette={palette}

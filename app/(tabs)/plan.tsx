@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Alert, StyleSheet, View as RNView } from 'react-native';
+import { Alert, Pressable, StyleSheet, View as RNView } from 'react-native';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
+import { BillsBottomSheet } from '@/components/BillsBottomSheet';
 import { MonthPickerField } from '@/components/MonthPickerField';
 import { Text } from '@/components/Themed';
 import {
@@ -15,6 +17,7 @@ import {
 import { radii } from '@/constants/theme';
 import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
 import { currentPaydayMonthId, type MonthId } from '@/src/domain/month';
+import { totalBillsAmount } from '@/src/domain/types';
 import { useBudgetStore } from '@/src/state/budgetStore';
 
 function moneyDraftFromText(text: string): string {
@@ -25,19 +28,20 @@ export default function PlanScreen() {
   const { palette } = useFluxPalette();
 
   const netSalary = useBudgetStore((s) => s.netSalary);
-  const staplesPerMonth = useBudgetStore((s) => s.staplesPerMonth);
+  const billItems = useBudgetStore((s) => s.billItems);
 
   const setNetSalary = useBudgetStore((s) => s.setNetSalary);
-  const setStaplesPerMonth = useBudgetStore((s) => s.setStaplesPerMonth);
   const addLine = useBudgetStore((s) => s.addLine);
   const resetBudget = useBudgetStore((s) => s.resetBudget);
 
   const [netDraft, setNetDraft] = useState(() => formatNgn(netSalary));
-  const [staplesDraft, setStaplesDraft] = useState(() => formatNgn(staplesPerMonth));
+  const [billsOpen, setBillsOpen] = useState(false);
 
   const [addMonth, setAddMonth] = useState<MonthId>(() => currentPaydayMonthId());
   const [addLabel, setAddLabel] = useState('New payday item');
   const [addAmount, setAddAmount] = useState(() => formatNgn(0));
+
+  const billsSum = useMemo(() => totalBillsAmount(billItems), [billItems]);
 
   const monthTriggerStyle = useMemo(
     () => ({
@@ -49,38 +53,30 @@ export default function PlanScreen() {
     [palette.borderStrong, palette.surfaceMuted]
   );
 
-  const commitCore = () => {
+  const commitNet = () => {
     const net = parseNgnInput(netDraft);
-    const staples = parseNgnInput(staplesDraft);
     setNetSalary(net);
-    setStaplesPerMonth(staples);
     setNetDraft(formatNgn(net));
-    setStaplesDraft(formatNgn(staples));
   };
 
   const onStartOver = () => {
-    Alert.alert(
-      'Start over?',
-      'This clears all payday line items and sets net pay and staples to ₦0.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Start over',
-          style: 'destructive',
-          onPress: () => {
-            resetBudget();
-            const s = useBudgetStore.getState();
-            setNetDraft(formatNgn(s.netSalary));
-            setStaplesDraft(formatNgn(s.staplesPerMonth));
-            setAddMonth(currentPaydayMonthId());
-          },
+    Alert.alert('Start over?', 'This clears payday outflows, bills, and sets net pay to ₦0.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Start over',
+        style: 'destructive',
+        onPress: () => {
+          resetBudget();
+          const s = useBudgetStore.getState();
+          setNetDraft(formatNgn(s.netSalary));
+          setAddMonth(currentPaydayMonthId());
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const onAddLine = () => {
-    commitCore();
+    commitNet();
     const amount = parseNgnInput(addAmount);
     if (amount <= 0) {
       Alert.alert('Amount needed', 'Enter a positive amount.');
@@ -90,63 +86,80 @@ export default function PlanScreen() {
     setAddAmount(formatNgn(0));
   };
 
+  const billsSummary =
+    billItems.length === 0
+      ? 'Tap to add rent, utilities, subscriptions…'
+      : `${billItems.length} ${billItems.length === 1 ? 'item' : 'items'} · ${formatNgn(billsSum)}`;
+
   return (
-    <ScreenScroll>
-      <RNView style={styles.titleBlock}>
-        <RNView style={[styles.titleAccent, { backgroundColor: palette.tint }]} />
-        <Text style={styles.title}>Plan</Text>
-        <Text style={[styles.caption, { color: palette.textSecondary }]}>
-          Enter your net pay and staples, then add loans, purchases, and other payday outflows by month. The timeline
-          only shows months where you have items.
-        </Text>
-      </RNView>
+    <>
+      <ScreenScroll>
+        <RNView style={styles.titleBlock}>
+          <RNView style={[styles.titleAccent, { backgroundColor: palette.tint }]} />
+          <Text style={styles.title}>Plan</Text>
+          <Text style={[styles.caption, { color: palette.textSecondary }]}>
+            Set net pay and monthly bills between paydays, then add big payday outflows by month. The timeline lists
+            months where you have payday line items.
+          </Text>
+        </RNView>
 
-      <SectionCard title="Income" subtitle="Net pay & staples">
-        <FormField label="Net take-home (each payday)">
-          <FluxTextInput
-            value={netDraft}
-            onChangeText={(t) => setNetDraft(moneyDraftFromText(t))}
-            onEndEditing={commitCore}
-            keyboardType="number-pad"
-            money
-            placeholder={formatNgn(0)}
-          />
-        </FormField>
+        <SectionCard title="Income" subtitle="Net pay & bills">
+          <FormField label="Net take-home (each payday)">
+            <FluxTextInput
+              value={netDraft}
+              onChangeText={(t) => setNetDraft(moneyDraftFromText(t))}
+              onEndEditing={commitNet}
+              keyboardType="number-pad"
+              money
+              placeholder={formatNgn(0)}
+            />
+          </FormField>
 
-        <FormField label="Staples for the month between paydays">
-          <FluxTextInput
-            value={staplesDraft}
-            onChangeText={(t) => setStaplesDraft(moneyDraftFromText(t))}
-            onEndEditing={commitCore}
-            keyboardType="number-pad"
-            money
-            placeholder={formatNgn(0)}
-          />
-        </FormField>
-      </SectionCard>
+          <FormField label="Bills (between paydays)">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityHint="Opens list of monthly bills"
+              onPress={() => setBillsOpen(true)}
+              style={({ pressed }) => [
+                styles.billsTrigger,
+                monthTriggerStyle,
+                { opacity: pressed ? 0.9 : 1 },
+              ]}>
+              <Text
+                style={[styles.billsTriggerText, { color: palette.text }]}
+                numberOfLines={2}>
+                {billsSummary}
+              </Text>
+              <FontAwesome name="list" size={18} color={palette.tint} />
+            </Pressable>
+          </FormField>
+        </SectionCard>
 
-      <SectionCard title="Add payday outflow" subtitle="One-off or recurring">
-        <FormField label="Month">
-          <MonthPickerField value={addMonth} onChange={setAddMonth} palette={palette} triggerStyle={monthTriggerStyle} />
-        </FormField>
-        <FormField label="Label">
-          <FluxTextInput value={addLabel} onChangeText={setAddLabel} placeholder="Description" />
-        </FormField>
-        <FormField label="Amount">
-          <FluxTextInput
-            value={addAmount}
-            onChangeText={(t) => setAddAmount(moneyDraftFromText(t))}
-            keyboardType="number-pad"
-            money
-            placeholder={formatNgn(0)}
-          />
-        </FormField>
+        <SectionCard title="Add payday outflow" subtitle="One-off or recurring by month">
+          <FormField label="Month">
+            <MonthPickerField value={addMonth} onChange={setAddMonth} palette={palette} triggerStyle={monthTriggerStyle} />
+          </FormField>
+          <FormField label="Label">
+            <FluxTextInput value={addLabel} onChangeText={setAddLabel} placeholder="Description" />
+          </FormField>
+          <FormField label="Amount">
+            <FluxTextInput
+              value={addAmount}
+              onChangeText={(t) => setAddAmount(moneyDraftFromText(t))}
+              keyboardType="number-pad"
+              money
+              placeholder={formatNgn(0)}
+            />
+          </FormField>
 
-        <PrimaryButton label="Add item" onPress={onAddLine} />
-      </SectionCard>
+          <PrimaryButton label="Add item" onPress={onAddLine} />
+        </SectionCard>
 
-      <DangerOutlineButton label="Start over" onPress={onStartOver} />
-    </ScreenScroll>
+        <DangerOutlineButton label="Start over" onPress={onStartOver} />
+      </ScreenScroll>
+
+      <BillsBottomSheet visible={billsOpen} onClose={() => setBillsOpen(false)} />
+    </>
   );
 }
 
@@ -169,5 +182,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginTop: 12,
+  },
+  billsTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    minHeight: 50,
+    gap: 10,
+  },
+  billsTriggerText: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
   },
 });

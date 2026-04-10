@@ -20,7 +20,7 @@ export default function TimelineScreen() {
   const budgetForRollup = useBudgetStore(
     useShallow((s) => ({
       netSalary: s.netSalary,
-      staplesPerMonth: s.staplesPerMonth,
+      billItems: s.billItems,
       lines: s.lines,
     }))
   );
@@ -37,7 +37,7 @@ export default function TimelineScreen() {
   const renderItem = ({ item, index }: { item: MonthRollup; index: number }) => {
     const accentKey = ACCENTS[index % ACCENTS.length];
     const accentColor = palette[accentKey];
-    const positive = item.cushionAfterStaples >= 0;
+    const positive = item.cushionAfterBills >= 0;
     const cushionColor = positive ? palette.success : palette.danger;
     const cushionBg = positive ? palette.successMuted : palette.dangerMuted;
 
@@ -60,14 +60,19 @@ export default function TimelineScreen() {
               </Text>
             </RNView>
             <RNView style={[styles.cushionBlock, { backgroundColor: cushionBg }]}>
-              <Text style={[styles.cushionLabel, { color: cushionColor }]}>After staples</Text>
-              <MoneyText amount={item.cushionAfterStaples} style={{ color: cushionColor, fontWeight: '800' }} />
+              <Text style={[styles.cushionLabel, { color: cushionColor }]}>After bills</Text>
+              <MoneyText amount={item.cushionAfterBills} style={{ color: cushionColor, fontWeight: '800' }} />
             </RNView>
           </RNView>
 
           <RNView style={[styles.metaRow, { borderColor: palette.border }]}>
             <Text style={[styles.metaMuted, { color: palette.textMuted }]}>Payday outflows</Text>
             <MoneyText amount={item.totalPaydayOutflow} style={[styles.metaValue, { color: palette.text }]} />
+          </RNView>
+
+          <RNView style={[styles.metaRow, { borderColor: palette.border }]}>
+            <Text style={[styles.metaMuted, { color: palette.textMuted }]}>Monthly bills</Text>
+            <MoneyText amount={item.billsTotal} style={[styles.metaValue, { color: palette.text }]} />
           </RNView>
 
           {item.lines.map((l, lineIdx) => (
@@ -125,8 +130,8 @@ export default function TimelineScreen() {
             ]}>
             <Text style={[styles.introTitle, { color: palette.info }]}>How to read this</Text>
             <Text style={[styles.intro, { color: palette.textSecondary }]}>
-              Each card is a month where you added a payday outflow. Cushion is what&apos;s left after your staples for
-              that payday. Add items in Plan — months appear here automatically.
+              Each card ties a month to a payday outflow. We subtract your bills total (from Plan) plus those outflows
+              from net pay to get cushion. Add bills and line items in Plan — months appear here automatically.
             </Text>
           </RNView>
         }

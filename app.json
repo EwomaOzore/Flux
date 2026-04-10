@@ -17,6 +17,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.fluxbudget.app",
       "buildNumber": "1",
+      "icon": {
+        "light": "./assets/images/icon-light.png",
+        "dark": "./assets/images/icon-dark.png"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

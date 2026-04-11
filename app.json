@@ -64,6 +64,12 @@
         "projectId": "b20d201c-0232-48ec-a191-4884039a1c6b"
       }
     },
-    "owner": "ewomaozore"
+    "owner": "ewomaozore",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b20d201c-0232-48ec-a191-4884039a1c6b"
+    }
   }
 }

@@ -12,7 +12,11 @@
     "build:dev": "eas build --profile development",
     "build:preview": "eas build --profile preview",
     "build:prod": "eas build --profile production",
-    "submit:prod": "eas submit --profile production --latest"
+    "submit:prod": "eas submit --profile production --latest",
+    "update:dev": "eas update --channel development --auto",
+    "update:preview": "eas update --channel preview --auto",
+    "update:prod": "eas update --channel production --auto",
+    "update:list": "eas update:list"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -31,6 +35,7 @@
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "expo-text-extractor": "^2.0.0",
+    "expo-updates": "~29.0.16",
     "expo-web-browser": "~15.0.10",
     "react": "19.1.0",
     "react-dom": "19.1.0",

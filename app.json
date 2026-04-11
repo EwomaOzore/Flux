@@ -4,7 +4,7 @@
     "slug": "flux-budget",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-light.png",
     "scheme": "flux-budget",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -34,7 +34,10 @@
         "backgroundColor": "#0f766e"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -54,6 +57,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b20d201c-0232-48ec-a191-4884039a1c6b"
+      }
+    },
+    "owner": "ewomaoz"
   }
 }

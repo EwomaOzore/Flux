@@ -1,5 +1,6 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Pressable, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 
 import { useFluxPalette } from '@/components/ui/useFluxPalette';
 import { radii } from '@/constants/theme';
@@ -17,6 +18,9 @@ export function DeferLineToNextMonthButton({ line }: Props) {
   const updateLine = useBudgetStore((s) => s.updateLine);
 
   const onPress = () => {
+    if (Platform.OS !== 'web') {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     const nextMonth = addMonthsId(line.month, 1);
     scheduleLineUndo({ kind: 'defer', lineId: line.id, previousMonth: line.month });
     updateLine(line.id, { month: nextMonth });
@@ -40,6 +44,10 @@ export function DeferLineToNextMonthButton({ line }: Props) {
 const styles = StyleSheet.create({
   hit: {
     padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: radii.sm,
   },
 });

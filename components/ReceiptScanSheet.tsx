@@ -2,7 +2,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { extractTextFromImage, ocrSupported } from '@/src/lib/receiptOcr';
-import { useCallback, useMemo, useState } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +25,7 @@ import { hairlineBorder, radii, spacing } from '@/constants/theme';
 import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
 import { formatMonthIdDisplay, type MonthId } from '@/src/domain/month';
 import { guessReceiptLabelFromText, parseReceiptAmountFromText } from '@/src/lib/parseReceiptText';
+import { getLastReceiptLabel, setLastReceiptLabel } from '@/src/lib/receiptPrefs';
 import { useBudgetStore } from '@/src/state/budgetStore';
 
 function moneyDraftFromText(text: string): string {
@@ -49,6 +51,15 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
   const [rawText, setRawText] = useState('');
   const [labelDraft, setLabelDraft] = useState('');
   const [amountDraft, setAmountDraft] = useState('');
+  const lastMerchantRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    void getLastReceiptLabel().then((last) => {
+      lastMerchantRef.current = last;
+      setLabelDraft((prev) => (prev.trim() ? prev : last ?? ''));
+    });
+  }, [visible]);
 
   const resetDrafts = useCallback(() => {
     setImageUri(null);
@@ -66,7 +77,8 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
   const applyParsedText = useCallback((fullText: string) => {
     setRawText(fullText);
     const amount = parseReceiptAmountFromText(fullText);
-    const label = guessReceiptLabelFromText(fullText);
+    const guessed = guessReceiptLabelFromText(fullText);
+    const label = guessed.trim() || lastMerchantRef.current || '';
     setLabelDraft(label);
     setAmountDraft(amount != null && amount > 0 ? formatNgn(amount) : '');
   }, []);
@@ -167,6 +179,10 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
       return;
     }
     const label = labelDraft.trim() || 'Receipt';
+    if (Platform.OS !== 'web') {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    void setLastReceiptLabel(label);
     addLine({ month, label, amount });
     Alert.alert(
       'Added',
@@ -441,6 +457,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
+    minHeight: 48,
     paddingVertical: 14,
     borderRadius: radii.md,
   },

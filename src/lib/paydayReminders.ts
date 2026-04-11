@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 
 const PREFS_KEY = 'flux-payday-reminder-prefs';
 const NOTIFICATION_ID = 'flux-monthly-payday-reminder';
+const NOTIFICATION_ID_EVE = 'flux-monthly-payday-reminder-eve';
 
 export type ReminderPrefs = {
   enabled: boolean;
@@ -11,6 +12,8 @@ export type ReminderPrefs = {
   dayOfMonth: number;
   hour: number;
   minute: number;
+  /** Second ping the calendar day before `dayOfMonth` (requires day ≥ 2). */
+  alsoRemindEve: boolean;
 };
 
 export const defaultReminderPrefs = (): ReminderPrefs => ({
@@ -18,6 +21,7 @@ export const defaultReminderPrefs = (): ReminderPrefs => ({
   dayOfMonth: 25,
   hour: 9,
   minute: 0,
+  alsoRemindEve: false,
 });
 
 export async function loadReminderPrefs(): Promise<ReminderPrefs> {
@@ -31,6 +35,7 @@ export async function loadReminderPrefs(): Promise<ReminderPrefs> {
       dayOfMonth: Math.min(28, Math.max(1, Math.round(parsed.dayOfMonth ?? 25))),
       hour: Math.min(23, Math.max(0, Math.round(parsed.hour ?? 9))),
       minute: Math.min(59, Math.max(0, Math.round(parsed.minute ?? 0))),
+      alsoRemindEve: typeof parsed.alsoRemindEve === 'boolean' ? parsed.alsoRemindEve : defaultReminderPrefs().alsoRemindEve,
     };
   } catch {
     return defaultReminderPrefs();
@@ -64,6 +69,7 @@ async function ensureAndroidChannel() {
 export async function applyReminderPrefs(prefs: ReminderPrefs): Promise<boolean> {
   await saveReminderPrefs(prefs);
   await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_ID).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_ID_EVE).catch(() => {});
 
   if (!prefs.enabled) {
     return true;
@@ -76,11 +82,31 @@ export async function applyReminderPrefs(prefs: ReminderPrefs): Promise<boolean>
 
   await ensureAndroidChannel();
 
+  const eveDay =
+    prefs.alsoRemindEve && prefs.dayOfMonth > 1 ? prefs.dayOfMonth - 1 : null;
+
+  if (eveDay != null) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIFICATION_ID_EVE,
+      content: {
+        title: 'Flux',
+        body: 'Review Flux before money lands.',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+        day: eveDay,
+        hour: prefs.hour,
+        minute: prefs.minute,
+        channelId: Platform.OS === 'android' ? 'flux-default' : undefined,
+      },
+    });
+  }
+
   await Notifications.scheduleNotificationAsync({
     identifier: NOTIFICATION_ID,
     content: {
       title: 'Flux — payday check-in',
-      body: 'Review income streams, bills, and line items before money lands.',
+      body: 'Open Flux and confirm income, bills, and line items for this payday run.',
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.MONTHLY,

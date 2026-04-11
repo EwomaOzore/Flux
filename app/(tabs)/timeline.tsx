@@ -1,6 +1,7 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import * as Haptics from 'expo-haptics';
 import { useMemo } from 'react';
-import { FlatList, Pressable, StyleSheet, View as RNView } from 'react-native';
+import { FlatList, Platform, Pressable, StyleSheet, View as RNView } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
 import { DeferLineToNextMonthButton } from '@/components/DeferLineToNextMonthButton';
@@ -32,6 +33,9 @@ export default function TimelineScreen() {
   const deleteLine = useBudgetStore((s) => s.deleteLine);
 
   const onDelete = (line: PaydayLine) => {
+    if (Platform.OS !== 'web') {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     scheduleLineUndo({ kind: 'delete', line });
     deleteLine(line.id);
   };
@@ -144,10 +148,11 @@ export default function TimelineScreen() {
         }
         ListEmptyComponent={
           <RNView style={styles.emptyState}>
-            <Text style={[styles.emptyTitle, { color: palette.text }]}>No months yet</Text>
+            <Text style={[styles.emptyTitle, { color: palette.text }]}>No timeline yet</Text>
             <Text style={[styles.emptyBody, { color: palette.textMuted }]}>
-              Add a payday outflow in Plan (rent, loan, purchase, etc.). That month will show up here with your cushion
-              for that payday.
+              {
+                "Add one payday outflow in Plan — even a small line — so this view can show how each month's cushion looks after bills."
+              }
             </Text>
           </RNView>
         }
@@ -263,7 +268,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    minHeight: 52,
+    paddingVertical: spacing.md,
   },
   lineAccent: {
     width: 3,
@@ -288,6 +294,10 @@ const styles = StyleSheet.create({
   },
   trash: {
     padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: radii.sm,
   },
 });

@@ -1,9 +1,15 @@
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useMemo } from "react";
-import { View as RNView, ScrollView, StyleSheet } from "react-native";
+import { useMemo, useState } from "react";
+import {
+  View as RNView,
+  ScrollView,
+  StyleSheet,
+  Pressable,
+} from "react-native";
 import { useShallow } from "zustand/react/shallow";
 
 import { DeferLineToNextMonthButton } from "@/components/DeferLineToNextMonthButton";
+import { DiscretionaryInfoModal } from "@/components/DiscretionaryInfoModal";
 import { MoneyText } from "@/components/MoneyText";
 import { Text, View } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -14,8 +20,15 @@ import {
   radii,
   spacing,
 } from "@/constants/theme";
-import { currentPaydayMonthId, formatMonthIdDisplay } from "@/src/domain/month";
+import { buildRollupsForMonths } from "@/src/domain/engine";
+import {
+  addMonthsId,
+  currentPaydayMonthId,
+  formatMonthIdDisplay,
+} from "@/src/domain/month";
+import { totalBillsAmount, totalIncomeNgn } from "@/src/domain/types";
 import { formatNgn } from "@/src/lib/formatCurrency";
+import { planningStreakMonths } from "@/src/lib/planningInsights";
 import {
   rollupForCurrentPayday,
   useBudgetStore,
@@ -34,9 +47,28 @@ export default function HomeScreen() {
       lines: s.lines,
     })),
   );
+  const [infoOpen, setInfoOpen] = useState(false);
   const roll = useMemo(
     () => rollupForCurrentPayday(budgetForRollup),
     [budgetForRollup, paydayMonth],
+  );
+
+  const prevMonth = useMemo(() => addMonthsId(paydayMonth, -1), [paydayMonth]);
+  const prevRoll = useMemo(() => {
+    const income = totalIncomeNgn(budgetForRollup.incomeStreams);
+    const bills = totalBillsAmount(budgetForRollup.billItems);
+    const [r] = buildRollupsForMonths(
+      [prevMonth],
+      income,
+      bills,
+      budgetForRollup.lines,
+    );
+    return r;
+  }, [budgetForRollup, prevMonth]);
+
+  const streak = useMemo(
+    () => planningStreakMonths(budgetForRollup.lines, paydayMonth),
+    [budgetForRollup.lines, paydayMonth],
   );
 
   const cushion = roll?.cushionAfterBills ?? 0;
@@ -134,16 +166,72 @@ export default function HomeScreen() {
           </RNView>
           <Text style={[styles.insight, { color: palette.textSecondary }]}>
             {positive
-              ? `About ${formatNgn(cushion)} is left after bills and planned payday outflows this month.`
-              : `You’re short about ${formatNgn(Math.abs(cushion))} after bills and outflows — trim a line or defer one.`}
+              ? `You have about ${formatNgn(cushion)} left for discretionary spending this payday — after bills and the line items you’ve planned.`
+              : `You’re short about ${formatNgn(Math.abs(cushion))} after bills and planned outflows — trim a line or defer one.`}
           </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityHint="Shows how cushion is calculated"
+            onPress={() => setInfoOpen(true)}
+            style={({ pressed }) => [
+              styles.infoLinkRow,
+              { opacity: pressed ? 0.75 : 1 },
+            ]}>
+            <Text style={[styles.infoLink, { color: palette.tint }]}>
+              What&apos;s included? Bills vs payday lines
+            </Text>
+          </Pressable>
+
+          <RNView
+            style={[
+              styles.compareCard,
+              {
+                backgroundColor: palette.surfaceMuted,
+                borderColor: palette.border,
+              },
+              hairlineBorder(palette.border),
+            ]}>
+            <Text style={[styles.compareTitle, { color: palette.textMuted }]}>
+              Cushion snapshot
+            </Text>
+            <Text style={[styles.compareBody, { color: palette.textSecondary }]}>
+              Last payday ({formatMonthIdDisplay(prevMonth)}):{" "}
+              <Text style={{ fontWeight: "700", color: palette.text }}>
+                {formatNgn(prevRoll.cushionAfterBills)}
+              </Text>
+              {" · "}
+              This payday ({formatMonthIdDisplay(paydayMonth)}):{" "}
+              <Text style={{ fontWeight: "700", color: palette.text }}>
+                {formatNgn(cushion)}
+              </Text>
+            </Text>
+            <Text style={[styles.compareHint, { color: palette.textMuted }]}>
+              No score — just visibility across paydays.
+            </Text>
+          </RNView>
+
+          {streak >= 2 ? (
+            <Text style={[styles.streakLine, { color: palette.textMuted }]}>
+              You&apos;ve logged spending {streak} paydays in a row. Steady rhythm.
+            </Text>
+          ) : null}
         </RNView>
+
+        <DiscretionaryInfoModal
+          visible={infoOpen}
+          onClose={() => setInfoOpen(false)}
+          monthLabel={formatMonthIdDisplay(paydayMonth)}
+          income={roll?.income ?? 0}
+          billsTotal={roll?.billsTotal ?? 0}
+          paydayOutflow={roll?.totalPaydayOutflow ?? 0}
+          cushion={cushion}
+        />
 
         <RNView style={styles.sectionHead}>
           <RNView
             style={[styles.sectionBar, { backgroundColor: palette.tint }]}
           />
-          <Text style={styles.sectionTitle}>This payday&apos;s line items</Text>
+          <Text style={styles.sectionTitle}>{"This payday's line items"}</Text>
         </RNView>
 
         {(roll?.lines.length ?? 0) === 0 ? (
@@ -158,7 +246,8 @@ export default function HomeScreen() {
             ]}
           >
             <Text style={[styles.empty, { color: palette.textMuted }]}>
-              No items scheduled for this month — nice and quiet.
+              Nothing here yet. Add one thing you&apos;re saving for — rent top-up, a trip, a bill — so this payday
+              reflects real life.
             </Text>
           </RNView>
         ) : (
@@ -363,6 +452,43 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: "500",
   },
+  infoLinkRow: {
+    marginTop: spacing.sm,
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  infoLink: {
+    fontSize: 15,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+  compareCard: {
+    marginTop: spacing.md,
+    borderRadius: radii.md,
+    padding: spacing.md,
+  },
+  compareTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    marginBottom: spacing.xs,
+  },
+  compareBody: {
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  compareHint: {
+    fontSize: 12,
+    marginTop: spacing.sm,
+    lineHeight: 17,
+  },
+  streakLine: {
+    marginTop: spacing.md,
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: "italic",
+  },
   sectionHead: {
     flexDirection: "row",
     alignItems: "center",
@@ -398,6 +524,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+    minHeight: 52,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
   },

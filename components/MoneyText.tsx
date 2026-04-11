@@ -1,5 +1,6 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
+import { font } from '@/constants/typography';
 import { formatNgn } from '@/src/lib/formatCurrency';
 
 type Props = TextProps & {
@@ -17,11 +18,12 @@ export function MoneyText({ amount, variant = 'body', style, ...rest }: Props) {
 
 const styles = StyleSheet.create({
   body: {
+    fontFamily: font.regular,
     fontVariant: ['tabular-nums'],
   },
   titleEmphasis: {
+    fontFamily: font.extraBold,
     fontSize: 34,
-    fontWeight: '800',
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },

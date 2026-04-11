@@ -325,6 +325,11 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
               </View>
             ) : null}
 
+            <Text style={[styles.privacy, { color: palette.textMuted }]}>
+              Receipt images are processed on your device to read text. Flux doesn&apos;t upload your photos to our
+              servers for OCR. You can delete the photo from your library anytime.
+            </Text>
+
             <PrimaryButton label="Add to payday outflows" onPress={onSave} />
           </ScrollView>
         </KeyboardAvoidingView>
@@ -472,5 +477,11 @@ const styles = StyleSheet.create({
   rawBody: {
     fontSize: 12,
     lineHeight: 18,
+  },
+  privacy: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
 });

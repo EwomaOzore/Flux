@@ -1,33 +1,42 @@
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, View as RNView } from 'react-native';
-import { useShallow } from 'zustand/react/shallow';
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useMemo } from "react";
+import { View as RNView, ScrollView, StyleSheet } from "react-native";
+import { useShallow } from "zustand/react/shallow";
 
-import { DeferLineToNextMonthButton } from '@/components/DeferLineToNextMonthButton';
-import { MoneyText } from '@/components/MoneyText';
-import { Text, View } from '@/components/Themed';
-import Colors, { type ThemePalette } from '@/constants/Colors';
-import { cardElevation, hairlineBorder, radii, spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
-import { formatNgn } from '@/src/lib/formatCurrency';
-import { currentPaydayMonthId, formatMonthIdDisplay } from '@/src/domain/month';
-import { rollupForCurrentPayday, useBudgetStore } from '@/src/state/budgetStore';
+import { DeferLineToNextMonthButton } from "@/components/DeferLineToNextMonthButton";
+import { MoneyText } from "@/components/MoneyText";
+import { Text, View } from "@/components/Themed";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors, { type ThemePalette } from "@/constants/Colors";
+import {
+  cardElevation,
+  hairlineBorder,
+  radii,
+  spacing,
+} from "@/constants/theme";
+import { currentPaydayMonthId, formatMonthIdDisplay } from "@/src/domain/month";
+import { formatNgn } from "@/src/lib/formatCurrency";
+import {
+  rollupForCurrentPayday,
+  useBudgetStore,
+} from "@/src/state/budgetStore";
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme ?? 'light'];
+  const palette = Colors[colorScheme ?? "light"];
   const tabBarHeight = useBottomTabBarHeight();
   const paydayMonth = currentPaydayMonthId();
+  const incomeStreamCount = useBudgetStore((s) => s.incomeStreams.length);
   const budgetForRollup = useBudgetStore(
     useShallow((s) => ({
-      netSalary: s.netSalary,
+      incomeStreams: s.incomeStreams,
       billItems: s.billItems,
       lines: s.lines,
-    }))
+    })),
   );
   const roll = useMemo(
     () => rollupForCurrentPayday(budgetForRollup),
-    [budgetForRollup, paydayMonth]
+    [budgetForRollup, paydayMonth],
   );
 
   const cushion = roll?.cushionAfterBills ?? 0;
@@ -42,22 +51,36 @@ export default function HomeScreen() {
         { paddingBottom: Math.max(spacing.xl, tabBarHeight + spacing.md) },
       ]}
       style={{ backgroundColor: palette.background }}
-      showsVerticalScrollIndicator={false}>
+      showsVerticalScrollIndicator={false}
+    >
       <RNView style={styles.decorTop}>
-        <RNView style={[styles.decorBlob, { backgroundColor: palette.tintMuted }]} />
-        <RNView style={[styles.decorBlob2, { backgroundColor: palette.infoMuted }]} />
+        <RNView style={[styles.decorBlob, { backgroundColor: palette.tint }]} />
+        <RNView
+          style={[styles.decorBlob2, { backgroundColor: palette.info }]}
+        />
       </RNView>
 
       <View style={styles.container}>
         <RNView style={[styles.brandRow, hairlineBorder(palette.border)]}>
-          <RNView style={[styles.brandDot, { backgroundColor: palette.tint }]} />
-          <Text style={[styles.brandText, { color: palette.textSecondary }]}>Payday snapshot</Text>
+          <RNView
+            style={[styles.brandDot, { backgroundColor: palette.tint }]}
+          />
+          <Text style={[styles.brandText, { color: palette.textSecondary }]}>
+            Payday snapshot
+          </Text>
         </RNView>
 
-        <Text style={[styles.kicker, { color: palette.tintStrong }]}>End-of-month payday</Text>
-        <Text style={styles.monthLabel}>{formatMonthIdDisplay(paydayMonth)}</Text>
+        <Text style={[styles.kicker, { color: palette.tintStrong }]}>
+          End-of-month payday
+        </Text>
+        <Text style={styles.monthLabel}>
+          {formatMonthIdDisplay(paydayMonth)}
+        </Text>
         <Text style={[styles.caption, { color: palette.textSecondary }]}>
           Salary lands for the month ahead; big bills hit the same run.
+          {incomeStreamCount > 1
+            ? ` You have ${incomeStreamCount} income streams combined below.`
+            : null}
         </Text>
 
         <RNView
@@ -68,18 +91,27 @@ export default function HomeScreen() {
               borderColor: palette.border,
             },
             cardElevation(colorScheme),
-          ]}>
-          <RNView style={[styles.heroAccent, { backgroundColor: palette.tint }]} />
+          ]}
+        >
+          <RNView
+            style={[styles.heroAccent, { backgroundColor: palette.tint }]}
+          />
           <RNView style={[styles.cushionBadge, { backgroundColor: cushionBg }]}>
             <Text style={[styles.cushionBadgeLabel, { color: cushionColor }]}>
-              {positive ? 'Healthy cushion' : 'Below bills'}
+              {positive ? "Healthy cushion" : "Below bills"}
             </Text>
           </RNView>
-          <Text style={[styles.heroLabel, { color: palette.textSecondary }]}>Cushion after bills</Text>
-          <MoneyText amount={cushion} variant="titleEmphasis" style={{ color: cushionColor }} />
+          <Text style={[styles.heroLabel, { color: palette.textSecondary }]}>
+            Cushion after bills
+          </Text>
+          <MoneyText
+            amount={cushion}
+            variant="titleEmphasis"
+            style={{ color: cushionColor }}
+          />
           <RNView style={styles.statRow}>
             <StatChip
-              label="Net pay"
+              label="Income (₦)"
               value={formatNgn(roll?.income ?? 0)}
               accent={palette.accentBlue}
               muted={palette.infoMuted}
@@ -100,10 +132,17 @@ export default function HomeScreen() {
               palette={palette}
             />
           </RNView>
+          <Text style={[styles.insight, { color: palette.textSecondary }]}>
+            {positive
+              ? `About ${formatNgn(cushion)} is left after bills and planned payday outflows this month.`
+              : `You’re short about ${formatNgn(Math.abs(cushion))} after bills and outflows — trim a line or defer one.`}
+          </Text>
         </RNView>
 
         <RNView style={styles.sectionHead}>
-          <RNView style={[styles.sectionBar, { backgroundColor: palette.tint }]} />
+          <RNView
+            style={[styles.sectionBar, { backgroundColor: palette.tint }]}
+          />
           <Text style={styles.sectionTitle}>This payday&apos;s line items</Text>
         </RNView>
 
@@ -116,7 +155,8 @@ export default function HomeScreen() {
                 borderColor: palette.border,
               },
               hairlineBorder(palette.border),
-            ]}>
+            ]}
+          >
             <Text style={[styles.empty, { color: palette.textMuted }]}>
               No items scheduled for this month — nice and quiet.
             </Text>
@@ -127,7 +167,8 @@ export default function HomeScreen() {
               styles.linesCard,
               { backgroundColor: palette.surface, borderColor: palette.border },
               cardElevation(colorScheme),
-            ]}>
+            ]}
+          >
             {roll!.lines.map((l, i) => (
               <RNView
                 key={l.id}
@@ -137,11 +178,22 @@ export default function HomeScreen() {
                     borderBottomWidth: StyleSheet.hairlineWidth,
                     borderBottomColor: palette.border,
                   },
-                ]}>
-                <RNView style={[styles.lineDot, { backgroundColor: palette.accentViolet }]} />
-                <Text style={[styles.lineLabel, { color: palette.text }]}>{l.label}</Text>
+                ]}
+              >
+                <RNView
+                  style={[
+                    styles.lineDot,
+                    { backgroundColor: palette.accentViolet },
+                  ]}
+                />
+                <Text style={[styles.lineLabel, { color: palette.text }]}>
+                  {l.label}
+                </Text>
                 <DeferLineToNextMonthButton line={l} />
-                <MoneyText amount={-l.amount} style={[styles.lineAmount, { color: palette.danger }]} />
+                <MoneyText
+                  amount={-l.amount}
+                  style={[styles.lineAmount, { color: palette.danger }]}
+                />
               </RNView>
             ))}
           </RNView>
@@ -166,7 +218,9 @@ function StatChip({
 }) {
   return (
     <RNView style={[styles.statChip, { backgroundColor: muted }]}>
-      <Text style={[styles.statChipLabel, { color: palette.textMuted }]}>{label}</Text>
+      <Text style={[styles.statChipLabel, { color: palette.textMuted }]}>
+        {label}
+      </Text>
       <Text style={[styles.statChipValue, { color: accent }]} numberOfLines={1}>
         {value}
       </Text>
@@ -182,10 +236,10 @@ const styles = StyleSheet.create({
   decorTop: {
     height: 120,
     marginBottom: -72,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   decorBlob: {
-    position: 'absolute',
+    position: "absolute",
     width: 220,
     height: 220,
     borderRadius: 110,
@@ -194,7 +248,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   decorBlob2: {
-    position: 'absolute',
+    position: "absolute",
     width: 140,
     height: 140,
     borderRadius: 70,
@@ -206,15 +260,15 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
     maxWidth: 560,
-    width: '100%',
-    alignSelf: 'center',
+    width: "100%",
+    alignSelf: "center",
     gap: spacing.sm,
   },
   brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.full,
@@ -227,20 +281,20 @@ const styles = StyleSheet.create({
   },
   brandText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   kicker: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     marginTop: spacing.xs,
   },
   monthLabel: {
     fontSize: 36,
-    fontWeight: '800',
+    fontWeight: "800",
     marginTop: 4,
     letterSpacing: -1,
   },
@@ -254,17 +308,17 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   heroAccent: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 0,
     bottom: 0,
     width: 4,
   },
   cushionBadge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radii.sm,
@@ -272,40 +326,46 @@ const styles = StyleSheet.create({
   },
   cushionBadgeLabel: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   heroLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   statRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
     marginTop: spacing.lg,
   },
   statChip: {
     flexGrow: 1,
-    minWidth: '28%',
+    minWidth: "28%",
     borderRadius: radii.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
   },
   statChipLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 4,
   },
   statChipValue: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.2,
   },
+  insight: {
+    marginTop: spacing.md,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "500",
+  },
   sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     marginTop: spacing.xl,
   },
@@ -316,7 +376,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.3,
   },
   emptyCard: {
@@ -332,11 +392,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     borderRadius: radii.xl,
     borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   lineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
@@ -350,10 +410,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   lineAmount: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });

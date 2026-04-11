@@ -1,6 +1,6 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useMemo } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, View as RNView } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View as RNView } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
 import { DeferLineToNextMonthButton } from '@/components/DeferLineToNextMonthButton';
@@ -11,8 +11,9 @@ import Colors from '@/constants/Colors';
 import { cardElevation, hairlineBorder, radii, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 import { formatMonthIdDisplay } from '@/src/domain/month';
+import { scheduleLineUndo } from '@/src/state/lineUndoStore';
 import { computeRollups, useBudgetStore } from '@/src/state/budgetStore';
-import type { MonthRollup } from '@/src/domain/types';
+import type { MonthRollup, PaydayLine } from '@/src/domain/types';
 
 const ACCENTS = ['tint', 'accentBlue', 'accentViolet', 'accentAmber', 'accentRose'] as const;
 
@@ -22,7 +23,7 @@ export default function TimelineScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const budgetForRollup = useBudgetStore(
     useShallow((s) => ({
-      netSalary: s.netSalary,
+      incomeStreams: s.incomeStreams,
       billItems: s.billItems,
       lines: s.lines,
     }))
@@ -30,11 +31,9 @@ export default function TimelineScreen() {
   const rollups = useMemo(() => computeRollups(budgetForRollup), [budgetForRollup]);
   const deleteLine = useBudgetStore((s) => s.deleteLine);
 
-  const onDelete = (id: string, label: string) => {
-    Alert.alert('Remove item?', label, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteLine(id) },
-    ]);
+  const onDelete = (line: PaydayLine) => {
+    scheduleLineUndo({ kind: 'delete', line });
+    deleteLine(line.id);
   };
 
   const renderItem = ({ item, index }: { item: MonthRollup; index: number }) => {
@@ -96,7 +95,7 @@ export default function TimelineScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${l.label}`}
-                  onPress={() => onDelete(l.id, l.label)}
+                  onPress={() => onDelete(l)}
                   hitSlop={10}
                   style={({ pressed }) => [
                     styles.trash,

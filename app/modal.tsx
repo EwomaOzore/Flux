@@ -16,9 +16,9 @@ export default function AboutModal() {
       <View style={styles.container}>
         <Text style={styles.title}>Flux</Text>
         <Text style={[styles.lead, { color: palette.textSecondary }]}>
-          A private payday planner for Nigerian (₦) cashflow: one screen for the current month-end run, a timeline for
-          what&apos;s coming, and a plan tab to tune numbers. Nothing leaves your phone unless you choose to back it up
-          later.
+          A private payday planner for cashflow in naira: combine several jobs or side gigs, convert foreign pay to ₦ in
+          your head, and see cushion after bills. Home shows this month-end run, Timeline lists months with line items,
+          Plan is where you tune income streams and bills. Data stays on your phone until you export or back up.
         </Text>
         <Text style={[styles.body, { color: palette.textSecondary }]}>
           Flux does not move money, connect to banks, or give financial advice. It&apos;s arithmetic you control.

@@ -4,19 +4,22 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { buildRollupsForMonths, sortedUniqueLineMonths } from '@/src/domain/engine';
 import { currentPaydayMonthId } from '@/src/domain/month';
-import type { BillItem, PaydayLine } from '@/src/domain/types';
-import { totalBillsAmount } from '@/src/domain/types';
+import type { BillItem, IncomeStream, PaydayLine } from '@/src/domain/types';
+import { totalBillsAmount, totalIncomeNgn } from '@/src/domain/types';
 
 const STORAGE_KEY = 'flux-budget-v6';
 
 export type BudgetState = {
-  netSalary: number;
+  incomeStreams: IncomeStream[];
   billItems: BillItem[];
   lines: PaydayLine[];
 };
 
 export type BudgetActions = {
-  setNetSalary: (value: number) => void;
+  setIncomeStreams: (streams: IncomeStream[]) => void;
+  addIncomeStream: (item: Omit<IncomeStream, 'id'> & { id?: string }) => void;
+  updateIncomeStream: (id: string, patch: Partial<Omit<IncomeStream, 'id'>>) => void;
+  removeIncomeStream: (id: string) => void;
   setBillItems: (items: BillItem[]) => void;
   addBill: (item: Omit<BillItem, 'id'> & { id?: string }) => void;
   updateBill: (id: string, patch: Partial<Omit<BillItem, 'id'>>) => void;
@@ -25,18 +28,19 @@ export type BudgetActions = {
   updateLine: (id: string, patch: Partial<Omit<PaydayLine, 'id'>>) => void;
   addLine: (line: Omit<PaydayLine, 'id'> & { id?: string }) => void;
   deleteLine: (id: string) => void;
-  /** Clears lines, bills, and zeros net pay. */
+  /** Clears lines, bills, and income streams. */
   resetBudget: () => void;
 };
 
 const defaultState = (): BudgetState => ({
-  netSalary: 0,
+  incomeStreams: [],
   billItems: [],
   lines: [],
 });
 
 type LegacyPersistedSlice = {
   netSalary?: number;
+  incomeStreams?: IncomeStream[];
   essentialItems?: BillItem[];
   billItems?: BillItem[];
   lines?: PaydayLine[];
@@ -46,7 +50,24 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
   persist(
     (set) => ({
       ...defaultState(),
-      setNetSalary: (value) => set({ netSalary: value }),
+      setIncomeStreams: (incomeStreams) => set({ incomeStreams }),
+      addIncomeStream: (item) =>
+        set((s) => {
+          const id = item.id ?? `income-${Date.now().toString(36)}`;
+          const next: IncomeStream = {
+            id,
+            label: item.label,
+            amountNgn: item.amountNgn,
+            note: item.note,
+          };
+          return { incomeStreams: [...s.incomeStreams, next] };
+        }),
+      updateIncomeStream: (id, patch) =>
+        set((s) => ({
+          incomeStreams: s.incomeStreams.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+        })),
+      removeIncomeStream: (id) =>
+        set((s) => ({ incomeStreams: s.incomeStreams.filter((x) => x.id !== id) })),
       setBillItems: (billItems) => set({ billItems }),
       addBill: (item) =>
         set((s) => {
@@ -85,36 +106,54 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState, fromVersion) => {
-        if (fromVersion < 2 && persistedState && typeof persistedState === 'object') {
-          const s = persistedState as LegacyPersistedSlice;
+        if (!persistedState || typeof persistedState !== 'object') {
+          return persistedState as BudgetState;
+        }
+
+        let state = persistedState as unknown as Record<string, unknown>;
+
+        if (fromVersion < 2) {
+          const s = state as unknown as LegacyPersistedSlice;
           if (Array.isArray(s.essentialItems)) {
             const { essentialItems: _drop, ...rest } = s;
-            return {
-              ...rest,
-              billItems: s.essentialItems,
-            } as BudgetState;
+            state = { ...rest, billItems: s.essentialItems } as Record<string, unknown>;
           }
         }
-        return persistedState as BudgetState;
+
+        if (fromVersion < 3) {
+          const legacy = state as unknown as LegacyPersistedSlice & { netSalary?: number };
+          const streams: IncomeStream[] =
+            Array.isArray(legacy.incomeStreams) && legacy.incomeStreams.length > 0
+              ? legacy.incomeStreams
+              : typeof legacy.netSalary === 'number' && legacy.netSalary > 0
+                ? [{ id: 'migrated-net', label: 'Net pay', amountNgn: legacy.netSalary }]
+                : [];
+          const { netSalary: _dropNet, ...rest } = legacy as Record<string, unknown>;
+          state = { ...rest, incomeStreams: streams } as Record<string, unknown>;
+        }
+
+        return state as unknown as BudgetState;
       },
     }
   )
 );
 
 /** Inputs that affect month rollups (narrower than full {@link BudgetState}). */
-export type BudgetRollupDeps = Pick<BudgetState, 'netSalary' | 'billItems' | 'lines'>;
+export type BudgetRollupDeps = Pick<BudgetState, 'incomeStreams' | 'billItems' | 'lines'>;
 
 export function computeRollups(state: BudgetRollupDeps) {
   const months = sortedUniqueLineMonths(state.lines);
   const billsTotal = totalBillsAmount(state.billItems);
-  return buildRollupsForMonths(months, state.netSalary, billsTotal, state.lines);
+  const income = totalIncomeNgn(state.incomeStreams);
+  return buildRollupsForMonths(months, income, billsTotal, state.lines);
 }
 
 export function rollupForCurrentPayday(s: BudgetRollupDeps) {
   const cur = currentPaydayMonthId();
   const billsTotal = totalBillsAmount(s.billItems);
-  const [rollup] = buildRollupsForMonths([cur], s.netSalary, billsTotal, s.lines);
+  const income = totalIncomeNgn(s.incomeStreams);
+  const [rollup] = buildRollupsForMonths([cur], income, billsTotal, s.lines);
   return rollup;
 }

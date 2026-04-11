@@ -7,6 +7,7 @@ import { useContext, useLayoutEffect } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
+import { font } from '@/constants/typography';
 import { radii, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 
@@ -199,8 +200,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   label: {
+    fontFamily: font.bold,
     fontSize: 10,
-    fontWeight: '700',
     letterSpacing: 0.2,
   },
 });

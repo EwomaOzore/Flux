@@ -7,6 +7,7 @@ import { GlassTabBar } from "@/components/GlassTabBar";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import { font } from "@/constants/typography";
 
 function TabBarIcon(
   props: Readonly<{
@@ -38,7 +39,7 @@ export default function TabLayout() {
           backgroundColor: palette.headerBackground,
         },
         headerTitleStyle: {
-          fontWeight: "700",
+          fontFamily: font.bold,
           fontSize: 18,
           letterSpacing: -0.3,
           color: palette.text,

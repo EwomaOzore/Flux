@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View as RNView } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  Share,
+  StyleSheet,
+  Switch,
+  View as RNView,
+} from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { BillsBottomSheet } from '@/components/BillsBottomSheet';
@@ -18,10 +25,16 @@ import {
 import { radii, spacing } from '@/constants/theme';
 import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
 import { currentPaydayMonthId, formatMonthIdDisplay, type MonthId } from '@/src/domain/month';
+import {
+  applyReminderPrefs,
+  defaultReminderPrefs,
+  loadReminderPrefs,
+  type ReminderPrefs,
+} from '@/src/lib/paydayReminders';
+import { buildExportJson } from '@/src/lib/exportBudget';
 import { totalBillsAmount } from '@/src/domain/types';
 import { useBudgetStore } from '@/src/state/budgetStore';
 
-/** Formatted naira while typing; empty when user clears digits so placeholder shows. */
 function moneyDraftFromText(text: string): string {
   if (!text.replace(/\D/g, '')) return '';
   return formatNgn(parseNgnInput(text));
@@ -30,14 +43,15 @@ function moneyDraftFromText(text: string): string {
 export default function PlanScreen() {
   const { palette } = useFluxPalette();
 
-  const netSalary = useBudgetStore((s) => s.netSalary);
+  const incomeStreams = useBudgetStore((s) => s.incomeStreams);
   const billItems = useBudgetStore((s) => s.billItems);
 
-  const setNetSalary = useBudgetStore((s) => s.setNetSalary);
+  const addIncomeStream = useBudgetStore((s) => s.addIncomeStream);
+  const updateIncomeStream = useBudgetStore((s) => s.updateIncomeStream);
+  const removeIncomeStream = useBudgetStore((s) => s.removeIncomeStream);
   const addLine = useBudgetStore((s) => s.addLine);
   const resetBudget = useBudgetStore((s) => s.resetBudget);
 
-  const [netDraft, setNetDraft] = useState(() => (netSalary > 0 ? formatNgn(netSalary) : ''));
   const [billsOpen, setBillsOpen] = useState(false);
   const [receiptScanOpen, setReceiptScanOpen] = useState(false);
 
@@ -45,19 +59,18 @@ export default function PlanScreen() {
   const [addLabel, setAddLabel] = useState('');
   const [addAmount, setAddAmount] = useState('');
 
+  const [reminderPrefs, setReminderPrefs] = useState<ReminderPrefs>(defaultReminderPrefs);
+
   const billsSum = useMemo(() => totalBillsAmount(billItems), [billItems]);
 
   useEffect(() => {
-    const hydrateNetDraft = () => {
-      const n = useBudgetStore.getState().netSalary;
-      setNetDraft(n > 0 ? formatNgn(n) : '');
+    const load = () => {
+      void loadReminderPrefs().then(setReminderPrefs);
     };
     if (useBudgetStore.persist.hasHydrated()) {
-      hydrateNetDraft();
+      load();
     }
-    return useBudgetStore.persist.onFinishHydration(() => {
-      hydrateNetDraft();
-    });
+    return useBudgetStore.persist.onFinishHydration(load);
   }, []);
 
   const monthTriggerStyle = useMemo(
@@ -67,35 +80,45 @@ export default function PlanScreen() {
       borderColor: palette.borderStrong,
       backgroundColor: palette.surfaceMuted,
     }),
-    [palette.borderStrong, palette.surfaceMuted]
+    [palette.borderStrong, palette.surfaceMuted],
   );
 
-  const commitNet = () => {
-    const net = parseNgnInput(netDraft || '0');
-    setNetSalary(net);
-    setNetDraft(net > 0 ? formatNgn(net) : '');
+  const onExport = async () => {
+    const s = useBudgetStore.getState();
+    const json = buildExportJson({
+      incomeStreams: s.incomeStreams,
+      billItems: s.billItems,
+      lines: s.lines,
+    });
+    try {
+      await Share.share({
+        message: json,
+        title: 'Flux backup',
+      });
+    } catch {
+      Alert.alert('Could not share', 'Try again or copy from a file manager.');
+    }
   };
 
-  const onStartOver = () => {
-    Alert.alert('Start over?', 'This clears payday outflows, bills, and sets net pay to ₦0.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Start over',
-        style: 'destructive',
-        onPress: () => {
-          resetBudget();
-          const s = useBudgetStore.getState();
-          setNetDraft(s.netSalary > 0 ? formatNgn(s.netSalary) : '');
-          setAddMonth(currentPaydayMonthId());
-          setAddLabel('');
-          setAddAmount('');
-        },
-      },
-    ]);
+  const onReminderToggle = async (enabled: boolean) => {
+    const next = { ...reminderPrefs, enabled };
+    setReminderPrefs(next);
+    const ok = await applyReminderPrefs(next);
+    if (enabled && !ok) {
+      setReminderPrefs((p) => ({ ...p, enabled: false }));
+      Alert.alert(
+        'Notifications off',
+        'Allow notifications for Flux in system settings to get payday reminders.',
+      );
+    }
+  };
+
+  const onAddIncomeRow = () => {
+    const n = incomeStreams.length + 1;
+    addIncomeStream({ label: `Income ${n}`, amountNgn: 0 });
   };
 
   const onAddLine = () => {
-    commitNet();
     const amount = parseNgnInput(addAmount || '0');
     if (amount <= 0) {
       Alert.alert('Amount needed', 'Enter a positive amount.');
@@ -111,6 +134,26 @@ export default function PlanScreen() {
     );
   };
 
+  const onStartOver = () => {
+    Alert.alert(
+      'Start over?',
+      'This clears income streams, payday outflows, bills, and reminders stay unless you turn them off.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start over',
+          style: 'destructive',
+          onPress: () => {
+            resetBudget();
+            setAddMonth(currentPaydayMonthId());
+            setAddLabel('');
+            setAddAmount('');
+          },
+        },
+      ],
+    );
+  };
+
   const billsSummary =
     billItems.length === 0
       ? 'Tap to add rent, utilities, subscriptions…'
@@ -123,23 +166,61 @@ export default function PlanScreen() {
           <RNView style={[styles.titleAccent, { backgroundColor: palette.tint }]} />
           <Text style={styles.title}>Plan</Text>
           <Text style={[styles.caption, { color: palette.textSecondary }]}>
-            Set net pay and monthly bills between paydays, then add big payday outflows by month. The timeline lists
-            months where you have payday line items.
+            Add each payday source in naira (convert dollars, pounds, etc. yourself). Totals and cushions use the
+            combined take-home. Same model works whether you have one payday or several jobs — tune streams to match
+            your life.
           </Text>
         </RNView>
 
-        <SectionCard title="Income" subtitle="Net pay & bills">
-          <FormField label="Net take-home (each payday)">
-            <FluxTextInput
-              value={netDraft}
-              onChangeText={(t) => setNetDraft(moneyDraftFromText(t))}
-              onEndEditing={commitNet}
-              keyboardType="number-pad"
-              money
-              placeholder="e.g. ₦400,000 (after tax)"
-            />
-          </FormField>
+        <SectionCard title="Income streams" subtitle="Take-home in ₦ per payday cycle">
+          {incomeStreams.length === 0 ? (
+            <Text style={[styles.hint, { color: palette.textMuted }]}>
+              No streams yet. Add one per job, contract, or side gig.
+            </Text>
+          ) : null}
+          {incomeStreams.map((stream) => (
+            <RNView key={stream.id} style={[styles.incomeRow, { borderColor: palette.border }]}>
+              <FormField label="Label">
+                <FluxTextInput
+                  value={stream.label}
+                  onChangeText={(t) => updateIncomeStream(stream.id, { label: t })}
+                  placeholder="e.g. Main job, US contract"
+                />
+              </FormField>
+              <FormField label="Amount (₦)">
+                <FluxTextInput
+                  key={`amt-${stream.id}-${stream.amountNgn}`}
+                  defaultValue={stream.amountNgn > 0 ? formatNgn(stream.amountNgn) : ''}
+                  onEndEditing={(e) => {
+                    const n = parseNgnInput(e.nativeEvent.text || '0');
+                    updateIncomeStream(stream.id, { amountNgn: Math.max(0, n) });
+                  }}
+                  keyboardType="number-pad"
+                  money
+                  placeholder="₦0"
+                />
+              </FormField>
+              <FormField label="Note (optional)">
+                <FluxTextInput
+                  value={stream.note ?? ''}
+                  onChangeText={(t) => updateIncomeStream(stream.id, { note: t || undefined })}
+                  placeholder='e.g. "$700 wired" — display only'
+                />
+              </FormField>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${stream.label}`}
+                onPress={() => removeIncomeStream(stream.id)}
+                style={({ pressed }) => [styles.removeIncome, { opacity: pressed ? 0.75 : 1 }]}>
+                <FontAwesome name="trash" size={16} color={palette.danger} />
+                <Text style={{ color: palette.danger, fontWeight: '700' }}>Remove stream</Text>
+              </Pressable>
+            </RNView>
+          ))}
+          <PrimaryButton label="Add income source" onPress={onAddIncomeRow} />
+        </SectionCard>
 
+        <SectionCard title="Bills" subtitle="Monthly, between paydays">
           <FormField label="Bills (between paydays)">
             <Pressable
               accessibilityRole="button"
@@ -202,6 +283,39 @@ export default function PlanScreen() {
           <PrimaryButton label="Add item" onPress={onAddLine} />
         </SectionCard>
 
+        <SectionCard title="Payday reminder" subtitle="Local notification each month">
+          <RNView style={styles.reminderRow}>
+            <RNView style={styles.reminderTextCol}>
+              <Text style={[styles.reminderTitle, { color: palette.text }]}>Monthly check-in</Text>
+              <Text style={[styles.reminderSub, { color: palette.textMuted }]}>
+                Day {reminderPrefs.dayOfMonth} at {String(reminderPrefs.hour).padStart(2, '0')}:
+                {String(reminderPrefs.minute).padStart(2, '0')} (device local time)
+              </Text>
+            </RNView>
+            <Switch
+              accessibilityLabel="Toggle payday reminder"
+              value={reminderPrefs.enabled}
+              onValueChange={onReminderToggle}
+              trackColor={{ false: palette.border, true: palette.tintMuted }}
+              thumbColor={palette.surface}
+            />
+          </RNView>
+        </SectionCard>
+
+        <SectionCard title="Backup" subtitle="JSON export — keep a copy outside the phone">
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void onExport()}
+            style={({ pressed }) => [
+              styles.exportBtn,
+              monthTriggerStyle,
+              { opacity: pressed ? 0.9 : 1 },
+            ]}>
+            <FontAwesome name="download" size={18} color={palette.tint} />
+            <Text style={[styles.exportBtnText, { color: palette.text }]}>Export data</Text>
+          </Pressable>
+        </SectionCard>
+
         <DangerOutlineButton label="Start over" onPress={onStartOver} />
       </ScreenScroll>
 
@@ -236,6 +350,22 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     marginTop: 12,
   },
+  hint: {
+    fontSize: 14,
+    marginBottom: spacing.sm,
+  },
+  incomeRow: {
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 0,
+  },
+  removeIncome: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
   scanTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -263,5 +393,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     flex: 1,
+  },
+  reminderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  reminderTextCol: {
+    flex: 1,
+  },
+  reminderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  reminderSub: {
+    fontSize: 13,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  exportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    minHeight: 50,
+  },
+  exportBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

@@ -53,6 +53,14 @@
           "photosPermission": "Flux uses your photos to attach receipt images for expenses.",
           "cameraPermission": "Flux uses the camera to scan receipts and add payday expenses."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon-light.png",
+          "color": "#0f766e",
+          "sounds": []
+        }
       ]
     ],
     "experiments": {

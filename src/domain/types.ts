@@ -11,6 +11,22 @@ export function totalBillsAmount(items: BillItem[]): number {
   return items.reduce((sum, i) => sum + i.amount, 0);
 }
 
+/**
+ * One income source (job, contract, etc.). Amounts are in **NGN** for budgeting math.
+ * If you’re paid in USD/GBP/etc., convert to naira here and optionally note the original in `note`.
+ */
+export interface IncomeStream {
+  id: string;
+  label: string;
+  amountNgn: number;
+  /** Display-only, e.g. "$650 + £200 before conversion" */
+  note?: string;
+}
+
+export function totalIncomeNgn(streams: IncomeStream[]): number {
+  return streams.reduce((sum, s) => sum + Math.max(0, s.amountNgn), 0);
+}
+
 export interface PaydayLine {
   id: string;
   month: MonthId;

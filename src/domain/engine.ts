@@ -14,7 +14,7 @@ export function sortedUniqueLineMonths(lines: PaydayLine[]): MonthId[] {
 
 export function buildRollupsForMonths(
   months: MonthId[],
-  netSalary: number,
+  totalIncomeNgn: number,
   billsTotal: number,
   lines: PaydayLine[]
 ): MonthRollup[] {
@@ -29,12 +29,12 @@ export function buildRollupsForMonths(
   return months.map((month) => {
     const monthLines = (linesByMonth.get(month) ?? []).slice().sort((a, b) => a.label.localeCompare(b.label));
     const totalPaydayOutflow = monthLines.reduce((s, l) => s + l.amount, 0);
-    const remainderBeforeBills = netSalary - totalPaydayOutflow;
+    const remainderBeforeBills = totalIncomeNgn - totalPaydayOutflow;
     const cushionAfterBills = remainderBeforeBills - billsTotal;
 
     return {
       month,
-      income: netSalary,
+      income: totalIncomeNgn,
       lines: monthLines,
       totalPaydayOutflow,
       billsTotal,

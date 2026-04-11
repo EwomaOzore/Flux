@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import { BillsBottomSheet } from "@/components/BillsBottomSheet";
+import { IncomeStreamBottomSheet } from "@/components/IncomeStreamBottomSheet";
 import { MonthPickerField } from "@/components/MonthPickerField";
 import { ReceiptScanSheet } from "@/components/ReceiptScanSheet";
 import { Text } from "@/components/Themed";
@@ -22,13 +23,13 @@ import {
   SectionCard,
   useFluxPalette,
 } from "@/components/ui";
-import { radii, spacing } from "@/constants/theme";
+import { hairlineBorder, radii, spacing } from "@/constants/theme";
 import {
   currentPaydayMonthId,
   formatMonthIdDisplay,
   type MonthId,
 } from "@/src/domain/month";
-import { totalBillsAmount } from "@/src/domain/types";
+import { totalBillsAmount, totalIncomeNgn } from "@/src/domain/types";
 import { buildExportCsv, buildExportJson } from "@/src/lib/exportBudget";
 import { formatNgn, parseNgnInput } from "@/src/lib/formatCurrency";
 import {
@@ -51,13 +52,14 @@ export default function PlanScreen() {
   const billItems = useBudgetStore((s) => s.billItems);
 
   const addIncomeStream = useBudgetStore((s) => s.addIncomeStream);
-  const updateIncomeStream = useBudgetStore((s) => s.updateIncomeStream);
-  const removeIncomeStream = useBudgetStore((s) => s.removeIncomeStream);
   const addLine = useBudgetStore((s) => s.addLine);
   const resetBudget = useBudgetStore((s) => s.resetBudget);
 
   const [billsOpen, setBillsOpen] = useState(false);
   const [receiptScanOpen, setReceiptScanOpen] = useState(false);
+  const [incomeStreamSheetId, setIncomeStreamSheetId] = useState<string | null>(
+    null,
+  );
 
   const [addMonth, setAddMonth] = useState<MonthId>(() =>
     currentPaydayMonthId(),
@@ -69,6 +71,10 @@ export default function PlanScreen() {
     useState<ReminderPrefs>(defaultReminderPrefs);
 
   const billsSum = useMemo(() => totalBillsAmount(billItems), [billItems]);
+  const incomeSum = useMemo(
+    () => totalIncomeNgn(incomeStreams),
+    [incomeStreams],
+  );
 
   useEffect(() => {
     const load = () => {
@@ -140,8 +146,9 @@ export default function PlanScreen() {
   };
 
   const onAddIncomeRow = () => {
-    const n = incomeStreams.length + 1;
-    addIncomeStream({ label: `Income ${n}`, amountNgn: 0 });
+    const id = `income-${Date.now().toString(36)}`;
+    addIncomeStream({ id, label: "", amountNgn: 0 });
+    setIncomeStreamSheetId(id);
   };
 
   const onAddLine = () => {
@@ -203,70 +210,68 @@ export default function PlanScreen() {
 
         <SectionCard
           title="Income streams"
-          subtitle="Take-home in ₦ per payday cycle"
+          subtitle="Take-home in ₦ per payday cycle — tap a row to edit"
         >
           {incomeStreams.length === 0 ? (
             <Text style={[styles.hint, { color: palette.textMuted }]}>
               No streams yet — add one for each place pay hits your account
               (salary, contract, side gig).
             </Text>
-          ) : null}
-          {incomeStreams.map((stream) => (
+          ) : (
             <RNView
-              key={stream.id}
-              style={[styles.incomeRow, { borderColor: palette.border }]}
+              style={[
+                styles.incomeList,
+                { borderColor: palette.border },
+                hairlineBorder(palette.border),
+              ]}
             >
-              <FormField label="Label">
-                <FluxTextInput
-                  value={stream.label}
-                  onChangeText={(t) =>
-                    updateIncomeStream(stream.id, { label: t })
-                  }
-                  placeholder="e.g. Main job, US contract"
-                />
-              </FormField>
-              <FormField label="Amount (₦)">
-                <FluxTextInput
-                  key={`amt-${stream.id}-${stream.amountNgn}`}
-                  defaultValue={
-                    stream.amountNgn > 0 ? formatNgn(stream.amountNgn) : ""
-                  }
-                  onEndEditing={(e) => {
-                    const n = parseNgnInput(e.nativeEvent.text || "0");
-                    updateIncomeStream(stream.id, {
-                      amountNgn: Math.max(0, n),
-                    });
-                  }}
-                  keyboardType="number-pad"
-                  money
-                  placeholder="₦0"
-                />
-              </FormField>
-              <FormField label="Note (optional)">
-                <FluxTextInput
-                  value={stream.note ?? ""}
-                  onChangeText={(t) =>
-                    updateIncomeStream(stream.id, { note: t || undefined })
-                  }
-                  placeholder='e.g. "$700 wired" — display only'
-                />
-              </FormField>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${stream.label}`}
-                onPress={() => removeIncomeStream(stream.id)}
-                style={({ pressed }) => [
-                  styles.removeIncome,
-                  { opacity: pressed ? 0.75 : 1 },
-                ]}
-              >
-                <FontAwesome name="trash" size={16} color={palette.danger} />
-                <Text style={{ color: palette.danger, fontWeight: "700" }}>
-                  Remove stream
-                </Text>
-              </Pressable>
+              {incomeStreams.map((stream, idx) => (
+                <Pressable
+                  key={stream.id}
+                  accessibilityRole="button"
+                  accessibilityHint="Opens editor for this income source"
+                  onPress={() => setIncomeStreamSheetId(stream.id)}
+                  style={({ pressed }) => [
+                    styles.incomeListRow,
+                    idx < incomeStreams.length - 1 && {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: palette.border,
+                    },
+                    { opacity: pressed ? 0.92 : 1 },
+                  ]}
+                >
+                  <RNView style={styles.incomeListTextCol}>
+                    <Text
+                      style={[styles.incomeListTitle, { color: palette.text }]}
+                      numberOfLines={1}
+                    >
+                      {stream.label.trim() || "Untitled"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.incomeListSub,
+                        { color: palette.textMuted },
+                      ]}
+                    >
+                      {stream.amountNgn > 0
+                        ? formatNgn(stream.amountNgn)
+                        : "No amount yet"}
+                    </Text>
+                  </RNView>
+                  <FontAwesome
+                    name="chevron-right"
+                    size={14}
+                    color={palette.textMuted}
+                  />
+                </Pressable>
+              ))}
             </RNView>
-          ))}
+          )}
+          {incomeStreams.length > 0 ? (
+            <Text style={[styles.incomeSumLine, { color: palette.textMuted }]}>
+              Combined take-home: {formatNgn(incomeSum)}
+            </Text>
+          ) : null}
           <PrimaryButton label="Add income source" onPress={onAddIncomeRow} />
         </SectionCard>
 
@@ -455,6 +460,10 @@ export default function PlanScreen() {
         month={addMonth}
         onMonthChange={setAddMonth}
       />
+      <IncomeStreamBottomSheet
+        streamId={incomeStreamSheetId}
+        onClose={() => setIncomeStreamSheetId(null)}
+      />
     </>
   );
 }
@@ -483,17 +492,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: spacing.sm,
   },
-  incomeRow: {
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 0,
+  incomeList: {
+    borderRadius: radii.md,
+    overflow: "hidden",
+    marginBottom: spacing.sm,
   },
-  removeIncome: {
+  incomeListRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    minHeight: 52,
+  },
+  incomeListTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  incomeListTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  incomeListSub: {
+    fontSize: 14,
+    marginTop: 2,
+    fontWeight: "600",
+  },
+  incomeSumLine: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: spacing.sm,
   },
   scanTrigger: {
     flexDirection: "row",

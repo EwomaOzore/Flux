@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  useWindowDimensions,
   View,
   type StyleProp,
   type ViewStyle,
@@ -44,6 +45,7 @@ function monthOptionsList(): MonthId[] {
 
 export function MonthPickerField({ value, onChange, palette, triggerStyle }: Props) {
   const colorScheme = useColorScheme();
+  const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [iosOpen, setIosOpen] = useState(false);
   const [webOpen, setWebOpen] = useState(false);
@@ -95,8 +97,15 @@ export function MonthPickerField({ value, onChange, palette, triggerStyle }: Pro
           },
           triggerStyle,
         ]}>
-        <Text style={[styles.triggerText, { color: palette.text }]}>{formatMonthIdDisplay(value)}</Text>
-        <FontAwesome name="calendar" size={18} color={palette.tint} />
+        <View style={styles.triggerSide} />
+        <Text
+          style={[styles.triggerText, { color: palette.text }]}
+          numberOfLines={1}>
+          {formatMonthIdDisplay(value)}
+        </Text>
+        <View style={styles.triggerSide}>
+          <FontAwesome name="calendar" size={18} color={palette.tint} />
+        </View>
       </Pressable>
 
       {Platform.OS === 'ios' ? (
@@ -110,27 +119,39 @@ export function MonthPickerField({ value, onChange, palette, triggerStyle }: Pro
                   backgroundColor: palette.surface,
                   borderColor: palette.border,
                   paddingBottom: Math.max(insets.bottom, spacing.md),
+                  width: windowWidth,
+                  maxWidth: '100%',
+                  alignSelf: 'center',
                 },
                 hairlineBorder(palette.border),
               ]}>
             <View style={styles.iosToolbar}>
-              <Pressable onPress={() => setIosOpen(false)} hitSlop={12}>
-                <Text style={{ color: palette.textMuted, fontSize: 17, fontWeight: '600' }}>Cancel</Text>
-              </Pressable>
-              <Text style={[styles.iosTitle, { color: palette.text }]}>Month</Text>
-              <Pressable onPress={applyIos} hitSlop={12}>
-                <Text style={{ color: palette.tint, fontSize: 17, fontWeight: '700' }}>Done</Text>
-              </Pressable>
+              <View style={styles.iosToolbarLeft}>
+                <Pressable onPress={() => setIosOpen(false)} hitSlop={12}>
+                  <Text style={{ color: palette.textMuted, fontSize: 17, fontWeight: '600' }}>Cancel</Text>
+                </Pressable>
+              </View>
+              <View style={styles.iosToolbarCenter}>
+                <Text style={[styles.iosTitle, { color: palette.text }]}>Month</Text>
+              </View>
+              <View style={styles.iosToolbarRight}>
+                <Pressable onPress={applyIos} hitSlop={12}>
+                  <Text style={{ color: palette.tint, fontSize: 17, fontWeight: '700' }}>Done</Text>
+                </Pressable>
+              </View>
             </View>
-            <DateTimePicker
-              value={iosTemp}
-              mode="date"
-              display="spinner"
-              themeVariant={colorScheme === 'dark' ? 'dark' : 'light'}
-              onChange={(_, date) => {
-                if (date) setIosTemp(date);
-              }}
-            />
+            <View style={[styles.iosPickerHost, { width: windowWidth }]}>
+              <DateTimePicker
+                style={{ width: windowWidth }}
+                value={iosTemp}
+                mode="date"
+                display="spinner"
+                themeVariant={colorScheme === 'dark' ? 'dark' : 'light'}
+                onChange={(_, date) => {
+                  if (date) setIosTemp(date);
+                }}
+              />
+            </View>
             </View>
           </View>
         </Modal>
@@ -170,6 +191,8 @@ export function MonthPickerField({ value, onChange, palette, triggerStyle }: Pro
                     ]}>
                     <Text
                       style={{
+                        width: '100%',
+                        textAlign: 'center',
                         fontSize: 16,
                         fontWeight: selected ? '800' : '500',
                         color: selected ? palette.tintStrong : palette.text,
@@ -199,17 +222,22 @@ const styles = StyleSheet.create({
   trigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
     minHeight: 50,
   },
+  /** Same width left + right so the month label stays visually centered with the calendar on the right. */
+  triggerSide: {
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   triggerText: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    flex: 1,
-    marginRight: spacing.sm,
+    textAlign: 'center',
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -220,17 +248,38 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.xl,
     borderBottomWidth: 0,
     overflow: 'hidden',
+    alignItems: 'stretch',
   },
   iosToolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    minHeight: 44,
+  },
+  iosToolbarLeft: {
+    flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  iosToolbarCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iosToolbarRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   iosTitle: {
     fontSize: 15,
     fontWeight: '800',
+    textAlign: 'center',
+  },
+  iosPickerHost: {
+    alignSelf: 'center',
+    alignItems: 'center',
   },
   webSheet: {
     borderRadius: radii.lg,
@@ -245,10 +294,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    textAlign: 'center',
   },
   webRow: {
     paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

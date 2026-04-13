@@ -27,10 +27,21 @@ function escapeCsvField(s: string): string {
 
 /** Flat CSV of income streams, bills, and payday lines — easy to open in Sheets or Excel. */
 export function buildExportCsv(state: BudgetState): string {
-  const rows: string[] = ['type,id,label,amount,month,note'];
+  const rows: string[] = ['type,id,label,amount,month,note,recurrence,one_time_month'];
   for (const s of state.incomeStreams) {
+    const rec = s.recurrence ?? 'recurring';
+    const oneMo = s.recurrence === 'one_time' && s.oneTimeMonth ? s.oneTimeMonth : '';
     rows.push(
-      ['income', s.id, escapeCsvField(s.label), String(s.amountNgn), '', escapeCsvField(s.note ?? '')].join(','),
+      [
+        'income',
+        s.id,
+        escapeCsvField(s.label),
+        String(s.amountNgn),
+        '',
+        escapeCsvField(s.note ?? ''),
+        rec,
+        oneMo,
+      ].join(','),
     );
   }
   for (const b of state.billItems) {

@@ -2,10 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { buildRollupsForMonths, sortedUniqueLineMonths } from '@/src/domain/engine';
+import { buildRollupsFromStreams, monthsForRollups } from '@/src/domain/engine';
 import { currentPaydayMonthId } from '@/src/domain/month';
 import type { BillItem, IncomeStream, PaydayLine } from '@/src/domain/types';
-import { totalBillsAmount, totalIncomeNgn } from '@/src/domain/types';
+import { totalBillsAmount } from '@/src/domain/types';
 
 const STORAGE_KEY = 'flux-budget-v6';
 
@@ -54,11 +54,16 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
       addIncomeStream: (item) =>
         set((s) => {
           const id = item.id ?? `income-${Date.now().toString(36)}`;
+          const recurrence = item.recurrence ?? 'recurring';
           const next: IncomeStream = {
             id,
             label: item.label,
             amountNgn: item.amountNgn,
             note: item.note,
+            recurrence,
+            ...(recurrence === 'one_time'
+              ? { oneTimeMonth: item.oneTimeMonth ?? currentPaydayMonthId() }
+              : {}),
           };
           return { incomeStreams: [...s.incomeStreams, next] };
         }),
@@ -106,7 +111,7 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
-      version: 3,
+      version: 4,
       migrate: (persistedState, fromVersion) => {
         if (!persistedState || typeof persistedState !== 'object') {
           return persistedState as BudgetState;
@@ -134,6 +139,18 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
           state = { ...rest, incomeStreams: streams } as Record<string, unknown>;
         }
 
+        if (fromVersion < 4) {
+          const s = state as unknown as BudgetState;
+          if (Array.isArray(s.incomeStreams)) {
+            state = {
+              ...state,
+              incomeStreams: s.incomeStreams.map((st) =>
+                st.recurrence ? st : { ...st, recurrence: 'recurring' as const },
+              ),
+            } as Record<string, unknown>;
+          }
+        }
+
         return state as unknown as BudgetState;
       },
     }
@@ -144,16 +161,14 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
 export type BudgetRollupDeps = Pick<BudgetState, 'incomeStreams' | 'billItems' | 'lines'>;
 
 export function computeRollups(state: BudgetRollupDeps) {
-  const months = sortedUniqueLineMonths(state.lines);
+  const months = monthsForRollups(state.lines, state.incomeStreams);
   const billsTotal = totalBillsAmount(state.billItems);
-  const income = totalIncomeNgn(state.incomeStreams);
-  return buildRollupsForMonths(months, income, billsTotal, state.lines);
+  return buildRollupsFromStreams(months, state.incomeStreams, billsTotal, state.lines);
 }
 
 export function rollupForCurrentPayday(s: BudgetRollupDeps) {
   const cur = currentPaydayMonthId();
   const billsTotal = totalBillsAmount(s.billItems);
-  const income = totalIncomeNgn(s.incomeStreams);
-  const [rollup] = buildRollupsForMonths([cur], income, billsTotal, s.lines);
+  const [rollup] = buildRollupsFromStreams([cur], s.incomeStreams, billsTotal, s.lines);
   return rollup;
 }

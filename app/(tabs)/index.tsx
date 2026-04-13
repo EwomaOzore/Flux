@@ -20,13 +20,13 @@ import {
   radii,
   spacing,
 } from "@/constants/theme";
-import { buildRollupsForMonths } from "@/src/domain/engine";
+import { buildRollupsFromStreams } from "@/src/domain/engine";
 import {
   addMonthsId,
   currentPaydayMonthId,
   formatMonthIdDisplay,
 } from "@/src/domain/month";
-import { totalBillsAmount, totalIncomeNgn } from "@/src/domain/types";
+import { totalBillsAmount } from "@/src/domain/types";
 import { formatNgn } from "@/src/lib/formatCurrency";
 import { planningStreakMonths } from "@/src/lib/planningInsights";
 import {
@@ -55,11 +55,10 @@ export default function HomeScreen() {
 
   const prevMonth = useMemo(() => addMonthsId(paydayMonth, -1), [paydayMonth]);
   const prevRoll = useMemo(() => {
-    const income = totalIncomeNgn(budgetForRollup.incomeStreams);
     const bills = totalBillsAmount(budgetForRollup.billItems);
-    const [r] = buildRollupsForMonths(
+    const [r] = buildRollupsFromStreams(
       [prevMonth],
-      income,
+      budgetForRollup.incomeStreams,
       bills,
       budgetForRollup.lines,
     );

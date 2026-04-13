@@ -29,7 +29,7 @@ import {
   formatMonthIdDisplay,
   type MonthId,
 } from "@/src/domain/month";
-import { totalBillsAmount, totalIncomeNgn } from "@/src/domain/types";
+import { incomeNgnForMonth, totalBillsAmount } from "@/src/domain/types";
 import { buildExportCsv, buildExportJson } from "@/src/lib/exportBudget";
 import { formatNgn, parseNgnInput } from "@/src/lib/formatCurrency";
 import {
@@ -72,7 +72,7 @@ export default function PlanScreen() {
 
   const billsSum = useMemo(() => totalBillsAmount(billItems), [billItems]);
   const incomeSum = useMemo(
-    () => totalIncomeNgn(incomeStreams),
+    () => incomeNgnForMonth(incomeStreams, currentPaydayMonthId()),
     [incomeStreams],
   );
 
@@ -202,15 +202,16 @@ export default function PlanScreen() {
           <Text style={styles.title}>Plan</Text>
           <Text style={[styles.caption, { color: palette.textSecondary }]}>
             Add each payday source in naira (convert dollars, pounds, etc.
-            yourself). Totals and cushions use the combined take-home. Same
-            model works whether you have one payday or several jobs — tune
-            streams to match your life.
+            yourself). Most income is every payday; add a one-time stream when
+            money lands once (a loan paid back to you, a gig). Cushions use
+            take-home for each month, including any one-off amounts in that
+            month only.
           </Text>
         </RNView>
 
         <SectionCard
           title="Income streams"
-          subtitle="Take-home in ₦ per payday cycle — tap a row to edit"
+          subtitle="Recurring pay plus one-off amounts (loan repaid to you, gigs) for a single month — tap a row to edit"
         >
           {incomeStreams.length === 0 ? (
             <Text style={[styles.hint, { color: palette.textMuted }]}>
@@ -253,9 +254,15 @@ export default function PlanScreen() {
                         { color: palette.textMuted },
                       ]}
                     >
-                      {stream.amountNgn > 0
-                        ? formatNgn(stream.amountNgn)
-                        : "No amount yet"}
+                      {stream.recurrence === "one_time" && stream.oneTimeMonth
+                        ? `One-time · ${formatMonthIdDisplay(stream.oneTimeMonth)} · ${
+                            stream.amountNgn > 0
+                              ? formatNgn(stream.amountNgn)
+                              : "No amount yet"
+                          }`
+                        : stream.amountNgn > 0
+                          ? `${formatNgn(stream.amountNgn)} · every payday`
+                          : "No amount yet · every payday"}
                     </Text>
                   </RNView>
                   <FontAwesome
@@ -269,7 +276,8 @@ export default function PlanScreen() {
           )}
           {incomeStreams.length > 0 ? (
             <Text style={[styles.incomeSumLine, { color: palette.textMuted }]}>
-              Combined take-home: {formatNgn(incomeSum)}
+              Take-home this payday ({formatMonthIdDisplay(currentPaydayMonthId())}):{" "}
+              {formatNgn(incomeSum)}
             </Text>
           ) : null}
           <PrimaryButton label="Add income source" onPress={onAddIncomeRow} />

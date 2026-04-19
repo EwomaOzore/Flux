@@ -9,9 +9,13 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/splash-light.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0f766e"
+      "backgroundColor": "#0F766E",
+      "dark": {
+        "image": "./assets/images/splash-dark.png",
+        "backgroundColor": "#0B1120"
+      }
     },
     "ios": {
       "supportsTablet": true,
@@ -45,6 +49,18 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-light.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0F766E",
+          "dark": {
+            "image": "./assets/images/splash-dark.png",
+            "backgroundColor": "#0B1120"
+          }
+        }
+      ],
       "expo-router",
       "@react-native-community/datetimepicker",
       [

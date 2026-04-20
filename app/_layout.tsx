@@ -22,7 +22,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BiometricGate } from "@/components/BiometricGate";
 import { UndoBanner } from "@/components/UndoBanner";
-import { WidgetDataSync } from "@/components/WidgetDataSync";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { navigationFonts } from "@/constants/typography";
@@ -96,7 +95,6 @@ function RootLayoutNav() {
     <ThemeProvider value={navigationTheme}>
       <ReminderBootstrap />
       <EASUpdateSync />
-      <WidgetDataSync />
       <BiometricGate>
         <View style={{ flex: 1 }}>
           <Stack>

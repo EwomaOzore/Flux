@@ -1,8 +1,7 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import * as LocalAuthentication from "expo-local-authentication";
 import { Link } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -25,7 +24,6 @@ import {
   loadReminderPrefs,
   type ReminderPrefs,
 } from "@/src/lib/paydayReminders";
-import { loadWidgetLastSyncAt } from "@/src/lib/widgetSyncMeta";
 
 type MenuRowProps = {
   readonly href: "/upcoming" | "/backup";
@@ -77,13 +75,6 @@ export default function SettingsScreen() {
   const [reminderPrefs, setReminderPrefs] =
     useState<ReminderPrefs>(defaultReminderPrefs);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
-  const [widgetSyncedAt, setWidgetSyncedAt] = useState<string | null>(null);
-
-  const refreshWidgetMeta = useCallback(() => {
-    void loadWidgetLastSyncAt()
-      .then(setWidgetSyncedAt)
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     loadReminderPrefs()
@@ -92,14 +83,7 @@ export default function SettingsScreen() {
     void loadBiometricLockEnabled()
       .then(setBiometricEnabled)
       .catch(() => {});
-    refreshWidgetMeta();
-  }, [refreshWidgetMeta]);
-
-  useFocusEffect(
-    useCallback(() => {
-      refreshWidgetMeta();
-    }, [refreshWidgetMeta]),
-  );
+  }, []);
 
   const onBiometricToggle = async (enabled: boolean) => {
     if (enabled) {
@@ -218,35 +202,6 @@ export default function SettingsScreen() {
               thumbColor={palette.surface}
             />
           </RNView>
-        </RNView>
-      </RNView>
-
-      <RNView style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
-          Home screen widgets
-        </Text>
-        <RNView
-          style={[
-            styles.reminderCard,
-            { borderColor: palette.border, backgroundColor: palette.surface },
-          ]}
-        >
-          <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-            Flux writes{" "}
-            <Text style={{ fontWeight: "700", color: palette.textSecondary }}>
-              flux-widget-snapshot.json
-            </Text>{" "}
-            to app documents so a native widget extension (WidgetKit / Android
-            widget) can read cushion and payday rollups. Add the widget target
-            in Xcode or Android Studio to ship a visible widget.
-          </Text>
-          <Text style={[styles.rowSub, { color: palette.textMuted, marginTop: spacing.sm }]}>
-            Snapshot last written:{" "}
-            {widgetSyncedAt
-              ? new Date(widgetSyncedAt).toLocaleString()
-              : "Not yet"}
-            .
-          </Text>
         </RNView>
       </RNView>
 

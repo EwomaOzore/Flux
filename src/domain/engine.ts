@@ -1,5 +1,5 @@
 import type { MonthId } from "./month";
-import { compareMonthId } from "./month";
+import { compareMonthId, monthRangeInclusive } from "./month";
 import {
   incomeNgnForMonth,
   type IncomeStream,
@@ -38,6 +38,12 @@ export function buildRollupsForMonths(
   billsTotal: number,
   lines: PaydayLine[],
 ): MonthRollup[] {
+  if (months.length === 0) return [];
+  const requested = [...new Set(months)].sort(compareMonthId);
+  const fullRange = monthRangeInclusive(
+    requested[0],
+    requested.at(-1) ?? requested[0],
+  );
   const linesByMonth = new Map<MonthId, PaydayLine[]>();
 
   for (const line of lines) {
@@ -46,16 +52,19 @@ export function buildRollupsForMonths(
     linesByMonth.set(line.month, existing);
   }
 
-  return months.map((month) => {
+  let carryFromPrevious = 0;
+  const byMonth = new Map<MonthId, MonthRollup>();
+  for (const month of fullRange) {
     const monthLines = (linesByMonth.get(month) ?? [])
       .slice()
       .sort((a, b) => a.label.localeCompare(b.label));
     const totalPaydayOutflow = monthLines.reduce((s, l) => s + l.amount, 0);
     const income = incomeForMonth(month);
-    const remainderBeforeBills = income - totalPaydayOutflow;
+    const remainderBeforeBills =
+      carryFromPrevious + income - totalPaydayOutflow;
     const cushionAfterBills = remainderBeforeBills - billsTotal;
 
-    return {
+    byMonth.set(month, {
       month,
       income,
       lines: monthLines,
@@ -63,8 +72,10 @@ export function buildRollupsForMonths(
       billsTotal,
       remainderBeforeBills,
       cushionAfterBills,
-    };
-  });
+    });
+    carryFromPrevious = cushionAfterBills;
+  }
+  return requested.map((m) => byMonth.get(m)).filter(Boolean) as MonthRollup[];
 }
 
 /** Convenience: rollups using {@link incomeNgnForMonth} from streams. */

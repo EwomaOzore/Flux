@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { buildRollupsFromStreams, monthsForRollups } from '@/src/domain/engine';
-import { currentPaydayMonthId } from '@/src/domain/month';
+import { compareMonthId, currentPaydayMonthId, monthRangeInclusive, type MonthId } from '@/src/domain/month';
 import type { BillItem, IncomeStream, PaydayLine } from '@/src/domain/types';
 import { totalBillsAmount } from '@/src/domain/types';
 
@@ -166,9 +166,18 @@ export function computeRollups(state: BudgetRollupDeps) {
   return buildRollupsFromStreams(months, state.incomeStreams, billsTotal, state.lines);
 }
 
+export function rollupsThroughMonth(s: BudgetRollupDeps, throughMonth: MonthId) {
+  const relevant = monthsForRollups(s.lines, s.incomeStreams).filter(
+    (m) => compareMonthId(m, throughMonth) <= 0
+  );
+  const start = relevant.length > 0 ? relevant[0] : throughMonth;
+  const months = monthRangeInclusive(start, throughMonth);
+  const billsTotal = totalBillsAmount(s.billItems);
+  return buildRollupsFromStreams(months, s.incomeStreams, billsTotal, s.lines);
+}
+
 export function rollupForCurrentPayday(s: BudgetRollupDeps) {
   const cur = currentPaydayMonthId();
-  const billsTotal = totalBillsAmount(s.billItems);
-  const [rollup] = buildRollupsFromStreams([cur], s.incomeStreams, billsTotal, s.lines);
-  return rollup;
+  const rolls = rollupsThroughMonth(s, cur);
+  return rolls.at(-1);
 }

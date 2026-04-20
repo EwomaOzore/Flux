@@ -31,6 +31,7 @@ import { formatNgn } from "@/src/lib/formatCurrency";
 import { planningStreakMonths } from "@/src/lib/planningInsights";
 import {
   rollupForCurrentPayday,
+  rollupsThroughMonth,
   useBudgetStore,
 } from "@/src/state/budgetStore";
 
@@ -55,14 +56,16 @@ export default function HomeScreen() {
 
   const prevMonth = useMemo(() => addMonthsId(paydayMonth, -1), [paydayMonth]);
   const prevRoll = useMemo(() => {
-    const bills = totalBillsAmount(budgetForRollup.billItems);
-    const [r] = buildRollupsFromStreams(
-      [prevMonth],
-      budgetForRollup.incomeStreams,
-      bills,
-      budgetForRollup.lines,
+    const rolls = rollupsThroughMonth(budgetForRollup, paydayMonth);
+    return (
+      rolls.find((r) => r.month === prevMonth) ??
+      buildRollupsFromStreams(
+        [prevMonth],
+        budgetForRollup.incomeStreams,
+        totalBillsAmount(budgetForRollup.billItems),
+        budgetForRollup.lines,
+      )[0]
     );
-    return r;
   }, [budgetForRollup, prevMonth]);
 
   const streak = useMemo(

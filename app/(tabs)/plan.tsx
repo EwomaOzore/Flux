@@ -1,12 +1,6 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  View as RNView,
-  StyleSheet,
-  Switch,
-} from "react-native";
+import { useMemo, useState } from "react";
+import { Alert, Pressable, View as RNView, StyleSheet } from "react-native";
 
 import { BillsBottomSheet } from "@/components/BillsBottomSheet";
 import { IncomeStreamBottomSheet } from "@/components/IncomeStreamBottomSheet";
@@ -29,29 +23,15 @@ import {
   formatMonthIdDisplay,
   type MonthId,
 } from "@/src/domain/month";
-import { logActivity } from "@/src/lib/activityLog";
 import { incomeNgnForMonth, totalBillsAmount } from "@/src/domain/types";
+import { logActivity } from "@/src/lib/activityLog";
 import { formatNgn, parseNgnInput } from "@/src/lib/formatCurrency";
-import {
-  applyReminderPrefs,
-  defaultReminderPrefs,
-  loadReminderPrefs,
-  type ReminderPrefs,
-} from "@/src/lib/paydayReminders";
 import { useBudgetStore } from "@/src/state/budgetStore";
 
 function moneyDraftFromText(text: string): string {
   if (!text.replaceAll(/\D/g, "")) return "";
   return formatNgn(parseNgnInput(text));
 }
-
-const LINE_TEMPLATES = [
-  "Rent",
-  "Utilities",
-  "School fees",
-  "Transport",
-  "Food top-up",
-] as const;
 
 export default function PlanScreen() {
   const { palette } = useFluxPalette();
@@ -75,30 +55,17 @@ export default function PlanScreen() {
   const [addEndMonth, setAddEndMonth] = useState<MonthId>(() =>
     currentPaydayMonthId(),
   );
-  const [addLineRecurrence, setAddLineRecurrence] = useState<"one_time" | "monthly">(
-    "one_time",
-  );
+  const [addLineRecurrence, setAddLineRecurrence] = useState<
+    "one_time" | "monthly"
+  >("one_time");
   const [addLabel, setAddLabel] = useState("");
   const [addAmount, setAddAmount] = useState("");
-
-  const [reminderPrefs, setReminderPrefs] =
-    useState<ReminderPrefs>(defaultReminderPrefs);
 
   const billsSum = useMemo(() => totalBillsAmount(billItems), [billItems]);
   const incomeSum = useMemo(
     () => incomeNgnForMonth(incomeStreams, currentPaydayMonthId()),
     [incomeStreams],
   );
-
-  useEffect(() => {
-    const load = () => {
-      loadReminderPrefs().then(setReminderPrefs).catch(() => {});
-    };
-    if (useBudgetStore.persist.hasHydrated()) {
-      load();
-    }
-    return useBudgetStore.persist.onFinishHydration(load);
-  }, []);
 
   const monthTriggerStyle = useMemo(
     () => ({
@@ -109,38 +76,6 @@ export default function PlanScreen() {
     }),
     [palette.borderStrong, palette.surfaceMuted],
   );
-
-  const onReminderToggle = async (enabled: boolean) => {
-    const next = { ...reminderPrefs, enabled };
-    setReminderPrefs(next);
-    const ok = await applyReminderPrefs(next);
-    if (enabled && !ok) {
-      setReminderPrefs((p) => ({ ...p, enabled: false }));
-      Alert.alert(
-        "Notifications off",
-        "Allow notifications for Flux in system settings to get payday reminders.",
-      );
-    }
-  };
-
-  const onReminderEveToggle = async (alsoRemindEve: boolean) => {
-    const next = { ...reminderPrefs, alsoRemindEve };
-    setReminderPrefs(next);
-    await applyReminderPrefs(next);
-  };
-
-  const onReminderDayChange = async (nextDay: number) => {
-    const day = Math.max(1, Math.min(28, nextDay));
-    const next = { ...reminderPrefs, dayOfMonth: day };
-    setReminderPrefs(next);
-    await applyReminderPrefs(next);
-  };
-
-  const onReminderTimePreset = async (hour: number, minute: number) => {
-    const next = { ...reminderPrefs, hour, minute };
-    setReminderPrefs(next);
-    await applyReminderPrefs(next);
-  };
 
   const onAddIncomeRow = () => {
     const id = `income-${Date.now().toString(36)}`;
@@ -156,18 +91,34 @@ export default function PlanScreen() {
     }
     const label = addLabel.trim() || "Payday item";
     if (amount > 500_000_000) {
-      Alert.alert("Large amount", "That amount looks unusually high. Please confirm before adding.");
+      Alert.alert(
+        "Large amount",
+        "That amount looks unusually high. Please confirm before adding.",
+      );
       return;
     }
     const duplicateInMonth = useBudgetStore
       .getState()
-      .lines.some((line) => line.month === addMonth && line.label.trim().toLowerCase() === label.toLowerCase());
+      .lines.some(
+        (line) =>
+          line.month === addMonth &&
+          line.label.trim().toLowerCase() === label.toLowerCase(),
+      );
     if (duplicateInMonth) {
-      Alert.alert("Possible duplicate", "A line with this label already exists in that month.");
+      Alert.alert(
+        "Possible duplicate",
+        "A line with this label already exists in that month.",
+      );
       return;
     }
-    if (addLineRecurrence === "monthly" && compareMonthId(addEndMonth, addMonth) < 0) {
-      Alert.alert("End month needed", "End month cannot be earlier than start month.");
+    if (
+      addLineRecurrence === "monthly" &&
+      compareMonthId(addEndMonth, addMonth) < 0
+    ) {
+      Alert.alert(
+        "End month needed",
+        "End month cannot be earlier than start month.",
+      );
       return;
     }
     addLine({
@@ -301,7 +252,8 @@ export default function PlanScreen() {
           )}
           {incomeStreams.length > 0 ? (
             <Text style={[styles.incomeSumLine, { color: palette.textMuted }]}>
-              Take-home this payday ({formatMonthIdDisplay(currentPaydayMonthId())}):{" "}
+              Take-home this payday (
+              {formatMonthIdDisplay(currentPaydayMonthId())}):{" "}
               {formatNgn(incomeSum)}
             </Text>
           ) : null}
@@ -365,7 +317,9 @@ export default function PlanScreen() {
             <RNView style={styles.recurRow}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityState={{ selected: addLineRecurrence === "one_time" }}
+                accessibilityState={{
+                  selected: addLineRecurrence === "one_time",
+                }}
                 onPress={() => setAddLineRecurrence("one_time")}
                 style={({ pressed }) => [
                   styles.recurChip,
@@ -396,7 +350,9 @@ export default function PlanScreen() {
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                accessibilityState={{ selected: addLineRecurrence === "monthly" }}
+                accessibilityState={{
+                  selected: addLineRecurrence === "monthly",
+                }}
                 onPress={() => setAddLineRecurrence("monthly")}
                 style={({ pressed }) => [
                   styles.recurChip,
@@ -431,28 +387,6 @@ export default function PlanScreen() {
                 ? "This line will appear every month from your selected start month."
                 : "This line applies only to the selected month."}
             </Text>
-          </FormField>
-          <FormField label="Quick templates">
-            <RNView style={styles.templateRow}>
-              {LINE_TEMPLATES.map((label) => (
-                <Pressable
-                  key={label}
-                  accessibilityRole="button"
-                  onPress={() => setAddLabel(label)}
-                  style={({ pressed }) => [
-                    styles.templateChip,
-                    {
-                      borderColor: palette.border,
-                      backgroundColor: palette.surfaceMuted,
-                      opacity: pressed ? 0.9 : 1,
-                    },
-                  ]}>
-                  <Text style={{ color: palette.textSecondary, fontWeight: "700" }}>
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-            </RNView>
           </FormField>
           {addLineRecurrence === "monthly" ? (
             <RNView style={styles.rangeRow}>
@@ -511,121 +445,6 @@ export default function PlanScreen() {
           </FormField>
 
           <PrimaryButton label="Add item" onPress={onAddLine} />
-        </SectionCard>
-
-        <SectionCard
-          title="Payday reminder"
-          subtitle="Local notifications on your device"
-        >
-          <RNView style={styles.reminderRow}>
-            <RNView style={styles.reminderTextCol}>
-              <Text style={[styles.reminderTitle, { color: palette.text }]}>
-                Monthly check-in
-              </Text>
-              <Text style={[styles.reminderSub, { color: palette.textMuted }]}>
-                Day {reminderPrefs.dayOfMonth} at{" "}
-                {String(reminderPrefs.hour).padStart(2, "0")}:
-                {String(reminderPrefs.minute).padStart(2, "0")} (device local
-                time). Optional nudge the day before when your check-in day is
-                2–28.
-              </Text>
-            </RNView>
-            <Switch
-              accessibilityLabel="Toggle payday reminder"
-              value={reminderPrefs.enabled}
-              onValueChange={onReminderToggle}
-              trackColor={{ false: palette.border, true: palette.tintMuted }}
-              thumbColor={palette.surface}
-            />
-          </RNView>
-          {reminderPrefs.enabled && reminderPrefs.dayOfMonth > 1 ? (
-            <RNView style={[styles.reminderRow, { marginTop: spacing.md }]}>
-              <RNView style={styles.reminderTextCol}>
-                <Text style={[styles.reminderTitle, { color: palette.text }]}>
-                  Day-before ping
-                </Text>
-                <Text
-                  style={[styles.reminderSub, { color: palette.textMuted }]}
-                >
-                  “Review Flux before money lands.” Same time, calendar day{" "}
-                  {reminderPrefs.dayOfMonth - 1}.
-                </Text>
-              </RNView>
-              <Switch
-                accessibilityLabel="Toggle day-before payday reminder"
-                value={reminderPrefs.alsoRemindEve}
-                onValueChange={(v) => void onReminderEveToggle(v)}
-                trackColor={{ false: palette.border, true: palette.tintMuted }}
-                thumbColor={palette.surface}
-              />
-            </RNView>
-          ) : null}
-          {reminderPrefs.enabled ? (
-            <>
-              <RNView style={styles.reminderTuneRow}>
-                <Text style={[styles.reminderTitle, { color: palette.text }]}>
-                  Check-in day
-                </Text>
-                <RNView style={styles.stepperWrap}>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => void onReminderDayChange(reminderPrefs.dayOfMonth - 1)}
-                    style={({ pressed }) => [
-                      styles.stepperBtn,
-                      { opacity: pressed ? 0.85 : 1, borderColor: palette.borderStrong, backgroundColor: palette.surfaceMuted },
-                    ]}>
-                    <Text style={{ color: palette.text }}>-</Text>
-                  </Pressable>
-                  <Text style={{ color: palette.textSecondary, fontWeight: "700" }}>
-                    Day {reminderPrefs.dayOfMonth}
-                  </Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => void onReminderDayChange(reminderPrefs.dayOfMonth + 1)}
-                    style={({ pressed }) => [
-                      styles.stepperBtn,
-                      { opacity: pressed ? 0.85 : 1, borderColor: palette.borderStrong, backgroundColor: palette.surfaceMuted },
-                    ]}>
-                    <Text style={{ color: palette.text }}>+</Text>
-                  </Pressable>
-                </RNView>
-              </RNView>
-              <Text style={[styles.reminderSub, { color: palette.textMuted }]}>
-                Quick time presets
-              </Text>
-              <RNView style={styles.templateRow}>
-                {[
-                  { label: "08:00", hour: 8, minute: 0 },
-                  { label: "09:00", hour: 9, minute: 0 },
-                  { label: "18:00", hour: 18, minute: 0 },
-                ].map((t) => {
-                  const selected = reminderPrefs.hour === t.hour && reminderPrefs.minute === t.minute;
-                  return (
-                    <Pressable
-                      key={t.label}
-                      accessibilityRole="button"
-                      onPress={() => void onReminderTimePreset(t.hour, t.minute)}
-                      style={({ pressed }) => [
-                        styles.templateChip,
-                        {
-                          borderColor: selected ? palette.tint : palette.border,
-                          backgroundColor: selected ? palette.tintMuted : palette.surfaceMuted,
-                          opacity: pressed ? 0.9 : 1,
-                        },
-                      ]}>
-                      <Text
-                        style={{
-                          color: selected ? palette.tintStrong : palette.textSecondary,
-                          fontWeight: "700",
-                        }}>
-                        {t.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </RNView>
-            </>
-          ) : null}
         </SectionCard>
 
         <DangerOutlineButton label="Start over" onPress={onStartOver} />
@@ -733,24 +552,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     flex: 1,
   },
-  reminderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  reminderTextCol: {
-    flex: 1,
-  },
-  reminderTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  reminderSub: {
-    fontSize: 13,
-    marginTop: 4,
-    lineHeight: 18,
-  },
   recurRow: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -799,25 +600,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-  },
-  reminderTuneRow: {
-    marginTop: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  stepperWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  stepperBtn: {
-    width: 32,
-    height: 32,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });

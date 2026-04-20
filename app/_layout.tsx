@@ -1,9 +1,3 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -11,14 +5,20 @@ import {
   Inter_700Bold,
   Inter_800ExtraBold,
 } from "@expo-google-fonts/inter";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Updates from "expo-updates";
 import { useEffect, useMemo } from "react";
 import { View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { UndoBanner } from "@/components/UndoBanner";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -104,6 +104,20 @@ function RootLayoutNav() {
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
+            name="backup"
+            options={{
+              title: "Backup & import",
+              headerBackButtonDisplayMode: "minimal",
+            }}
+          />
+          <Stack.Screen
+            name="upcoming"
+            options={{
+              title: "Upcoming",
+              headerBackButtonDisplayMode: "minimal",
+            }}
+          />
+          <Stack.Screen
             name="modal"
             options={{ presentation: "modal", title: "About" }}
           />
@@ -116,7 +130,8 @@ function RootLayoutNav() {
             right: 0,
             bottom: insets.bottom + 72,
             zIndex: 50,
-          }}>
+          }}
+        >
           <UndoBanner />
         </View>
       </View>

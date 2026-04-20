@@ -1,6 +1,6 @@
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { type ReactNode } from 'react';
+import { type ReactNode, useContext } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   type ScrollViewProps,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { View } from '@/components/Themed';
 import { spacing } from '@/constants/theme';
@@ -20,7 +21,13 @@ type Props = {
 
 export function ScreenScroll({ children, ...scrollProps }: Props) {
   const { palette } = useFluxPalette();
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeightContext = useContext(BottomTabBarHeightContext);
+  const insets = useSafeAreaInsets();
+  /** Tab screens get measured bar height; stack-only screens (e.g. /backup) have no tab context. */
+  const bottomPad =
+    tabBarHeightContext !== undefined
+      ? tabBarHeightContext
+      : Math.max(insets.bottom, spacing.md);
   const headerHeight = useHeaderHeight();
 
   return (
@@ -32,7 +39,7 @@ export function ScreenScroll({ children, ...scrollProps }: Props) {
         style={{ flex: 1, backgroundColor: palette.background }}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: Math.max(48, tabBarHeight + spacing.md) },
+          { paddingBottom: Math.max(48, bottomPad + spacing.md) },
         ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

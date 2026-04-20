@@ -7,12 +7,12 @@ import { Text, View } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { cardElevation, hairlineBorder, radii, spacing } from "@/constants/theme";
+import { buildRollupsFromStreams } from "@/src/domain/engine";
 import {
   addMonthsId,
   currentPaydayMonthId,
   formatMonthIdDisplay,
 } from "@/src/domain/month";
-import { buildRollupsFromStreams } from "@/src/domain/engine";
 import { totalBillsAmount } from "@/src/domain/types";
 import { useBudgetStore } from "@/src/state/budgetStore";
 
@@ -29,7 +29,11 @@ export default function UpcomingScreen() {
   );
 
   const upcoming = useMemo(() => {
-    const months = [paydayMonth, addMonthsId(paydayMonth, 1), addMonthsId(paydayMonth, 2)];
+    const months = [
+      paydayMonth,
+      addMonthsId(paydayMonth, 1),
+      addMonthsId(paydayMonth, 2),
+    ];
     return buildRollupsFromStreams(
       months,
       budget.incomeStreams,
@@ -42,7 +46,8 @@ export default function UpcomingScreen() {
     <ScrollView
       style={{ backgroundColor: palette.background }}
       contentContainerStyle={styles.scroll}
-      showsVerticalScrollIndicator={false}>
+      showsVerticalScrollIndicator={false}
+    >
       <View
         style={[
           styles.intro,
@@ -51,7 +56,8 @@ export default function UpcomingScreen() {
             borderColor: palette.border,
           },
           hairlineBorder(palette.border),
-        ]}>
+        ]}
+      >
         <Text style={[styles.title, { color: palette.info }]}>Upcoming view</Text>
         <Text style={[styles.body, { color: palette.textSecondary }]}>
           Next three payday runs, so you can spot heavy months early.
@@ -68,27 +74,36 @@ export default function UpcomingScreen() {
               borderColor: palette.border,
             },
             cardElevation(colorScheme),
-          ]}>
+          ]}
+        >
           <Text style={[styles.month, { color: palette.text }]}>
             {formatMonthIdDisplay(monthRoll.month)}
           </Text>
           <RNView style={styles.meta}>
             <Text style={[styles.metaLabel, { color: palette.textMuted }]}>Income</Text>
-            <MoneyText amount={monthRoll.income} style={{ color: palette.textSecondary }} />
+            <MoneyText
+              amount={monthRoll.income}
+              style={{ color: palette.textSecondary }}
+            />
           </RNView>
           <RNView style={styles.meta}>
-            <Text style={[styles.metaLabel, { color: palette.textMuted }]}>Bills + outflows</Text>
+            <Text style={[styles.metaLabel, { color: palette.textMuted }]}>
+              Bills + outflows
+            </Text>
             <MoneyText
               amount={monthRoll.billsTotal + monthRoll.totalPaydayOutflow}
               style={{ color: palette.textSecondary }}
             />
           </RNView>
           <RNView style={styles.meta}>
-            <Text style={[styles.metaLabel, { color: palette.textMuted }]}>Cushion</Text>
+            <Text style={[styles.metaLabel, { color: palette.textMuted }]}>
+              Cushion
+            </Text>
             <MoneyText
               amount={monthRoll.cushionAfterBills}
               style={{
-                color: monthRoll.cushionAfterBills >= 0 ? palette.success : palette.danger,
+                color:
+                  monthRoll.cushionAfterBills >= 0 ? palette.success : palette.danger,
                 fontWeight: "800",
               }}
             />
@@ -97,8 +112,13 @@ export default function UpcomingScreen() {
             <RNView style={styles.linesWrap}>
               {monthRoll.lines.slice(0, 4).map((line) => (
                 <RNView key={line.id} style={styles.lineRow}>
-                  <Text style={[styles.lineLabel, { color: palette.text }]}>{line.label}</Text>
-                  <MoneyText amount={line.amount} style={{ color: palette.textSecondary }} />
+                  <Text style={[styles.lineLabel, { color: palette.text }]}>
+                    {line.label}
+                  </Text>
+                  <MoneyText
+                    amount={line.amount}
+                    style={{ color: palette.textSecondary }}
+                  />
                 </RNView>
               ))}
               {monthRoll.lines.length > 4 ? (

@@ -29,6 +29,7 @@ import {
   formatMonthIdDisplay,
   type MonthId,
 } from "@/src/domain/month";
+import { formatNgn } from "@/src/lib/formatCurrency";
 import type { MonthRollup, PaydayLine } from "@/src/domain/types";
 import { computeRollups, useBudgetStore } from "@/src/state/budgetStore";
 import { scheduleLineUndo } from "@/src/state/lineUndoStore";
@@ -114,12 +115,20 @@ export default function TimelineScreen() {
     return byMonth
       .map((r) => ({
         ...r,
-        lines: r.lines.filter((l) => l.label.toLowerCase().includes(query)),
+        lines: r.lines.filter((l) => {
+          const amountText = formatNgn(l.amount).toLowerCase();
+          return (
+            l.label.toLowerCase().includes(query) ||
+            amountText.includes(query) ||
+            amountText.replace("₦", "").includes(query)
+          );
+        }),
       }))
       .filter(
         (r) =>
           r.lines.length > 0 ||
-          formatMonthIdDisplay(r.month).toLowerCase().includes(query),
+          formatMonthIdDisplay(r.month).toLowerCase().includes(query) ||
+          formatNgn(r.totalPaydayOutflow).toLowerCase().includes(query),
       );
   }, [monthFilter, monthFilterEnabled, query, rollups]);
 
@@ -222,11 +231,16 @@ export default function TimelineScreen() {
               />
               <RNView style={styles.lineRight}>
                 {l.recurrence === "monthly" ? (
-                  <FontAwesome
-                    name="repeat"
-                    size={13}
-                    color={palette.textMuted}
-                  />
+                  <RNView style={styles.recurBadge}>
+                    <FontAwesome
+                      name="repeat"
+                      size={12}
+                      color={palette.textMuted}
+                    />
+                    <Text style={[styles.recurBadgeText, { color: palette.textMuted }]}>
+                      monthly
+                    </Text>
+                  </RNView>
                 ) : null}
                 <MoneyText
                   amount={l.amount}
@@ -607,6 +621,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+  },
+  recurBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  recurBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.2,
   },
   lineAmount: {
     fontSize: 14,

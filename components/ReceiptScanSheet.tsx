@@ -172,7 +172,7 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
     }
   }, [runOcrOnUri]);
 
-  const onSave = useCallback(() => {
+  const onSave = useCallback((keepOpen: boolean = false) => {
     const amount = parseNgnInput(amountDraft || '0');
     if (amount <= 0) {
       Alert.alert('Amount needed', 'Enter a positive amount from the receipt.');
@@ -188,6 +188,12 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
       'Added',
       `“${label}” for ${formatMonthIdDisplay(month)} was added from your receipt. It will show on Home and Timeline.`,
     );
+    if (keepOpen) {
+      setImageUri(null);
+      setRawText('');
+      setAmountDraft('');
+      return;
+    }
     handleClose();
   }, [addLine, amountDraft, handleClose, labelDraft, month]);
 
@@ -346,7 +352,17 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
               servers for OCR. You can delete the photo from your library anytime.
             </Text>
 
-            <PrimaryButton label="Add to payday outflows" onPress={onSave} />
+            <PrimaryButton label="Add to payday outflows" onPress={() => onSave(false)} />
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => onSave(true)}
+              style={({ pressed }) => [
+                styles.addAnotherBtn,
+                monthTriggerStyle,
+                { opacity: pressed ? 0.9 : 1 },
+              ]}>
+              <Text style={[styles.addAnotherText, { color: palette.text }]}>Save and add another</Text>
+            </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
@@ -500,5 +516,18 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: spacing.md,
     marginBottom: spacing.sm,
+  },
+  addAnotherBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    marginTop: spacing.sm,
+  },
+  addAnotherText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

@@ -11,6 +11,7 @@ import { useShallow } from "zustand/react/shallow";
 import { DeferLineToNextMonthButton } from "@/components/DeferLineToNextMonthButton";
 import { DiscretionaryInfoModal } from "@/components/DiscretionaryInfoModal";
 import { MoneyText } from "@/components/MoneyText";
+import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { Text, View } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors, { type ThemePalette } from "@/constants/Colors";
@@ -49,6 +50,7 @@ export default function HomeScreen() {
     })),
   );
   const [infoOpen, setInfoOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const roll = useMemo(
     () => rollupForCurrentPayday(budgetForRollup),
     [budgetForRollup, paydayMonth],
@@ -79,14 +81,15 @@ export default function HomeScreen() {
   const cushionBg = positive ? palette.successMuted : palette.dangerMuted;
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.scroll,
-        { paddingBottom: Math.max(spacing.xl, tabBarHeight + spacing.md) },
-      ]}
-      style={{ backgroundColor: palette.background }}
-      showsVerticalScrollIndicator={false}
-    >
+    <RNView style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: Math.max(spacing.xl + 72, tabBarHeight + spacing.md) },
+        ]}
+        style={{ backgroundColor: palette.background }}
+        showsVerticalScrollIndicator={false}
+      >
       <RNView style={styles.decorTop}>
         <RNView style={[styles.decorBlob, { backgroundColor: palette.tint }]} />
         <RNView
@@ -290,7 +293,28 @@ export default function HomeScreen() {
           </RNView>
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Quick add payday outflow"
+        onPress={() => setQuickAddOpen(true)}
+        style={({ pressed }) => [
+          styles.quickFab,
+          {
+            backgroundColor: palette.tint,
+            bottom: Math.max(spacing.lg, tabBarHeight + spacing.xs),
+            opacity: pressed ? 0.9 : 1,
+          },
+          cardElevation(colorScheme),
+        ]}>
+        <Text style={styles.quickFabText}>+</Text>
+      </Pressable>
+      <QuickAddLineSheet
+        visible={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        initialMonth={paydayMonth}
+      />
+    </RNView>
   );
 }
 
@@ -320,6 +344,9 @@ function StatChip({
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   scroll: {
     flexGrow: 1,
     paddingBottom: spacing.xl,
@@ -544,5 +571,21 @@ const styles = StyleSheet.create({
   lineAmount: {
     fontSize: 15,
     fontWeight: "700",
+  },
+  quickFab: {
+    position: "absolute",
+    right: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quickFabText: {
+    color: "#fff",
+    fontSize: 32,
+    lineHeight: 34,
+    fontWeight: "800",
+    marginTop: -2,
   },
 });

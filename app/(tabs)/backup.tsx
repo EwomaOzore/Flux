@@ -58,6 +58,10 @@ export default function BackupScreen() {
               store.setIncomeStreams(next.incomeStreams);
               store.setBillItems(next.billItems);
               store.setLines(next.lines);
+              Alert.alert(
+                'Import successful',
+                `Imported ${next.incomeStreams.length} income streams, ${next.billItems.length} bills, and ${next.lines.length} payday outflows.`,
+              );
             },
           },
         ],

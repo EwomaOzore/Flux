@@ -1,17 +1,18 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, Platform, Pressable, StyleSheet, View as RNView } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 
 import { DeferLineToNextMonthButton } from '@/components/DeferLineToNextMonthButton';
 import { MoneyText } from '@/components/MoneyText';
+import { QuickAddLineSheet } from '@/components/QuickAddLineSheet';
 import { Text, View } from '@/components/Themed';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
 import { cardElevation, hairlineBorder, radii, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
-import { formatMonthIdDisplay } from '@/src/domain/month';
+import { currentPaydayMonthId, formatMonthIdDisplay } from '@/src/domain/month';
 import { scheduleLineUndo } from '@/src/state/lineUndoStore';
 import { computeRollups, useBudgetStore } from '@/src/state/budgetStore';
 import type { MonthRollup, PaydayLine } from '@/src/domain/types';
@@ -30,6 +31,7 @@ export default function TimelineScreen() {
     }))
   );
   const rollups = useMemo(() => computeRollups(budgetForRollup), [budgetForRollup]);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const deleteLine = useBudgetStore((s) => s.deleteLine);
 
   const onDelete = (line: PaydayLine) => {
@@ -156,6 +158,26 @@ export default function TimelineScreen() {
             </Text>
           </RNView>
         }
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Quick add payday outflow"
+        onPress={() => setQuickAddOpen(true)}
+        style={({ pressed }) => [
+          styles.quickFab,
+          {
+            backgroundColor: palette.tint,
+            bottom: Math.max(spacing.lg, tabBarHeight + spacing.xs),
+            opacity: pressed ? 0.9 : 1,
+          },
+          cardElevation(colorScheme),
+        ]}>
+        <Text style={styles.quickFabText}>+</Text>
+      </Pressable>
+      <QuickAddLineSheet
+        visible={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        initialMonth={currentPaydayMonthId()}
       />
     </View>
   );
@@ -299,5 +321,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: radii.sm,
+  },
+  quickFab: {
+    position: 'absolute',
+    right: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickFabText: {
+    color: '#fff',
+    fontSize: 32,
+    lineHeight: 34,
+    fontWeight: '800',
+    marginTop: -2,
   },
 });

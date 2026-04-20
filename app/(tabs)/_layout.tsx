@@ -1,7 +1,6 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Link, Tabs } from "expo-router";
+import { Tabs } from "expo-router";
 import React from "react";
-import { Pressable } from "react-native";
 
 import { GlassTabBar } from "@/components/GlassTabBar";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
@@ -53,22 +52,6 @@ export default function TabLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable
-                hitSlop={12}
-                style={{ marginRight: 14 }}
-                accessibilityRole="button"
-                accessibilityLabel="About"
-              >
-                <FontAwesome
-                  name="question-circle"
-                  size={22}
-                  color={palette.textSecondary}
-                />
-              </Pressable>
-            </Link>
-          ),
         }}
       />
       <Tabs.Screen

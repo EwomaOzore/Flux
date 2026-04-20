@@ -73,11 +73,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="more"
+        name="settings"
         options={{
-          title: "More",
+          title: "Settings",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="ellipsis-h" color={color} />
+            <TabBarIcon name="cog" color={color} />
           ),
         }}
       />

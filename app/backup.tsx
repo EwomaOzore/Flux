@@ -3,8 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, Share, StyleSheet, View as RNView } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, Share, StyleSheet, View as RNView } from 'react-native';
+import { useShallow } from 'zustand/shallow';
 
 import { Text } from '@/components/Themed';
 import { PrimaryButton, ScreenScroll, SectionCard, useFluxPalette } from '@/components/ui';
@@ -18,13 +19,35 @@ import { useBudgetStore } from '@/src/state/budgetStore';
 const LAST_EXPORT_KEY = 'flux-last-exported-at';
 const LAST_IMPORT_KEY = 'flux-last-imported-at';
 type ImportMode = 'replace' | 'merge';
-type MergeConflictStrategy = 'incoming' | 'local';
+type MergeSide = 'incoming' | 'local';
 
-function mergeById<T extends { id: string }>(a: T[], b: T[]) {
-  const map = new Map<string, T>();
-  for (const x of a) map.set(x.id, x);
-  for (const x of b) map.set(x.id, x);
-  return [...map.values()];
+type ConflictRow = {
+  readonly kind: 'income' | 'bill' | 'line';
+  readonly id: string;
+  readonly label: string;
+};
+
+function conflictKey(kind: ConflictRow['kind'], id: string): string {
+  return `${kind}:${id}`;
+}
+
+function mergeWithPerSide<T extends { id: string }>(
+  local: T[],
+  incoming: T[],
+  sideForId: (id: string) => MergeSide,
+): T[] {
+  const localMap = new Map(local.map((x) => [x.id, x]));
+  const incomingMap = new Map(incoming.map((x) => [x.id, x]));
+  const ids = new Set<string>([...localMap.keys(), ...incomingMap.keys()]);
+  const out: T[] = [];
+  for (const id of ids) {
+    const l = localMap.get(id);
+    const r = incomingMap.get(id);
+    if (l && r) out.push(sideForId(id) === 'incoming' ? r : l);
+    else if (l) out.push(l);
+    else if (r) out.push(r);
+  }
+  return out;
 }
 
 export default function BackupScreen() {
@@ -38,12 +61,29 @@ export default function BackupScreen() {
   const [activity, setActivity] = useState<
     { id: string; at: string; action: string; detail?: string }[]
   >([]);
-  const [mergeConflictStrategy, setMergeConflictStrategy] = useState<MergeConflictStrategy>('incoming');
+  const [defaultMergeSide, setDefaultMergeSide] = useState<MergeSide>('incoming');
+  const [conflictOverrides, setConflictOverrides] = useState<Record<string, MergeSide>>({});
+
+  const currentSlice = useBudgetStore(
+    useShallow((s) => ({
+      incomeStreams: s.incomeStreams,
+      billItems: s.billItems,
+      lines: s.lines,
+    })),
+  );
 
   const exportPayload = () => {
     const s = useBudgetStore.getState();
     return { incomeStreams: s.incomeStreams, billItems: s.billItems, lines: s.lines };
   };
+
+  const sideForConflict = useCallback(
+    (kind: ConflictRow['kind'], id: string): MergeSide => {
+      const k = conflictKey(kind, id);
+      return conflictOverrides[k] ?? defaultMergeSide;
+    },
+    [conflictOverrides, defaultMergeSide],
+  );
 
   useEffect(() => {
     const loadMeta = async () => {
@@ -116,11 +156,6 @@ export default function BackupScreen() {
     }
   };
 
-  const countConflicts = <T extends { id: string }>(current: T[], incoming: T[]) => {
-    const localIds = new Set(current.map((x) => x.id));
-    return incoming.reduce((acc, x) => (localIds.has(x.id) ? acc + 1 : acc), 0);
-  };
-
   const onImport = async () => {
     setImporting(true);
     try {
@@ -133,6 +168,7 @@ export default function BackupScreen() {
       const next = parseBudgetImportJson(raw);
       setPreview(next);
       setPreviewFileName(picked.assets[0]?.name ?? 'Selected file');
+      setConflictOverrides({});
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Could not import this file.';
       Alert.alert('Import failed', msg);
@@ -141,25 +177,41 @@ export default function BackupScreen() {
     }
   };
 
+  const conflictRows = useMemo((): ConflictRow[] => {
+    if (!preview) return [];
+    const rows: ConflictRow[] = [];
+    for (const x of preview.incomeStreams) {
+      if (currentSlice.incomeStreams.some((c) => c.id === x.id)) {
+        rows.push({ kind: 'income', id: x.id, label: x.label || x.id });
+      }
+    }
+    for (const x of preview.billItems) {
+      if (currentSlice.billItems.some((c) => c.id === x.id)) {
+        rows.push({ kind: 'bill', id: x.id, label: x.label || x.id });
+      }
+    }
+    for (const x of preview.lines) {
+      if (currentSlice.lines.some((c) => c.id === x.id)) {
+        rows.push({ kind: 'line', id: x.id, label: x.label || x.id });
+      }
+    }
+    return rows;
+  }, [preview, currentSlice]);
+
   const mergedCounts = useMemo(() => {
     if (!preview) return null;
-    const current = exportPayload();
-    return {
-      income: mergeById(current.incomeStreams, preview.incomeStreams).length,
-      bills: mergeById(current.billItems, preview.billItems).length,
-      lines: mergeById(current.lines, preview.lines).length,
-    };
-  }, [preview]);
-
-  const conflictCounts = useMemo(() => {
-    if (!preview) return null;
-    const current = exportPayload();
-    return {
-      income: countConflicts(current.incomeStreams, preview.incomeStreams),
-      bills: countConflicts(current.billItems, preview.billItems),
-      lines: countConflicts(current.lines, preview.lines),
-    };
-  }, [preview]);
+    const cur = currentSlice;
+    const income = mergeWithPerSide(cur.incomeStreams, preview.incomeStreams, (id) =>
+      sideForConflict('income', id),
+    );
+    const bills = mergeWithPerSide(cur.billItems, preview.billItems, (id) =>
+      sideForConflict('bill', id),
+    );
+    const lines = mergeWithPerSide(cur.lines, preview.lines, (id) =>
+      sideForConflict('line', id),
+    );
+    return { income: income.length, bills: bills.length, lines: lines.length };
+  }, [preview, currentSlice, sideForConflict]);
 
   const applyImport = async () => {
     if (!preview) return;
@@ -170,25 +222,30 @@ export default function BackupScreen() {
       store.setLines(preview.lines);
     } else {
       const s = useBudgetStore.getState();
-      const mergeLocalWins = <T extends { id: string }>(current: T[], incoming: T[]) => {
-        const map = new Map<string, T>();
-        for (const x of incoming) map.set(x.id, x);
-        for (const x of current) map.set(x.id, x);
-        return [...map.values()];
-      };
-      if (mergeConflictStrategy === 'incoming') {
-        store.setIncomeStreams(mergeById(s.incomeStreams, preview.incomeStreams));
-        store.setBillItems(mergeById(s.billItems, preview.billItems));
-        store.setLines(mergeById(s.lines, preview.lines));
-      } else {
-        store.setIncomeStreams(mergeLocalWins(s.incomeStreams, preview.incomeStreams));
-        store.setBillItems(mergeLocalWins(s.billItems, preview.billItems));
-        store.setLines(mergeLocalWins(s.lines, preview.lines));
-      }
+      store.setIncomeStreams(
+        mergeWithPerSide(s.incomeStreams, preview.incomeStreams, (id) =>
+          sideForConflict('income', id),
+        ),
+      );
+      store.setBillItems(
+        mergeWithPerSide(s.billItems, preview.billItems, (id) =>
+          sideForConflict('bill', id),
+        ),
+      );
+      store.setLines(
+        mergeWithPerSide(s.lines, preview.lines, (id) =>
+          sideForConflict('line', id),
+        ),
+      );
     }
     await saveMeta(LAST_IMPORT_KEY, new Date().toISOString());
+    const overrideCount = Object.keys(conflictOverrides).length;
     const mergeNote =
-      importMode === 'merge' ? ` (${mergeConflictStrategy} wins)` : '';
+      importMode === 'merge'
+        ? overrideCount > 0
+          ? ` (merge, ${overrideCount} per-item)`
+          : ` (merge, default ${defaultMergeSide})`
+        : '';
     await logActivity('import-applied', `${importMode}${mergeNote}`);
     setActivity((await listActivity()).slice(0, 8));
     Alert.alert(
@@ -199,6 +256,7 @@ export default function BackupScreen() {
     );
     setPreview(null);
     setPreviewFileName('');
+    setConflictOverrides({});
   };
 
   return (
@@ -328,45 +386,180 @@ export default function BackupScreen() {
                 <Text style={[styles.note, { color: palette.textMuted }]}>
                   After merge: {mergedCounts.income} income streams, {mergedCounts.bills} bills, {mergedCounts.lines} outflows.
                 </Text>
-                {conflictCounts ? (
+                {conflictRows.length > 0 ? (
+                  <>
+                    <Text style={[styles.note, { color: palette.textMuted }]}>
+                      {conflictRows.length} item
+                      {conflictRows.length === 1 ? '' : 's'} with the same ID on this device and in the file. Choose which
+                      version to keep for each, or set defaults below.
+                    </Text>
+                    <RNView style={styles.modeRow}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: defaultMergeSide === 'incoming' }}
+                        onPress={() => {
+                          setDefaultMergeSide('incoming');
+                          setConflictOverrides({});
+                        }}
+                        style={({ pressed }) => [
+                          styles.modeChip,
+                          {
+                            borderColor:
+                              defaultMergeSide === 'incoming' ? palette.tint : palette.border,
+                            backgroundColor:
+                              defaultMergeSide === 'incoming'
+                                ? palette.tintMuted
+                                : palette.surfaceMuted,
+                            opacity: pressed ? 0.92 : 1,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={{
+                            color:
+                              defaultMergeSide === 'incoming'
+                                ? palette.tintStrong
+                                : palette.textSecondary,
+                            fontWeight: '700',
+                          }}
+                        >
+                          Default: use file
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: defaultMergeSide === 'local' }}
+                        onPress={() => {
+                          setDefaultMergeSide('local');
+                          setConflictOverrides({});
+                        }}
+                        style={({ pressed }) => [
+                          styles.modeChip,
+                          {
+                            borderColor:
+                              defaultMergeSide === 'local' ? palette.tint : palette.border,
+                            backgroundColor:
+                              defaultMergeSide === 'local'
+                                ? palette.tintMuted
+                                : palette.surfaceMuted,
+                            opacity: pressed ? 0.92 : 1,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={{
+                            color:
+                              defaultMergeSide === 'local'
+                                ? palette.tintStrong
+                                : palette.textSecondary,
+                            fontWeight: '700',
+                          }}
+                        >
+                          Default: keep device
+                        </Text>
+                      </Pressable>
+                    </RNView>
+                    <ScrollView
+                      style={styles.conflictScroll}
+                      nestedScrollEnabled
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      {conflictRows.map((row) => {
+                        const ck = conflictKey(row.kind, row.id);
+                        const picked = sideForConflict(row.kind, row.id);
+                        const kindLabel =
+                          row.kind === 'income'
+                            ? 'Income'
+                            : row.kind === 'bill'
+                              ? 'Bill'
+                              : 'Outflow';
+                        return (
+                          <RNView
+                            key={ck}
+                            style={[
+                              styles.conflictCard,
+                              { borderColor: palette.border, backgroundColor: palette.surfaceMuted },
+                              hairlineBorder(palette.border),
+                            ]}
+                          >
+                            <Text style={{ color: palette.textMuted, fontSize: 11, fontWeight: '800' }}>
+                              {kindLabel}
+                            </Text>
+                            <Text style={{ color: palette.text, fontWeight: '700' }} numberOfLines={2}>
+                              {row.label}
+                            </Text>
+                            <RNView style={styles.modeRow}>
+                              <Pressable
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: picked === 'incoming' }}
+                                onPress={() =>
+                                  setConflictOverrides((o) => ({ ...o, [ck]: 'incoming' }))
+                                }
+                                style={({ pressed }) => [
+                                  styles.modeChip,
+                                  {
+                                    borderColor:
+                                      picked === 'incoming' ? palette.tint : palette.border,
+                                    backgroundColor:
+                                      picked === 'incoming'
+                                        ? palette.tintMuted
+                                        : palette.surface,
+                                    opacity: pressed ? 0.92 : 1,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={{
+                                    color:
+                                      picked === 'incoming'
+                                        ? palette.tintStrong
+                                        : palette.textSecondary,
+                                    fontWeight: '700',
+                                  }}
+                                >
+                                  Use file
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: picked === 'local' }}
+                                onPress={() =>
+                                  setConflictOverrides((o) => ({ ...o, [ck]: 'local' }))
+                                }
+                                style={({ pressed }) => [
+                                  styles.modeChip,
+                                  {
+                                    borderColor:
+                                      picked === 'local' ? palette.tint : palette.border,
+                                    backgroundColor:
+                                      picked === 'local' ? palette.tintMuted : palette.surface,
+                                    opacity: pressed ? 0.92 : 1,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={{
+                                    color:
+                                      picked === 'local'
+                                        ? palette.tintStrong
+                                        : palette.textSecondary,
+                                    fontWeight: '700',
+                                  }}
+                                >
+                                  Keep device
+                                </Text>
+                              </Pressable>
+                            </RNView>
+                          </RNView>
+                        );
+                      })}
+                    </ScrollView>
+                  </>
+                ) : (
                   <Text style={[styles.note, { color: palette.textMuted }]}>
-                    ID conflicts: {conflictCounts.income} income, {conflictCounts.bills} bills, {conflictCounts.lines} outflows.
+                    No overlapping IDs — new rows from the file are added and the rest stay as on this device.
                   </Text>
-                ) : null}
-                <RNView style={styles.modeRow}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: mergeConflictStrategy === 'incoming' }}
-                    onPress={() => setMergeConflictStrategy('incoming')}
-                    style={({ pressed }) => [
-                      styles.modeChip,
-                      {
-                        borderColor: mergeConflictStrategy === 'incoming' ? palette.tint : palette.border,
-                        backgroundColor: mergeConflictStrategy === 'incoming' ? palette.tintMuted : palette.surfaceMuted,
-                        opacity: pressed ? 0.92 : 1,
-                      },
-                    ]}>
-                    <Text style={{ color: mergeConflictStrategy === 'incoming' ? palette.tintStrong : palette.textSecondary, fontWeight: '700' }}>
-                      Incoming wins
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: mergeConflictStrategy === 'local' }}
-                    onPress={() => setMergeConflictStrategy('local')}
-                    style={({ pressed }) => [
-                      styles.modeChip,
-                      {
-                        borderColor: mergeConflictStrategy === 'local' ? palette.tint : palette.border,
-                        backgroundColor: mergeConflictStrategy === 'local' ? palette.tintMuted : palette.surfaceMuted,
-                        opacity: pressed ? 0.92 : 1,
-                      },
-                    ]}>
-                    <Text style={{ color: mergeConflictStrategy === 'local' ? palette.tintStrong : palette.textSecondary, fontWeight: '700' }}>
-                      Keep local
-                    </Text>
-                  </Pressable>
-                </RNView>
+                )}
               </>
             ) : null}
             <RNView style={styles.row}>
@@ -375,6 +568,7 @@ export default function BackupScreen() {
                 onPress={() => {
                   setPreview(null);
                   setPreviewFileName('');
+                  setConflictOverrides({});
                 }}
                 style={({ pressed }) => [
                   styles.btn,
@@ -456,6 +650,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  conflictScroll: {
+    maxHeight: 280,
+    marginTop: spacing.sm,
+  },
+  conflictCard: {
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
   },
   activityRow: {
     paddingVertical: spacing.xs,

@@ -1,6 +1,8 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import * as LocalAuthentication from "expo-local-authentication";
 import { Link } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -12,12 +14,18 @@ import {
 import { Text } from "@/components/Themed";
 import { ScreenScroll, useFluxPalette } from "@/components/ui";
 import { radii, spacing } from "@/constants/theme";
+import { notifyBiometricPrefsChanged } from "@/src/lib/biometricEvents";
+import {
+  loadBiometricLockEnabled,
+  saveBiometricLockEnabled,
+} from "@/src/lib/biometricPrefs";
 import {
   applyReminderPrefs,
   defaultReminderPrefs,
   loadReminderPrefs,
   type ReminderPrefs,
 } from "@/src/lib/paydayReminders";
+import { loadWidgetLastSyncAt } from "@/src/lib/widgetSyncMeta";
 
 type MenuRowProps = {
   readonly href: "/upcoming" | "/backup";
@@ -64,16 +72,68 @@ function MenuRow({ href, icon, title, subtitle, palette }: MenuRowProps) {
   );
 }
 
-export default function MoreScreen() {
+export default function SettingsScreen() {
   const { palette } = useFluxPalette();
   const [reminderPrefs, setReminderPrefs] =
     useState<ReminderPrefs>(defaultReminderPrefs);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [widgetSyncedAt, setWidgetSyncedAt] = useState<string | null>(null);
+
+  const refreshWidgetMeta = useCallback(() => {
+    void loadWidgetLastSyncAt()
+      .then(setWidgetSyncedAt)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadReminderPrefs()
       .then(setReminderPrefs)
       .catch(() => {});
-  }, []);
+    void loadBiometricLockEnabled()
+      .then(setBiometricEnabled)
+      .catch(() => {});
+    refreshWidgetMeta();
+  }, [refreshWidgetMeta]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshWidgetMeta();
+    }, [refreshWidgetMeta]),
+  );
+
+  const onBiometricToggle = async (enabled: boolean) => {
+    if (enabled) {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      if (!hasHardware) {
+        Alert.alert(
+          "Not available",
+          "This device does not support biometric authentication.",
+        );
+        return;
+      }
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!enrolled) {
+        Alert.alert(
+          "Set up biometrics",
+          "Add Face ID, Touch ID, or a device PIN in system settings first.",
+        );
+        return;
+      }
+      const res = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Enable biometric lock for Flux",
+        cancelLabel: "Cancel",
+        disableDeviceFallback: false,
+      });
+      if (!res.success) return;
+      await saveBiometricLockEnabled(true);
+      setBiometricEnabled(true);
+      notifyBiometricPrefsChanged();
+    } else {
+      await saveBiometricLockEnabled(false);
+      setBiometricEnabled(false);
+      notifyBiometricPrefsChanged();
+    }
+  };
 
   const onReminderToggle = async (enabled: boolean) => {
     const next = { ...reminderPrefs, enabled };
@@ -111,7 +171,7 @@ export default function MoreScreen() {
     <ScreenScroll>
       <RNView style={styles.section}>
         <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
-          Planning tools
+          Planning
         </Text>
         <RNView style={styles.sectionRows}>
           <MenuRow
@@ -125,9 +185,68 @@ export default function MoreScreen() {
             href="/backup"
             icon="download"
             title="Backup & import"
-            subtitle="Export files, import snapshots, and review activity."
+            subtitle="Export files, import snapshots, and resolve merge conflicts."
             palette={palette}
           />
+        </RNView>
+      </RNView>
+
+      <RNView style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
+          Security
+        </Text>
+        <RNView
+          style={[
+            styles.reminderCard,
+            { borderColor: palette.border, backgroundColor: palette.surface },
+          ]}
+        >
+          <RNView style={styles.reminderRow}>
+            <RNView style={styles.reminderTextCol}>
+              <Text style={[styles.rowTitle, { color: palette.text }]}>
+                Biometric lock
+              </Text>
+              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                Require Face ID, Touch ID, or device PIN when you return to Flux.
+              </Text>
+            </RNView>
+            <Switch
+              accessibilityLabel="Toggle biometric lock"
+              value={biometricEnabled}
+              onValueChange={(v) => void onBiometricToggle(v)}
+              trackColor={{ false: palette.border, true: palette.tintMuted }}
+              thumbColor={palette.surface}
+            />
+          </RNView>
+        </RNView>
+      </RNView>
+
+      <RNView style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
+          Home screen widgets
+        </Text>
+        <RNView
+          style={[
+            styles.reminderCard,
+            { borderColor: palette.border, backgroundColor: palette.surface },
+          ]}
+        >
+          <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+            Flux writes{" "}
+            <Text style={{ fontWeight: "700", color: palette.textSecondary }}>
+              flux-widget-snapshot.json
+            </Text>{" "}
+            to app documents so a native widget extension (WidgetKit / Android
+            widget) can read cushion and payday rollups. Add the widget target
+            in Xcode or Android Studio to ship a visible widget.
+          </Text>
+          <Text style={[styles.rowSub, { color: palette.textMuted, marginTop: spacing.sm }]}>
+            Snapshot last written:{" "}
+            {widgetSyncedAt
+              ? new Date(widgetSyncedAt).toLocaleString()
+              : "Not yet"}
+            .
+          </Text>
         </RNView>
       </RNView>
 

@@ -20,7 +20,9 @@ import { View } from "react-native";
 import "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BiometricGate } from "@/components/BiometricGate";
 import { UndoBanner } from "@/components/UndoBanner";
+import { WidgetDataSync } from "@/components/WidgetDataSync";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { navigationFonts } from "@/constants/typography";
@@ -94,41 +96,44 @@ function RootLayoutNav() {
     <ThemeProvider value={navigationTheme}>
       <ReminderBootstrap />
       <EASUpdateSync />
-      <View style={{ flex: 1 }}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="backup"
-            options={{
-              title: "Backup & import",
-              headerBackButtonDisplayMode: "minimal",
+      <WidgetDataSync />
+      <BiometricGate>
+        <View style={{ flex: 1 }}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="backup"
+              options={{
+                title: "Backup & import",
+                headerBackButtonDisplayMode: "minimal",
+              }}
+            />
+            <Stack.Screen
+              name="upcoming"
+              options={{
+                title: "Upcoming",
+                headerBackButtonDisplayMode: "minimal",
+              }}
+            />
+            <Stack.Screen
+              name="modal"
+              options={{ presentation: "modal", title: "About" }}
+            />
+          </Stack>
+          <View
+            pointerEvents="box-none"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: insets.bottom + 72,
+              zIndex: 50,
             }}
-          />
-          <Stack.Screen
-            name="upcoming"
-            options={{
-              title: "Upcoming",
-              headerBackButtonDisplayMode: "minimal",
-            }}
-          />
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: "modal", title: "About" }}
-          />
-        </Stack>
-        <View
-          pointerEvents="box-none"
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: insets.bottom + 72,
-            zIndex: 50,
-          }}
-        >
-          <UndoBanner />
+          >
+            <UndoBanner />
+          </View>
         </View>
-      </View>
+      </BiometricGate>
     </ThemeProvider>
   );
 }

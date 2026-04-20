@@ -52,11 +52,25 @@ function parseLine(input: unknown): PaydayLine | null {
   const label = asString(input.label) ?? "";
   const amount = asNumber(input.amount) ?? 0;
   if (!id || !month) return null;
+  const recurrence = input.recurrence === "monthly" ? "monthly" : "one_time";
+  const monthId = month as MonthId;
   return {
     id,
-    month: month as PaydayLine["month"],
+    month: monthId,
     label,
     amount: Math.max(0, Math.round(amount)),
+    recurrence,
+    ...(recurrence === "monthly"
+      ? {
+          startMonth:
+            ((asString(input.startMonth) as MonthId | null) ??
+              monthId),
+          endMonth:
+            ((asString(input.endMonth) as MonthId | null) ??
+              (asString(input.startMonth) as MonthId | null) ??
+              monthId),
+        }
+      : {}),
   };
 }
 

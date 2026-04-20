@@ -221,6 +221,13 @@ export default function TimelineScreen() {
                 highlightColor={palette.tintStrong}
               />
               <RNView style={styles.lineRight}>
+                {l.recurrence === "monthly" ? (
+                  <FontAwesome
+                    name="repeat"
+                    size={13}
+                    color={palette.textMuted}
+                  />
+                ) : null}
                 <MoneyText
                   amount={l.amount}
                   style={[styles.lineAmount, { color: palette.textSecondary }]}

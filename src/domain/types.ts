@@ -43,9 +43,7 @@ export function incomeNgnForMonth(
     const amt = Math.max(0, s.amountNgn);
     if (amt <= 0) continue;
     const rec: IncomeRecurrence = s.recurrence ?? "recurring";
-    if (rec === "recurring") {
-      sum += amt;
-    } else if (rec === "one_time" && s.oneTimeMonth === month) {
+    if (rec === "recurring" || (rec === "one_time" && s.oneTimeMonth === month)) {
       sum += amt;
     }
   }
@@ -63,6 +61,12 @@ export interface PaydayLine {
   label: string;
   /** Positive = money leaving your account on that payday */
   amount: number;
+  /** one_time = this specific month only, monthly = repeats from startMonth through endMonth. */
+  recurrence?: "one_time" | "monthly";
+  /** Start month for monthly recurrence; defaults to `month` when omitted. */
+  startMonth?: MonthId;
+  /** End month for monthly recurrence (inclusive); defaults to `startMonth` / `month` when omitted. */
+  endMonth?: MonthId;
 }
 
 export interface MonthRollup {

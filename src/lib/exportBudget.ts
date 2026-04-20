@@ -18,16 +18,16 @@ export function buildExportJson(state: BudgetState): string {
 }
 
 function escapeCsvField(s: string): string {
-  const flat = s.replace(/\r?\n/g, ' ').trim();
+  const flat = s.replaceAll(/\r?\n/g, ' ').trim();
   if (/[",]/.test(flat)) {
-    return `"${flat.replace(/"/g, '""')}"`;
+    return `"${flat.replaceAll(/"/g, '""')}"`;
   }
   return flat;
 }
 
 /** Flat CSV of income streams, bills, and payday lines — easy to open in Sheets or Excel. */
 export function buildExportCsv(state: BudgetState): string {
-  const rows: string[] = ['type,id,label,amount,month,note,recurrence,one_time_month'];
+  const rows: string[] = ['type,id,label,amount,month,note,recurrence,one_time_month,line_recurrence,line_start_month,line_end_month'];
   for (const s of state.incomeStreams) {
     const rec = s.recurrence ?? 'recurring';
     const oneMo = s.recurrence === 'one_time' && s.oneTimeMonth ? s.oneTimeMonth : '';
@@ -48,7 +48,21 @@ export function buildExportCsv(state: BudgetState): string {
     rows.push(['bill', b.id, escapeCsvField(b.label), String(b.amount), '', ''].join(','));
   }
   for (const l of state.lines) {
-    rows.push(['line', l.id, escapeCsvField(l.label), String(l.amount), l.month, ''].join(','));
+    rows.push(
+      [
+        'line',
+        l.id,
+        escapeCsvField(l.label),
+        String(l.amount),
+        l.month,
+        '',
+        '',
+        '',
+        l.recurrence ?? 'one_time',
+        l.recurrence === 'monthly' ? l.startMonth ?? l.month : '',
+        l.recurrence === 'monthly' ? l.endMonth ?? l.startMonth ?? l.month : '',
+      ].join(','),
+    );
   }
   return rows.join('\n');
 }

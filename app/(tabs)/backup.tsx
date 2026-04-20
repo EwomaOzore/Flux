@@ -45,9 +45,21 @@ export default function BackupScreen() {
       if (picked.canceled || !picked.assets[0]?.uri) return;
       const raw = await (await fetch(picked.assets[0].uri)).text();
       const next = parseBudgetImportJson(raw);
+      const sampleIncome = next.incomeStreams
+        .slice(0, 2)
+        .map((s) => s.label || "Untitled")
+        .join(", ");
+      const sampleLines = next.lines
+        .slice(0, 2)
+        .map((l) => l.label || "Untitled")
+        .join(", ");
       Alert.alert(
-        'Replace current data?',
-        'Import will overwrite your current income streams, bills, and payday outflows.',
+        'Preview import',
+        `Income streams: ${next.incomeStreams.length}${
+          sampleIncome ? ` (e.g. ${sampleIncome})` : ""
+        }\nBills: ${next.billItems.length}\nPayday outflows: ${next.lines.length}${
+          sampleLines ? ` (e.g. ${sampleLines})` : ""
+        }\n\nThis will overwrite your current data.`,
         [
           { text: 'Cancel', style: 'cancel' },
           {

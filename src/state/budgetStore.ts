@@ -97,11 +97,19 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
       addLine: (line) =>
         set((s) => {
           const id = line.id ?? `line-${Date.now().toString(36)}`;
+          const recurrence = line.recurrence ?? 'one_time';
           const next: PaydayLine = {
             id,
             month: line.month,
             label: line.label,
             amount: line.amount,
+            recurrence,
+            ...(recurrence === 'monthly'
+              ? {
+                  startMonth: line.startMonth ?? line.month,
+                  endMonth: line.endMonth ?? line.startMonth ?? line.month,
+                }
+              : {}),
           };
           return { lines: [...s.lines, next] };
         }),
@@ -111,7 +119,7 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
-      version: 4,
+      version: 6,
       migrate: (persistedState, fromVersion) => {
         if (!persistedState || typeof persistedState !== 'object') {
           return persistedState as BudgetState;
@@ -147,6 +155,36 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
               incomeStreams: s.incomeStreams.map((st) =>
                 st.recurrence ? st : { ...st, recurrence: 'recurring' as const },
               ),
+            } as Record<string, unknown>;
+          }
+        }
+
+        if (fromVersion < 5) {
+          const s = state as unknown as BudgetState;
+          if (Array.isArray(s.lines)) {
+            state = {
+              ...state,
+              lines: s.lines.map((line) =>
+                line.recurrence ? line : { ...line, recurrence: 'one_time' as const },
+              ),
+            } as Record<string, unknown>;
+          }
+        }
+
+        if (fromVersion < 6) {
+          const s = state as unknown as BudgetState;
+          if (Array.isArray(s.lines)) {
+            state = {
+              ...state,
+              lines: s.lines.map((line) => {
+                if ((line.recurrence ?? 'one_time') !== 'monthly') return line;
+                const start = line.startMonth ?? line.month;
+                return {
+                  ...line,
+                  startMonth: start,
+                  endMonth: line.endMonth ?? start,
+                };
+              }),
             } as Record<string, unknown>;
           }
         }

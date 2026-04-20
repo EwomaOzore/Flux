@@ -23,7 +23,17 @@ export function monthsForRollups(
   incomeStreams: IncomeStream[],
 ): MonthId[] {
   const seen = new Set<MonthId>();
-  for (const l of lines) seen.add(l.month);
+  for (const l of lines) {
+    const rec = l.recurrence ?? "one_time";
+    if (rec === "monthly") {
+      const start = l.startMonth ?? l.month;
+      const end = l.endMonth ?? start;
+      seen.add(start);
+      seen.add(end);
+    } else {
+      seen.add(l.month);
+    }
+  }
   for (const s of incomeStreams) {
     if (s.recurrence === "one_time" && s.oneTimeMonth) {
       seen.add(s.oneTimeMonth);
@@ -44,18 +54,19 @@ export function buildRollupsForMonths(
     requested[0],
     requested.at(-1) ?? requested[0],
   );
-  const linesByMonth = new Map<MonthId, PaydayLine[]>();
-
-  for (const line of lines) {
-    const existing = linesByMonth.get(line.month) ?? [];
-    existing.push(line);
-    linesByMonth.set(line.month, existing);
-  }
-
   let carryFromPrevious = 0;
   const byMonth = new Map<MonthId, MonthRollup>();
   for (const month of fullRange) {
-    const monthLines = (linesByMonth.get(month) ?? [])
+    const monthLines = lines
+      .filter((line) => {
+        const rec = line.recurrence ?? "one_time";
+        if (rec === "monthly") {
+          const start = line.startMonth ?? line.month;
+          const end = line.endMonth ?? start;
+          return compareMonthId(month, start) >= 0 && compareMonthId(month, end) <= 0;
+        }
+        return line.month === month;
+      })
       .slice()
       .sort((a, b) => a.label.localeCompare(b.label));
     const totalPaydayOutflow = monthLines.reduce((s, l) => s + l.amount, 0);

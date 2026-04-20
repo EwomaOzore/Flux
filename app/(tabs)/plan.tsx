@@ -24,6 +24,7 @@ import {
 } from "@/components/ui";
 import { hairlineBorder, radii, spacing } from "@/constants/theme";
 import {
+  compareMonthId,
   currentPaydayMonthId,
   formatMonthIdDisplay,
   type MonthId,
@@ -61,6 +62,12 @@ export default function PlanScreen() {
 
   const [addMonth, setAddMonth] = useState<MonthId>(() =>
     currentPaydayMonthId(),
+  );
+  const [addEndMonth, setAddEndMonth] = useState<MonthId>(() =>
+    currentPaydayMonthId(),
+  );
+  const [addLineRecurrence, setAddLineRecurrence] = useState<"one_time" | "monthly">(
+    "one_time",
   );
   const [addLabel, setAddLabel] = useState("");
   const [addAmount, setAddAmount] = useState("");
@@ -126,12 +133,26 @@ export default function PlanScreen() {
       return;
     }
     const label = addLabel.trim() || "Payday item";
-    addLine({ month: addMonth, label, amount });
+    if (addLineRecurrence === "monthly" && compareMonthId(addEndMonth, addMonth) < 0) {
+      Alert.alert("End month needed", "End month cannot be earlier than start month.");
+      return;
+    }
+    addLine({
+      month: addMonth,
+      label,
+      amount,
+      recurrence: addLineRecurrence,
+      ...(addLineRecurrence === "monthly"
+        ? { startMonth: addMonth, endMonth: addEndMonth }
+        : {}),
+    });
     setAddLabel("");
     setAddAmount("");
     Alert.alert(
       "Added",
-      `“${label}” for ${formatMonthIdDisplay(addMonth)} was added. It will show on Home and Timeline.`,
+      addLineRecurrence === "monthly"
+        ? `“${label}” will repeat monthly from ${formatMonthIdDisplay(addMonth)} to ${formatMonthIdDisplay(addEndMonth)}.`
+        : `“${label}” for ${formatMonthIdDisplay(addMonth)} was added. It will show on Home and Timeline.`,
     );
   };
 
@@ -147,6 +168,8 @@ export default function PlanScreen() {
           onPress: () => {
             resetBudget();
             setAddMonth(currentPaydayMonthId());
+            setAddEndMonth(currentPaydayMonthId());
+            setAddLineRecurrence("one_time");
             setAddLabel("");
             setAddAmount("");
           },
@@ -302,16 +325,118 @@ export default function PlanScreen() {
 
         <SectionCard
           title="Add payday outflow"
-          subtitle="One-off or recurring by month"
+          subtitle="One-off for one month, or repeat monthly from a start month"
         >
-          <FormField label="Month">
-            <MonthPickerField
-              value={addMonth}
-              onChange={setAddMonth}
-              palette={palette}
-              triggerStyle={monthTriggerStyle}
-            />
+          <FormField label="When this applies">
+            <RNView style={styles.recurRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: addLineRecurrence === "one_time" }}
+                onPress={() => setAddLineRecurrence("one_time")}
+                style={({ pressed }) => [
+                  styles.recurChip,
+                  {
+                    borderColor:
+                      addLineRecurrence === "one_time"
+                        ? palette.tint
+                        : palette.border,
+                    backgroundColor:
+                      addLineRecurrence === "one_time"
+                        ? palette.tintMuted
+                        : palette.surfaceMuted,
+                    opacity: pressed ? 0.92 : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color:
+                      addLineRecurrence === "one_time"
+                        ? palette.tintStrong
+                        : palette.textSecondary,
+                    fontWeight: "700",
+                  }}
+                >
+                  One-time
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: addLineRecurrence === "monthly" }}
+                onPress={() => setAddLineRecurrence("monthly")}
+                style={({ pressed }) => [
+                  styles.recurChip,
+                  {
+                    borderColor:
+                      addLineRecurrence === "monthly"
+                        ? palette.tint
+                        : palette.border,
+                    backgroundColor:
+                      addLineRecurrence === "monthly"
+                        ? palette.tintMuted
+                        : palette.surfaceMuted,
+                    opacity: pressed ? 0.92 : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color:
+                      addLineRecurrence === "monthly"
+                        ? palette.tintStrong
+                        : palette.textSecondary,
+                    fontWeight: "700",
+                  }}
+                >
+                  Monthly
+                </Text>
+              </Pressable>
+            </RNView>
+            <Text style={[styles.recurHint, { color: palette.textMuted }]}>
+              {addLineRecurrence === "monthly"
+                ? "This line will appear every month from your selected start month."
+                : "This line applies only to the selected month."}
+            </Text>
           </FormField>
+          {addLineRecurrence === "monthly" ? (
+            <RNView style={styles.rangeRow}>
+              <RNView style={styles.rangeCol}>
+                <Text style={styles.rangeLabel}>Start month</Text>
+                <MonthPickerField
+                  value={addMonth}
+                  onChange={(m) => {
+                    setAddMonth(m);
+                    if (
+                      addLineRecurrence === "monthly" &&
+                      compareMonthId(addEndMonth, m) < 0
+                    ) {
+                      setAddEndMonth(m);
+                    }
+                  }}
+                  palette={palette}
+                  triggerStyle={monthTriggerStyle}
+                />
+              </RNView>
+              <RNView style={styles.rangeCol}>
+                <Text style={styles.rangeLabel}>End month</Text>
+                <MonthPickerField
+                  value={addEndMonth}
+                  onChange={setAddEndMonth}
+                  palette={palette}
+                  triggerStyle={monthTriggerStyle}
+                />
+              </RNView>
+            </RNView>
+          ) : (
+            <FormField label="Month">
+              <MonthPickerField
+                value={addMonth}
+                onChange={setAddMonth}
+                palette={palette}
+                triggerStyle={monthTriggerStyle}
+              />
+            </FormField>
+          )}
           <FormField label="Label">
             <FluxTextInput
               value={addLabel}
@@ -503,5 +628,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
     lineHeight: 18,
+  },
+  recurRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  recurChip: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  recurHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: spacing.sm,
+  },
+  rangeRow: {
+    marginTop: spacing.md,
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  rangeCol: {
+    flex: 1,
+    gap: 6,
+  },
+  rangeLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    opacity: 0.75,
   },
 });

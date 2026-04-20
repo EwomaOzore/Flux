@@ -79,6 +79,13 @@ export default function HomeScreen() {
   const positive = cushion >= 0;
   const cushionColor = positive ? palette.success : palette.danger;
   const cushionBg = positive ? palette.successMuted : palette.dangerMuted;
+  const pinnedOutflows = useMemo(
+    () =>
+      [...(roll?.lines ?? [])]
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 3),
+    [roll?.lines],
+  );
 
   return (
     <RNView style={styles.screen}>
@@ -238,6 +245,26 @@ export default function HomeScreen() {
           />
           <Text style={styles.sectionTitle}>{"This payday's line items"}</Text>
         </RNView>
+        {pinnedOutflows.length > 0 ? (
+          <RNView
+            style={[
+              styles.pinnedCard,
+              { borderColor: palette.border, backgroundColor: palette.surfaceMuted },
+              hairlineBorder(palette.border),
+            ]}>
+            <Text style={[styles.pinnedTitle, { color: palette.textSecondary }]}>
+              Pinned key outflows
+            </Text>
+            {pinnedOutflows.map((line) => (
+              <RNView key={line.id} style={styles.pinnedRow}>
+                <Text style={[styles.pinnedLabel, { color: palette.text }]} numberOfLines={1}>
+                  {line.label}
+                </Text>
+                <MoneyText amount={line.amount} style={{ color: palette.textSecondary }} />
+              </RNView>
+            ))}
+          </RNView>
+        ) : null}
 
         {(roll?.lines.length ?? 0) === 0 ? (
           <RNView
@@ -324,13 +351,13 @@ function StatChip({
   accent,
   muted,
   palette,
-}: {
+}: Readonly<{
   label: string;
   value: string;
   accent: string;
   muted: string;
   palette: ThemePalette;
-}) {
+}>) {
   return (
     <RNView style={[styles.statChip, { backgroundColor: muted }]}>
       <Text style={[styles.statChipLabel, { color: palette.textMuted }]}>
@@ -533,6 +560,29 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     letterSpacing: -0.3,
+  },
+  pinnedCard: {
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: spacing.xs,
+  },
+  pinnedTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  pinnedRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  pinnedLabel: {
+    flex: 1,
+    fontWeight: "600",
   },
   emptyCard: {
     marginTop: spacing.sm,

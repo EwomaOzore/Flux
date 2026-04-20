@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet } from 'react-native';
 import { useFluxPalette } from '@/components/ui/useFluxPalette';
 import { radii } from '@/constants/theme';
 import { addMonthsId } from '@/src/domain/month';
+import { logActivity } from '@/src/lib/activityLog';
 import type { PaydayLine } from '@/src/domain/types';
 import { scheduleLineUndo } from '@/src/state/lineUndoStore';
 import { useBudgetStore } from '@/src/state/budgetStore';
@@ -23,7 +24,16 @@ export function DeferLineToNextMonthButton({ line }: Props) {
     }
     const nextMonth = addMonthsId(line.month, 1);
     scheduleLineUndo({ kind: 'defer', lineId: line.id, previousMonth: line.month });
-    updateLine(line.id, { month: nextMonth });
+    updateLine(line.id, {
+      month: nextMonth,
+      ...(line.recurrence === 'monthly'
+        ? {
+            startMonth: addMonthsId(line.startMonth ?? line.month, 1),
+            endMonth: addMonthsId(line.endMonth ?? line.startMonth ?? line.month, 1),
+          }
+        : {}),
+    });
+    void logActivity('defer-line', line.label);
   };
 
   return (

@@ -72,6 +72,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="upcoming"
+        options={{
+          title: "Upcoming",
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="clock-o" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="timeline"
         options={{
           title: "Timeline",

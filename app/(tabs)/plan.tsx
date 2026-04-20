@@ -29,6 +29,7 @@ import {
   formatMonthIdDisplay,
   type MonthId,
 } from "@/src/domain/month";
+import { logActivity } from "@/src/lib/activityLog";
 import { incomeNgnForMonth, totalBillsAmount } from "@/src/domain/types";
 import { formatNgn, parseNgnInput } from "@/src/lib/formatCurrency";
 import {
@@ -40,9 +41,17 @@ import {
 import { useBudgetStore } from "@/src/state/budgetStore";
 
 function moneyDraftFromText(text: string): string {
-  if (!text.replace(/\D/g, "")) return "";
+  if (!text.replaceAll(/\D/g, "")) return "";
   return formatNgn(parseNgnInput(text));
 }
+
+const LINE_TEMPLATES = [
+  "Rent",
+  "Utilities",
+  "School fees",
+  "Transport",
+  "Food top-up",
+] as const;
 
 export default function PlanScreen() {
   const { palette } = useFluxPalette();
@@ -83,7 +92,7 @@ export default function PlanScreen() {
 
   useEffect(() => {
     const load = () => {
-      void loadReminderPrefs().then(setReminderPrefs);
+      loadReminderPrefs().then(setReminderPrefs).catch(() => {});
     };
     if (useBudgetStore.persist.hasHydrated()) {
       load();
@@ -120,6 +129,19 @@ export default function PlanScreen() {
     await applyReminderPrefs(next);
   };
 
+  const onReminderDayChange = async (nextDay: number) => {
+    const day = Math.max(1, Math.min(28, nextDay));
+    const next = { ...reminderPrefs, dayOfMonth: day };
+    setReminderPrefs(next);
+    await applyReminderPrefs(next);
+  };
+
+  const onReminderTimePreset = async (hour: number, minute: number) => {
+    const next = { ...reminderPrefs, hour, minute };
+    setReminderPrefs(next);
+    await applyReminderPrefs(next);
+  };
+
   const onAddIncomeRow = () => {
     const id = `income-${Date.now().toString(36)}`;
     addIncomeStream({ id, label: "", amountNgn: 0 });
@@ -133,6 +155,17 @@ export default function PlanScreen() {
       return;
     }
     const label = addLabel.trim() || "Payday item";
+    if (amount > 500_000_000) {
+      Alert.alert("Large amount", "That amount looks unusually high. Please confirm before adding.");
+      return;
+    }
+    const duplicateInMonth = useBudgetStore
+      .getState()
+      .lines.some((line) => line.month === addMonth && line.label.trim().toLowerCase() === label.toLowerCase());
+    if (duplicateInMonth) {
+      Alert.alert("Possible duplicate", "A line with this label already exists in that month.");
+      return;
+    }
     if (addLineRecurrence === "monthly" && compareMonthId(addEndMonth, addMonth) < 0) {
       Alert.alert("End month needed", "End month cannot be earlier than start month.");
       return;
@@ -148,6 +181,7 @@ export default function PlanScreen() {
     });
     setAddLabel("");
     setAddAmount("");
+    logActivity("add-line", `${label} · ${formatNgn(amount)}`).catch(() => {});
     Alert.alert(
       "Added",
       addLineRecurrence === "monthly"
@@ -398,6 +432,28 @@ export default function PlanScreen() {
                 : "This line applies only to the selected month."}
             </Text>
           </FormField>
+          <FormField label="Quick templates">
+            <RNView style={styles.templateRow}>
+              {LINE_TEMPLATES.map((label) => (
+                <Pressable
+                  key={label}
+                  accessibilityRole="button"
+                  onPress={() => setAddLabel(label)}
+                  style={({ pressed }) => [
+                    styles.templateChip,
+                    {
+                      borderColor: palette.border,
+                      backgroundColor: palette.surfaceMuted,
+                      opacity: pressed ? 0.9 : 1,
+                    },
+                  ]}>
+                  <Text style={{ color: palette.textSecondary, fontWeight: "700" }}>
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </RNView>
+          </FormField>
           {addLineRecurrence === "monthly" ? (
             <RNView style={styles.rangeRow}>
               <RNView style={styles.rangeCol}>
@@ -503,6 +559,72 @@ export default function PlanScreen() {
                 thumbColor={palette.surface}
               />
             </RNView>
+          ) : null}
+          {reminderPrefs.enabled ? (
+            <>
+              <RNView style={styles.reminderTuneRow}>
+                <Text style={[styles.reminderTitle, { color: palette.text }]}>
+                  Check-in day
+                </Text>
+                <RNView style={styles.stepperWrap}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => void onReminderDayChange(reminderPrefs.dayOfMonth - 1)}
+                    style={({ pressed }) => [
+                      styles.stepperBtn,
+                      { opacity: pressed ? 0.85 : 1, borderColor: palette.borderStrong, backgroundColor: palette.surfaceMuted },
+                    ]}>
+                    <Text style={{ color: palette.text }}>-</Text>
+                  </Pressable>
+                  <Text style={{ color: palette.textSecondary, fontWeight: "700" }}>
+                    Day {reminderPrefs.dayOfMonth}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => void onReminderDayChange(reminderPrefs.dayOfMonth + 1)}
+                    style={({ pressed }) => [
+                      styles.stepperBtn,
+                      { opacity: pressed ? 0.85 : 1, borderColor: palette.borderStrong, backgroundColor: palette.surfaceMuted },
+                    ]}>
+                    <Text style={{ color: palette.text }}>+</Text>
+                  </Pressable>
+                </RNView>
+              </RNView>
+              <Text style={[styles.reminderSub, { color: palette.textMuted }]}>
+                Quick time presets
+              </Text>
+              <RNView style={styles.templateRow}>
+                {[
+                  { label: "08:00", hour: 8, minute: 0 },
+                  { label: "09:00", hour: 9, minute: 0 },
+                  { label: "18:00", hour: 18, minute: 0 },
+                ].map((t) => {
+                  const selected = reminderPrefs.hour === t.hour && reminderPrefs.minute === t.minute;
+                  return (
+                    <Pressable
+                      key={t.label}
+                      accessibilityRole="button"
+                      onPress={() => void onReminderTimePreset(t.hour, t.minute)}
+                      style={({ pressed }) => [
+                        styles.templateChip,
+                        {
+                          borderColor: selected ? palette.tint : palette.border,
+                          backgroundColor: selected ? palette.tintMuted : palette.surfaceMuted,
+                          opacity: pressed ? 0.9 : 1,
+                        },
+                      ]}>
+                      <Text
+                        style={{
+                          color: selected ? palette.tintStrong : palette.textSecondary,
+                          fontWeight: "700",
+                        }}>
+                        {t.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </RNView>
+            </>
           ) : null}
         </SectionCard>
 
@@ -663,5 +785,39 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
     opacity: 0.75,
+  },
+  templateRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  templateChip: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
+    minHeight: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  reminderTuneRow: {
+    marginTop: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  stepperWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  stepperBtn: {
+    width: 32,
+    height: 32,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

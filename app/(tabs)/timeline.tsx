@@ -29,6 +29,7 @@ import {
   formatMonthIdDisplay,
   type MonthId,
 } from "@/src/domain/month";
+import { logActivity } from "@/src/lib/activityLog";
 import { formatNgn } from "@/src/lib/formatCurrency";
 import type { MonthRollup, PaydayLine } from "@/src/domain/types";
 import { computeRollups, useBudgetStore } from "@/src/state/budgetStore";
@@ -138,6 +139,7 @@ export default function TimelineScreen() {
     }
     scheduleLineUndo({ kind: "delete", line });
     deleteLine(line.id);
+    logActivity("delete-line", line.label).catch(() => {});
   };
 
   const renderItem = ({

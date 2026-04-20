@@ -4,7 +4,6 @@ import {
   Alert,
   Pressable,
   View as RNView,
-  Share,
   StyleSheet,
   Switch,
 } from "react-native";
@@ -30,7 +29,6 @@ import {
   type MonthId,
 } from "@/src/domain/month";
 import { incomeNgnForMonth, totalBillsAmount } from "@/src/domain/types";
-import { buildExportCsv, buildExportJson } from "@/src/lib/exportBudget";
 import { formatNgn, parseNgnInput } from "@/src/lib/formatCurrency";
 import {
   applyReminderPrefs,
@@ -95,36 +93,6 @@ export default function PlanScreen() {
     }),
     [palette.borderStrong, palette.surfaceMuted],
   );
-
-  const exportPayload = () => ({
-    incomeStreams: useBudgetStore.getState().incomeStreams,
-    billItems: useBudgetStore.getState().billItems,
-    lines: useBudgetStore.getState().lines,
-  });
-
-  const onExportJson = async () => {
-    const json = buildExportJson(exportPayload());
-    try {
-      await Share.share({
-        message: json,
-        title: "Flux backup (JSON)",
-      });
-    } catch {
-      Alert.alert("Could not share", "Try again or copy from a file manager.");
-    }
-  };
-
-  const onExportCsv = async () => {
-    const csv = buildExportCsv(exportPayload());
-    try {
-      await Share.share({
-        message: csv,
-        title: "Flux backup (CSV)",
-      });
-    } catch {
-      Alert.alert("Could not share", "Try again or copy from a file manager.");
-    }
-  };
 
   const onReminderToggle = async (enabled: boolean) => {
     const next = { ...reminderPrefs, enabled };
@@ -413,48 +381,6 @@ export default function PlanScreen() {
           ) : null}
         </SectionCard>
 
-        <SectionCard
-          title="Backup"
-          subtitle="JSON or CSV — keep a copy outside the phone"
-        >
-          <RNView style={styles.exportRow}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void onExportJson()}
-              style={({ pressed }) => [
-                styles.exportBtn,
-                styles.exportBtnHalf,
-                monthTriggerStyle,
-                { opacity: pressed ? 0.9 : 1 },
-              ]}
-            >
-              <FontAwesome name="file-o" size={18} color={palette.tint} />
-              <Text style={[styles.exportBtnText, { color: palette.text }]}>
-                JSON
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void onExportCsv()}
-              style={({ pressed }) => [
-                styles.exportBtn,
-                styles.exportBtnHalf,
-                monthTriggerStyle,
-                { opacity: pressed ? 0.9 : 1 },
-              ]}
-            >
-              <FontAwesome name="table" size={18} color={palette.tint} />
-              <Text style={[styles.exportBtnText, { color: palette.text }]}>
-                CSV
-              </Text>
-            </Pressable>
-          </RNView>
-          {/* <Text style={[styles.trustNote, { color: palette.textMuted }]}>
-            App lock with Face ID or fingerprint is on the roadmap. Home-screen widgets (next payday + cushion) are a
-            bigger lift — also planned.
-          </Text> */}
-        </SectionCard>
-
         <DangerOutlineButton label="Start over" onPress={onStartOver} />
       </ScreenScroll>
 
@@ -577,30 +503,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
     lineHeight: 18,
-  },
-  exportRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  exportBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    minHeight: 50,
-  },
-  exportBtnHalf: {
-    flex: 1,
-  },
-  exportBtnText: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  trustNote: {
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: spacing.md,
   },
 });

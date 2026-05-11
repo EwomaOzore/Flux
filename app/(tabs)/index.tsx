@@ -1,10 +1,10 @@
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useMemo, useState } from "react";
 import {
+  Pressable,
   View as RNView,
   ScrollView,
   StyleSheet,
-  Pressable,
 } from "react-native";
 import { useShallow } from "zustand/react/shallow";
 
@@ -30,11 +30,7 @@ import {
 import { totalBillsAmount } from "@/src/domain/types";
 import { formatNgn } from "@/src/lib/formatCurrency";
 import { planningStreakMonths } from "@/src/lib/planningInsights";
-import {
-  rollupForCurrentPayday,
-  rollupsThroughMonth,
-  useBudgetStore,
-} from "@/src/state/budgetStore";
+import { useBudgetStore } from "@/src/state/budgetStore";
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -51,24 +47,34 @@ export default function HomeScreen() {
   );
   const [infoOpen, setInfoOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+
+  const billsTotal = useMemo(
+    () => totalBillsAmount(budgetForRollup.billItems),
+    [budgetForRollup.billItems],
+  );
+
   const roll = useMemo(
-    () => rollupForCurrentPayday(budgetForRollup),
-    [budgetForRollup, paydayMonth],
+    () =>
+      buildRollupsFromStreams(
+        [paydayMonth],
+        budgetForRollup.incomeStreams,
+        billsTotal,
+        budgetForRollup.lines,
+      )[0],
+    [budgetForRollup, paydayMonth, billsTotal],
   );
 
   const prevMonth = useMemo(() => addMonthsId(paydayMonth, -1), [paydayMonth]);
-  const prevRoll = useMemo(() => {
-    const rolls = rollupsThroughMonth(budgetForRollup, paydayMonth);
-    return (
-      rolls.find((r) => r.month === prevMonth) ??
+  const prevRoll = useMemo(
+    () =>
       buildRollupsFromStreams(
         [prevMonth],
         budgetForRollup.incomeStreams,
-        totalBillsAmount(budgetForRollup.billItems),
+        billsTotal,
         budgetForRollup.lines,
-      )[0]
-    );
-  }, [budgetForRollup, prevMonth]);
+      )[0],
+    [budgetForRollup, prevMonth, billsTotal],
+  );
 
   const streak = useMemo(
     () => planningStreakMonths(budgetForRollup.lines, paydayMonth),
@@ -85,214 +91,230 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: Math.max(spacing.xl + 72, tabBarHeight + spacing.md) },
+          {
+            paddingBottom: Math.max(spacing.xl + 72, tabBarHeight + spacing.md),
+          },
         ]}
         style={{ backgroundColor: palette.background }}
         showsVerticalScrollIndicator={false}
       >
-      <RNView style={styles.decorTop}>
-        <RNView style={[styles.decorBlob, { backgroundColor: palette.tint }]} />
-        <RNView
-          style={[styles.decorBlob2, { backgroundColor: palette.info }]}
-        />
-      </RNView>
-
-      <View style={styles.container}>
-        <RNView style={[styles.brandRow, hairlineBorder(palette.border)]}>
+        <RNView style={styles.decorTop}>
           <RNView
-            style={[styles.brandDot, { backgroundColor: palette.tint }]}
+            style={[styles.decorBlob, { backgroundColor: palette.tint }]}
           />
-          <Text style={[styles.brandText, { color: palette.textSecondary }]}>
-            Payday snapshot
-          </Text>
+          <RNView
+            style={[styles.decorBlob2, { backgroundColor: palette.info }]}
+          />
         </RNView>
 
-        <Text style={[styles.kicker, { color: palette.tintStrong }]}>
-          End-of-month payday
-        </Text>
-        <Text style={styles.monthLabel}>
-          {formatMonthIdDisplay(paydayMonth)}
-        </Text>
-        <Text style={[styles.caption, { color: palette.textSecondary }]}>
-          Salary lands for the month ahead; big bills hit the same run.
-          {incomeStreamCount > 1
-            ? ` You have ${incomeStreamCount} income streams combined below.`
-            : null}
-        </Text>
+        <View style={styles.container}>
+          <RNView style={[styles.brandRow, hairlineBorder(palette.border)]}>
+            <RNView
+              style={[styles.brandDot, { backgroundColor: palette.tint }]}
+            />
+            <Text style={[styles.brandText, { color: palette.textSecondary }]}>
+              Payday snapshot
+            </Text>
+          </RNView>
 
-        <RNView
-          style={[
-            styles.hero,
-            {
-              backgroundColor: palette.surface,
-              borderColor: palette.border,
-            },
-            cardElevation(colorScheme),
-          ]}
-        >
-          <RNView
-            style={[styles.heroAccent, { backgroundColor: palette.tint }]}
-          />
-          <RNView style={[styles.cushionBadge, { backgroundColor: cushionBg }]}>
-            <Text style={[styles.cushionBadgeLabel, { color: cushionColor }]}>
-              {positive ? "Healthy cushion" : "Below bills"}
-            </Text>
-          </RNView>
-          <Text style={[styles.heroLabel, { color: palette.textSecondary }]}>
-            Cushion after bills
+          <Text style={[styles.kicker, { color: palette.tintStrong }]}>
+            End-of-month payday
           </Text>
-          <MoneyText
-            amount={cushion}
-            variant="titleEmphasis"
-            style={{ color: cushionColor }}
-          />
-          <RNView style={styles.statRow}>
-            <StatChip
-              label="Income (₦)"
-              value={formatNgn(roll?.income ?? 0)}
-              accent={palette.accentBlue}
-              muted={palette.infoMuted}
-              palette={palette}
-            />
-            <StatChip
-              label="Bills"
-              value={formatNgn(roll?.billsTotal ?? 0)}
-              accent={palette.accentViolet}
-              muted={palette.tintMuted}
-              palette={palette}
-            />
-            <StatChip
-              label="Payday out"
-              value={formatNgn(roll?.totalPaydayOutflow ?? 0)}
-              accent={palette.accentAmber}
-              muted={palette.warningMuted}
-              palette={palette}
-            />
-          </RNView>
-          <Text style={[styles.insight, { color: palette.textSecondary }]}>
-            {positive
-              ? `You have about ${formatNgn(cushion)} left for discretionary spending this payday — after bills and the line items you’ve planned.`
-              : `You’re short about ${formatNgn(Math.abs(cushion))} after bills and planned outflows — trim a line or defer one.`}
+          <Text style={styles.monthLabel}>
+            {formatMonthIdDisplay(paydayMonth)}
           </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityHint="Shows how cushion is calculated"
-            onPress={() => setInfoOpen(true)}
-            style={({ pressed }) => [
-              styles.infoLinkRow,
-              { opacity: pressed ? 0.75 : 1 },
-            ]}>
-            <Text style={[styles.infoLink, { color: palette.tint }]}>
-              What&apos;s included? Bills vs payday lines
-            </Text>
-          </Pressable>
+          <Text style={[styles.caption, { color: palette.textSecondary }]}>
+            Salary lands for the month ahead; big bills hit the same run.
+            {incomeStreamCount > 1
+              ? ` You have ${incomeStreamCount} income streams combined below.`
+              : null}
+          </Text>
 
           <RNView
             style={[
-              styles.compareCard,
+              styles.hero,
               {
-                backgroundColor: palette.surfaceMuted,
+                backgroundColor: palette.surface,
                 borderColor: palette.border,
               },
-              hairlineBorder(palette.border),
-            ]}>
-            <Text style={[styles.compareTitle, { color: palette.textMuted }]}>
-              Cushion snapshot
-            </Text>
-            <Text style={[styles.compareBody, { color: palette.textSecondary }]}>
-              Last payday ({formatMonthIdDisplay(prevMonth)}):{" "}
-              <Text style={{ fontWeight: "700", color: palette.text }}>
-                {formatNgn(prevRoll.cushionAfterBills)}
-              </Text>
-              {" · "}
-              This payday ({formatMonthIdDisplay(paydayMonth)}):{" "}
-              <Text style={{ fontWeight: "700", color: palette.text }}>
-                {formatNgn(cushion)}
-              </Text>
-            </Text>
-            <Text style={[styles.compareHint, { color: palette.textMuted }]}>
-              No score — just visibility across paydays.
-            </Text>
-          </RNView>
-
-          {streak >= 2 ? (
-            <Text style={[styles.streakLine, { color: palette.textMuted }]}>
-              You&apos;ve logged spending {streak} paydays in a row. Steady rhythm.
-            </Text>
-          ) : null}
-        </RNView>
-
-        <DiscretionaryInfoModal
-          visible={infoOpen}
-          onClose={() => setInfoOpen(false)}
-          monthLabel={formatMonthIdDisplay(paydayMonth)}
-          income={roll?.income ?? 0}
-          billsTotal={roll?.billsTotal ?? 0}
-          paydayOutflow={roll?.totalPaydayOutflow ?? 0}
-          cushion={cushion}
-        />
-
-        <RNView style={styles.sectionHead}>
-          <RNView
-            style={[styles.sectionBar, { backgroundColor: palette.tint }]}
-          />
-          <Text style={styles.sectionTitle}>{"This payday's line items"}</Text>
-        </RNView>
-
-        {(roll?.lines.length ?? 0) === 0 ? (
-          <RNView
-            style={[
-              styles.emptyCard,
-              {
-                backgroundColor: palette.surfaceMuted,
-                borderColor: palette.border,
-              },
-              hairlineBorder(palette.border),
-            ]}
-          >
-            <Text style={[styles.empty, { color: palette.textMuted }]}>
-              Nothing here yet. Add one thing you&apos;re saving for — rent top-up, a trip, a bill — so this payday
-              reflects real life.
-            </Text>
-          </RNView>
-        ) : (
-          <RNView
-            style={[
-              styles.linesCard,
-              { backgroundColor: palette.surface, borderColor: palette.border },
               cardElevation(colorScheme),
             ]}
           >
-            {roll!.lines.map((l, i) => (
-              <RNView
-                key={l.id}
-                style={[
-                  styles.lineRow,
-                  i < roll!.lines.length - 1 && {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: palette.border,
-                  },
-                ]}
+            <RNView
+              style={[styles.heroAccent, { backgroundColor: palette.tint }]}
+            />
+            <RNView
+              style={[styles.cushionBadge, { backgroundColor: cushionBg }]}
+            >
+              <Text style={[styles.cushionBadgeLabel, { color: cushionColor }]}>
+                {positive ? "Healthy cushion" : "Below bills"}
+              </Text>
+            </RNView>
+            <Text style={[styles.heroLabel, { color: palette.textSecondary }]}>
+              Cushion after bills
+            </Text>
+            <MoneyText
+              amount={cushion}
+              variant="titleEmphasis"
+              style={{ color: cushionColor }}
+            />
+            <RNView style={styles.statRow}>
+              <StatChip
+                label="Income (₦)"
+                value={formatNgn(roll?.income ?? 0)}
+                accent={palette.accentBlue}
+                muted={palette.infoMuted}
+                palette={palette}
+              />
+              <StatChip
+                label="Bills"
+                value={formatNgn(roll?.billsTotal ?? 0)}
+                accent={palette.accentViolet}
+                muted={palette.tintMuted}
+                palette={palette}
+              />
+              <StatChip
+                label="Payday out"
+                value={formatNgn(roll?.totalPaydayOutflow ?? 0)}
+                accent={palette.accentAmber}
+                muted={palette.warningMuted}
+                palette={palette}
+              />
+            </RNView>
+            <Text style={[styles.insight, { color: palette.textSecondary }]}>
+              {positive
+                ? `You have about ${formatNgn(cushion)} left for discretionary spending this payday — after bills and the line items you’ve planned.`
+                : `You’re short about ${formatNgn(Math.abs(cushion))} after bills and planned outflows — trim a line or defer one.`}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityHint="Shows how cushion is calculated"
+              onPress={() => setInfoOpen(true)}
+              style={({ pressed }) => [
+                styles.infoLinkRow,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              <Text style={[styles.infoLink, { color: palette.tint }]}>
+                What&apos;s included? Bills vs payday lines
+              </Text>
+            </Pressable>
+
+            <RNView
+              style={[
+                styles.compareCard,
+                {
+                  backgroundColor: palette.surfaceMuted,
+                  borderColor: palette.border,
+                },
+                hairlineBorder(palette.border),
+              ]}
+            >
+              <Text style={[styles.compareTitle, { color: palette.textMuted }]}>
+                Cushion snapshot
+              </Text>
+              <Text
+                style={[styles.compareBody, { color: palette.textSecondary }]}
               >
-                <RNView
-                  style={[
-                    styles.lineDot,
-                    { backgroundColor: palette.accentViolet },
-                  ]}
-                />
-                <Text style={[styles.lineLabel, { color: palette.text }]}>
-                  {l.label}
+                Last payday ({formatMonthIdDisplay(prevMonth)}):{" "}
+                <Text style={{ fontWeight: "700", color: palette.text }}>
+                  {formatNgn(prevRoll.cushionAfterBills)}
                 </Text>
-                <DeferLineToNextMonthButton line={l} />
-                <MoneyText
-                  amount={-l.amount}
-                  style={[styles.lineAmount, { color: palette.danger }]}
-                />
-              </RNView>
-            ))}
+                {" · "}
+                This payday ({formatMonthIdDisplay(paydayMonth)}):{" "}
+                <Text style={{ fontWeight: "700", color: palette.text }}>
+                  {formatNgn(cushion)}
+                </Text>
+              </Text>
+              <Text style={[styles.compareHint, { color: palette.textMuted }]}>
+                No score — just visibility across paydays.
+              </Text>
+            </RNView>
+
+            {streak >= 2 ? (
+              <Text style={[styles.streakLine, { color: palette.textMuted }]}>
+                You&apos;ve logged spending {streak} paydays in a row. Steady
+                rhythm.
+              </Text>
+            ) : null}
           </RNView>
-        )}
-      </View>
+
+          <DiscretionaryInfoModal
+            visible={infoOpen}
+            onClose={() => setInfoOpen(false)}
+            monthLabel={formatMonthIdDisplay(paydayMonth)}
+            income={roll?.income ?? 0}
+            billsTotal={roll?.billsTotal ?? 0}
+            paydayOutflow={roll?.totalPaydayOutflow ?? 0}
+            cushion={cushion}
+          />
+
+          <RNView style={styles.sectionHead}>
+            <RNView
+              style={[styles.sectionBar, { backgroundColor: palette.tint }]}
+            />
+            <Text style={styles.sectionTitle}>
+              {"This payday's line items"}
+            </Text>
+          </RNView>
+
+          {(roll?.lines.length ?? 0) === 0 ? (
+            <RNView
+              style={[
+                styles.emptyCard,
+                {
+                  backgroundColor: palette.surfaceMuted,
+                  borderColor: palette.border,
+                },
+                hairlineBorder(palette.border),
+              ]}
+            >
+              <Text style={[styles.empty, { color: palette.textMuted }]}>
+                Nothing here yet. Add one thing you&apos;re saving for — rent
+                top-up, a trip, a bill — so this payday reflects real life.
+              </Text>
+            </RNView>
+          ) : (
+            <RNView
+              style={[
+                styles.linesCard,
+                {
+                  backgroundColor: palette.surface,
+                  borderColor: palette.border,
+                },
+                cardElevation(colorScheme),
+              ]}
+            >
+              {roll!.lines.map((l, i) => (
+                <RNView
+                  key={l.id}
+                  style={[
+                    styles.lineRow,
+                    i < roll!.lines.length - 1 && {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: palette.border,
+                    },
+                  ]}
+                >
+                  <RNView
+                    style={[
+                      styles.lineDot,
+                      { backgroundColor: palette.accentViolet },
+                    ]}
+                  />
+                  <Text style={[styles.lineLabel, { color: palette.text }]}>
+                    {l.label}
+                  </Text>
+                  <DeferLineToNextMonthButton line={l} />
+                  <MoneyText
+                    amount={-l.amount}
+                    style={[styles.lineAmount, { color: palette.danger }]}
+                  />
+                </RNView>
+              ))}
+            </RNView>
+          )}
+        </View>
       </ScrollView>
       <Pressable
         accessibilityRole="button"
@@ -306,7 +328,8 @@ export default function HomeScreen() {
             opacity: pressed ? 0.9 : 1,
           },
           cardElevation(colorScheme),
-        ]}>
+        ]}
+      >
         <Text style={styles.quickFabText}>+</Text>
       </Pressable>
       <QuickAddLineSheet

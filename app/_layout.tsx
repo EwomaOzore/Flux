@@ -1,4 +1,3 @@
-import "react-native-gesture-handler";
 import {
   Inter_400Regular,
   Inter_500Medium,

@@ -8,16 +8,14 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FluxBottomSheet, FluxBottomSheetHeader } from '@/components/FluxBottomSheet';
 import { Text } from '@/components/Themed';
 import { FluxTextInput, FormField, PrimaryButton, useFluxPalette } from '@/components/ui';
 import { MonthPickerField } from '@/components/MonthPickerField';
@@ -97,7 +95,7 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
         if (!full) {
           Alert.alert(
             'No text found',
-            'Try a clearer photo, use “Fill from clipboard” if you copied text from the receipt, or type the amount below.',
+            'Try a clearer photo, use "Fill from clipboard" if you copied text from the receipt, or type the amount below.',
           );
           return;
         }
@@ -186,7 +184,7 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
     addLine({ month, label, amount });
     Alert.alert(
       'Added',
-      `“${label}” for ${formatMonthIdDisplay(month)} was added from your receipt. It will show on Home and Timeline.`,
+      `"${label}" for ${formatMonthIdDisplay(month)} was added from your receipt. It will show on Home and Timeline.`,
     );
     if (keepOpen) {
       setImageUri(null);
@@ -205,215 +203,145 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={styles.root}>
-        <Pressable style={styles.backdrop} onPress={handleClose} accessibilityLabel="Close" />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 8 : 0}
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: palette.surface,
-              borderColor: palette.border,
-              paddingBottom: Math.max(insets.bottom, spacing.md),
-              maxHeight: '88%',
-            },
-            hairlineBorder(palette.border),
-          ]}>
-          <View style={[styles.handleZone, { borderBottomColor: palette.border }]}>
-            <View style={[styles.handle, { backgroundColor: palette.borderStrong }]} />
-          </View>
+    <FluxBottomSheet visible={visible} onClose={handleClose} snapPoints={['88%']}>
+      <FluxBottomSheetHeader title="Scan receipt" onClose={handleClose} subtitle={introCopy} />
 
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: palette.text }]}>Scan receipt</Text>
-            <Pressable onPress={handleClose} hitSlop={14} accessibilityRole="button" accessibilityLabel="Close">
-              <Text style={{ color: palette.tint, fontSize: 17, fontWeight: '700' }}>Done</Text>
-            </Pressable>
-          </View>
+      {ocrSupported ? null : (
+        <View style={[styles.tipBox, { backgroundColor: palette.infoMuted, borderColor: palette.border }]}>
+          <Text style={[styles.tipTitle, { color: palette.info }]}>
+            {Platform.OS === 'web' ? 'Paste receipt text' : 'Quick fill in Expo Go'}
+          </Text>
+          <Text style={[styles.tipBody, { color: palette.textSecondary }]}>
+            {Platform.OS === 'web'
+              ? 'Copy text from your receipt elsewhere, then tap the button below to parse label and amount.'
+              : 'Open the receipt in Photos → use Live Text to select text → Copy → come back here → tap Fill from clipboard.'}
+          </Text>
+          <Pressable
+            onPress={pasteFromClipboard}
+            style={({ pressed }) => [
+              styles.clipboardBtn,
+              {
+                backgroundColor: palette.surface,
+                borderColor: palette.borderStrong,
+                opacity: pressed ? 0.9 : 1,
+              },
+              hairlineBorder(palette.borderStrong),
+            ]}
+          >
+            <FontAwesome name="paste" size={18} color={palette.tint} />
+            <Text style={[styles.clipboardBtnText, { color: palette.text }]}>Fill from clipboard</Text>
+          </Pressable>
+        </View>
+      )}
 
-          <Text style={[styles.subtitle, { color: palette.textSecondary }]}>{introCopy}</Text>
+      <View style={[styles.scroll, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+        <View style={styles.actions}>
+          <Pressable
+            onPress={pickFromCamera}
+            disabled={ocrBusy}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              monthTriggerStyle,
+              { opacity: pressed || ocrBusy ? 0.85 : 1 },
+            ]}
+          >
+            <FontAwesome name="camera" size={20} color={palette.tint} />
+            <Text style={[styles.actionLabel, { color: palette.text }]}>Camera</Text>
+          </Pressable>
+          <Pressable
+            onPress={pickFromLibrary}
+            disabled={ocrBusy}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              monthTriggerStyle,
+              { opacity: pressed || ocrBusy ? 0.85 : 1 },
+            ]}
+          >
+            <FontAwesome name="photo" size={20} color={palette.tint} />
+            <Text style={[styles.actionLabel, { color: palette.text }]}>Photo library</Text>
+          </Pressable>
+        </View>
 
-          {ocrSupported ? null : (
-            <View style={[styles.tipBox, { backgroundColor: palette.infoMuted, borderColor: palette.border }]}>
-              <Text style={[styles.tipTitle, { color: palette.info }]}>
-                {Platform.OS === 'web' ? 'Paste receipt text' : 'Quick fill in Expo Go'}
-              </Text>
-              <Text style={[styles.tipBody, { color: palette.textSecondary }]}>
-                {Platform.OS === 'web'
-                  ? 'Copy text from your receipt elsewhere, then tap the button below to parse label and amount.'
-                  : 'Open the receipt in Photos → use Live Text to select text → Copy → come back here → tap Fill from clipboard.'}
-              </Text>
-              <Pressable
-                onPress={pasteFromClipboard}
-                style={({ pressed }) => [
-                  styles.clipboardBtn,
-                  {
-                    backgroundColor: palette.surface,
-                    borderColor: palette.borderStrong,
-                    opacity: pressed ? 0.9 : 1,
-                  },
-                  hairlineBorder(palette.borderStrong),
-                ]}>
-                <FontAwesome name="paste" size={18} color={palette.tint} />
-                <Text style={[styles.clipboardBtnText, { color: palette.text }]}>Fill from clipboard</Text>
-              </Pressable>
-            </View>
-          )}
-
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scroll}>
-            <View style={styles.actions}>
-              <Pressable
-                onPress={pickFromCamera}
-                disabled={ocrBusy}
-                style={({ pressed }) => [
-                  styles.actionBtn,
-                  monthTriggerStyle,
-                  { opacity: pressed || ocrBusy ? 0.85 : 1 },
-                ]}>
-                <FontAwesome name="camera" size={20} color={palette.tint} />
-                <Text style={[styles.actionLabel, { color: palette.text }]}>Camera</Text>
-              </Pressable>
-              <Pressable
-                onPress={pickFromLibrary}
-                disabled={ocrBusy}
-                style={({ pressed }) => [
-                  styles.actionBtn,
-                  monthTriggerStyle,
-                  { opacity: pressed || ocrBusy ? 0.85 : 1 },
-                ]}>
-                <FontAwesome name="photo" size={20} color={palette.tint} />
-                <Text style={[styles.actionLabel, { color: palette.text }]}>Photo library</Text>
-              </Pressable>
-            </View>
-
-            {ocrSupported ? (
-              <Pressable
-                onPress={pasteFromClipboard}
-                style={({ pressed }) => [
-                  styles.secondaryRow,
-                  monthTriggerStyle,
-                  { opacity: pressed ? 0.9 : 1 },
-                ]}>
-                <FontAwesome name="paste" size={18} color={palette.tint} />
-                <Text style={[styles.secondaryRowText, { color: palette.text }]}>
-                  Or fill from clipboard (copied receipt text)
-                </Text>
-              </Pressable>
-            ) : null}
-
-            {ocrBusy ? (
-              <View style={styles.busy}>
-                <ActivityIndicator size="large" color={palette.tint} />
-                <Text style={[styles.busyText, { color: palette.textMuted }]}>Reading receipt…</Text>
-              </View>
-            ) : null}
-
-            {imageUri && !ocrBusy ? (
-              <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="contain" />
-            ) : null}
-
-            <FormField label="Month for this expense">
-              <MonthPickerField value={month} onChange={onMonthChange} palette={palette} triggerStyle={monthTriggerStyle} />
-            </FormField>
-
-            <FormField label="Label (editable)">
-              <FluxTextInput
-                value={labelDraft}
-                onChangeText={setLabelDraft}
-                placeholder="e.g. Shop name or description"
-              />
-            </FormField>
-            <FormField label="Amount (editable)">
-              <FluxTextInput
-                value={amountDraft}
-                onChangeText={(t) => setAmountDraft(moneyDraftFromText(t))}
-                keyboardType="number-pad"
-                money
-                placeholder="e.g. ₦12,500"
-              />
-            </FormField>
-
-            {rawText.length > 0 ? (
-              <View style={[styles.rawBox, { borderColor: palette.border, backgroundColor: palette.surfaceMuted }]}>
-                <Text style={[styles.rawTitle, { color: palette.textMuted }]}>Recognized text</Text>
-                <Text style={[styles.rawBody, { color: palette.textSecondary }]} numberOfLines={6}>
-                  {rawText}
-                </Text>
-              </View>
-            ) : null}
-
-            <Text style={[styles.privacy, { color: palette.textMuted }]}>
-              Receipt images are processed on your device to read text. Flux doesn&apos;t upload your photos to our
-              servers for OCR. You can delete the photo from your library anytime.
+        {ocrSupported ? (
+          <Pressable
+            onPress={pasteFromClipboard}
+            style={({ pressed }) => [
+              styles.secondaryRow,
+              monthTriggerStyle,
+              { opacity: pressed ? 0.9 : 1 },
+            ]}
+          >
+            <FontAwesome name="paste" size={18} color={palette.tint} />
+            <Text style={[styles.secondaryRowText, { color: palette.text }]}>
+              Or fill from clipboard (copied receipt text)
             </Text>
+          </Pressable>
+        ) : null}
 
-            <PrimaryButton label="Add to payday outflows" onPress={() => onSave(false)} />
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => onSave(true)}
-              style={({ pressed }) => [
-                styles.addAnotherBtn,
-                monthTriggerStyle,
-                { opacity: pressed ? 0.9 : 1 },
-              ]}>
-              <Text style={[styles.addAnotherText, { color: palette.text }]}>Save and add another</Text>
-            </Pressable>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        {ocrBusy ? (
+          <View style={styles.busy}>
+            <ActivityIndicator size="large" color={palette.tint} />
+            <Text style={[styles.busyText, { color: palette.textMuted }]}>Reading receipt…</Text>
+          </View>
+        ) : null}
+
+        {imageUri && !ocrBusy ? (
+          <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="contain" />
+        ) : null}
+
+        <FormField label="Month for this expense">
+          <MonthPickerField value={month} onChange={onMonthChange} palette={palette} triggerStyle={monthTriggerStyle} />
+        </FormField>
+
+        <FormField label="Label (editable)">
+          <FluxTextInput
+            value={labelDraft}
+            onChangeText={setLabelDraft}
+            placeholder="e.g. Shop name or description"
+          />
+        </FormField>
+        <FormField label="Amount (editable)">
+          <FluxTextInput
+            value={amountDraft}
+            onChangeText={(t) => setAmountDraft(moneyDraftFromText(t))}
+            keyboardType="number-pad"
+            money
+            placeholder="e.g. ₦12,500"
+          />
+        </FormField>
+
+        {rawText.length > 0 ? (
+          <View style={[styles.rawBox, { borderColor: palette.border, backgroundColor: palette.surfaceMuted }]}>
+            <Text style={[styles.rawTitle, { color: palette.textMuted }]}>Recognized text</Text>
+            <Text style={[styles.rawBody, { color: palette.textSecondary }]} numberOfLines={6}>
+              {rawText}
+            </Text>
+          </View>
+        ) : null}
+
+        <Text style={[styles.privacy, { color: palette.textMuted }]}>
+          Receipt images are processed on your device to read text. Flux doesn&apos;t upload your photos to our
+          servers for OCR. You can delete the photo from your library anytime.
+        </Text>
+
+        <PrimaryButton label="Add to payday outflows" onPress={() => onSave(false)} />
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => onSave(true)}
+          style={({ pressed }) => [
+            styles.addAnotherBtn,
+            monthTriggerStyle,
+            { opacity: pressed ? 0.9 : 1 },
+          ]}
+        >
+          <Text style={[styles.addAnotherText, { color: palette.text }]}>Save and add another</Text>
+        </Pressable>
       </View>
-    </Modal>
+    </FluxBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#00000055',
-  },
-  sheet: {
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    overflow: 'hidden',
-  },
-  handleZone: {
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
   tipBox: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
@@ -460,7 +388,6 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
     gap: spacing.md,
   },
   actions: {

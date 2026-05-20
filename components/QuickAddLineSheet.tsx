@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Text } from '@/components/Themed';
+import { FluxBottomSheet, FluxBottomSheetHeader } from '@/components/FluxBottomSheet';
 import { FluxTextInput, FormField, PrimaryButton, useFluxPalette } from '@/components/ui';
-import { hairlineBorder, radii, spacing } from '@/constants/theme';
+import { radii, spacing } from '@/constants/theme';
 import { type MonthId, currentPaydayMonthId } from '@/src/domain/month';
 import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
 import { useBudgetStore } from '@/src/state/budgetStore';
@@ -58,77 +58,37 @@ export function QuickAddLineSheet({ visible, onClose, initialMonth }: Props) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={styles.root}>
-        <Pressable style={styles.backdrop} onPress={handleClose} accessibilityLabel="Close quick add" />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 8 : 0}
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: palette.surface,
-              borderColor: palette.border,
-              paddingBottom: Math.max(insets.bottom, spacing.md),
-            },
-            hairlineBorder(palette.border),
-          ]}>
-          <View style={[styles.handleZone, { borderBottomColor: palette.border }]}>
-            <View style={[styles.handle, { backgroundColor: palette.borderStrong }]} />
-          </View>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: palette.text }]}>Quick add</Text>
-            <Pressable onPress={handleClose} hitSlop={14}>
-              <Text style={{ color: palette.tint, fontSize: 17, fontWeight: '700' }}>Done</Text>
-            </Pressable>
-          </View>
-          <View style={styles.formWrap}>
-            <FormField label="Month">
-              <MonthPickerField value={month} onChange={setMonth} palette={palette} triggerStyle={triggerStyle} />
-            </FormField>
-            <FormField label="Label">
-              <FluxTextInput value={label} onChangeText={setLabel} placeholder="e.g. Rent, school fees, groceries" />
-            </FormField>
-            <FormField label="Amount">
-              <FluxTextInput
-                value={amount}
-                onChangeText={(t) => setAmount(moneyDraftFromText(t))}
-                keyboardType="number-pad"
-                money
-                placeholder="e.g. ₦35,000"
-              />
-            </FormField>
-            <PrimaryButton label="Add item" onPress={onAdd} />
-          </View>
-        </KeyboardAvoidingView>
+    <FluxBottomSheet
+      visible={visible}
+      onClose={handleClose}
+      enableDynamicSizing
+      variant="view"
+    >
+      <View style={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
+        <FluxBottomSheetHeader title="Quick add" onClose={handleClose} />
+        <View style={styles.formWrap}>
+          <FormField label="Month">
+            <MonthPickerField value={month} onChange={setMonth} palette={palette} triggerStyle={triggerStyle} />
+          </FormField>
+          <FormField label="Label">
+            <FluxTextInput value={label} onChangeText={setLabel} placeholder="e.g. Rent, school fees, groceries" />
+          </FormField>
+          <FormField label="Amount">
+            <FluxTextInput
+              value={amount}
+              onChangeText={(t) => setAmount(moneyDraftFromText(t))}
+              keyboardType="number-pad"
+              money
+              placeholder="e.g. ₦35,000"
+            />
+          </FormField>
+          <PrimaryButton label="Add item" onPress={onAdd} />
+        </View>
       </View>
-    </Modal>
+    </FluxBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#00000055' },
-  sheet: {
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    overflow: 'hidden',
-  },
-  handleZone: {
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  handle: { width: 36, height: 4, borderRadius: 2 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  title: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
   formWrap: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
 });

@@ -1,3 +1,4 @@
+import "react-native-gesture-handler";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -6,6 +7,7 @@ import {
   Inter_800ExtraBold,
 } from "@expo-google-fonts/inter";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import {
   DarkTheme,
   DefaultTheme,
@@ -17,6 +19,7 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Updates from "expo-updates";
 import { useEffect, useMemo } from "react";
 import { View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -92,47 +95,51 @@ function RootLayoutNav() {
   }, [colorScheme]);
 
   return (
-    <ThemeProvider value={navigationTheme}>
-      <ReminderBootstrap />
-      <EASUpdateSync />
-      <BiometricGate>
-        <View style={{ flex: 1 }}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="backup"
-              options={{
-                title: "Backup & import",
-                headerBackButtonDisplayMode: "minimal",
-              }}
-            />
-            <Stack.Screen
-              name="upcoming"
-              options={{
-                title: "Upcoming",
-                headerBackButtonDisplayMode: "minimal",
-              }}
-            />
-            <Stack.Screen
-              name="modal"
-              options={{ presentation: "modal", title: "About" }}
-            />
-          </Stack>
-          <View
-            pointerEvents="box-none"
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: insets.bottom + 72,
-              zIndex: 50,
-            }}
-          >
-            <UndoBanner />
-          </View>
-        </View>
-      </BiometricGate>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={navigationTheme}>
+        <BottomSheetModalProvider>
+          <ReminderBootstrap />
+          <EASUpdateSync />
+          <BiometricGate>
+            <View style={{ flex: 1 }}>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="backup"
+                  options={{
+                    title: "Backup & import",
+                    headerBackButtonDisplayMode: "minimal",
+                  }}
+                />
+                <Stack.Screen
+                  name="upcoming"
+                  options={{
+                    title: "Upcoming",
+                    headerBackButtonDisplayMode: "minimal",
+                  }}
+                />
+                <Stack.Screen
+                  name="modal"
+                  options={{ presentation: "modal", title: "About" }}
+                />
+              </Stack>
+              <View
+                pointerEvents="box-none"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  bottom: insets.bottom + 72,
+                  zIndex: 50,
+                }}
+              >
+                <UndoBanner />
+              </View>
+            </View>
+          </BiometricGate>
+        </BottomSheetModalProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

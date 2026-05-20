@@ -2,8 +2,6 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,10 +12,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FluxBottomSheet } from '@/components/FluxBottomSheet';
 import { Text } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import type { ThemePalette } from '@/constants/Colors';
-import { hairlineBorder, radii, spacing } from '@/constants/theme';
+import { radii, spacing } from '@/constants/theme';
 import {
   addMonthsId,
   currentPaydayMonthId,
@@ -96,11 +95,13 @@ export function MonthPickerField({ value, onChange, palette, triggerStyle }: Pro
             opacity: pressed ? 0.92 : 1,
           },
           triggerStyle,
-        ]}>
+        ]}
+      >
         <View style={styles.triggerSide} />
         <Text
           style={[styles.triggerText, { color: palette.text }]}
-          numberOfLines={1}>
+          numberOfLines={1}
+        >
           {formatMonthIdDisplay(value)}
         </Text>
         <View style={styles.triggerSide}>
@@ -109,26 +110,19 @@ export function MonthPickerField({ value, onChange, palette, triggerStyle }: Pro
       </Pressable>
 
       {Platform.OS === 'ios' ? (
-        <Modal visible={iosOpen} animationType="slide" transparent onRequestClose={() => setIosOpen(false)}>
-          <View style={styles.modalRoot}>
-            <Pressable style={styles.modalBackdrop} onPress={() => setIosOpen(false)} />
-            <View
-              style={[
-                styles.iosSheet,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.border,
-                  paddingBottom: Math.max(insets.bottom, spacing.md),
-                  width: windowWidth,
-                  maxWidth: '100%',
-                  alignSelf: 'center',
-                },
-                hairlineBorder(palette.border),
-              ]}>
+        <FluxBottomSheet
+          visible={iosOpen}
+          onClose={() => setIosOpen(false)}
+          enableDynamicSizing
+          variant="view"
+        >
+          <View style={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
             <View style={styles.iosToolbar}>
               <View style={styles.iosToolbarLeft}>
                 <Pressable onPress={() => setIosOpen(false)} hitSlop={12}>
-                  <Text style={{ color: palette.textMuted, fontSize: 17, fontWeight: '600' }}>Cancel</Text>
+                  <Text style={{ color: palette.textMuted, fontSize: 17, fontWeight: '600' }}>
+                    Cancel
+                  </Text>
                 </Pressable>
               </View>
               <View style={styles.iosToolbarCenter}>
@@ -136,7 +130,9 @@ export function MonthPickerField({ value, onChange, palette, triggerStyle }: Pro
               </View>
               <View style={styles.iosToolbarRight}>
                 <Pressable onPress={applyIos} hitSlop={12}>
-                  <Text style={{ color: palette.tint, fontSize: 17, fontWeight: '700' }}>Done</Text>
+                  <Text style={{ color: palette.tint, fontSize: 17, fontWeight: '700' }}>
+                    Done
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -152,73 +148,57 @@ export function MonthPickerField({ value, onChange, palette, triggerStyle }: Pro
                 }}
               />
             </View>
-            </View>
           </View>
-        </Modal>
+        </FluxBottomSheet>
       ) : null}
 
       {Platform.OS === 'web' ? (
-        <Modal visible={webOpen} animationType="fade" transparent onRequestClose={() => setWebOpen(false)}>
-          <View style={[styles.modalRoot, styles.modalRootCentered]}>
-            <Pressable style={styles.modalBackdrop} onPress={() => setWebOpen(false)} />
-            <View
-              style={[
-                styles.webSheet,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.border,
-                },
-                hairlineBorder(palette.border),
-              ]}>
-            <Text style={[styles.webSheetTitle, { color: palette.text }]}>Choose month</Text>
-            <FlatList
-              data={webMonths}
-              keyExtractor={(m) => m}
-              renderItem={({ item }) => {
-                const selected = item === value;
-                return (
-                  <Pressable
-                    onPress={() => {
-                      onChange(item);
-                      setWebOpen(false);
-                    }}
-                    style={[
-                      styles.webRow,
-                      {
-                        backgroundColor: selected ? palette.tintMuted : 'transparent',
-                        borderBottomColor: palette.border,
-                      },
-                    ]}>
-                    <Text
-                      style={{
-                        width: '100%',
-                        textAlign: 'center',
-                        fontSize: 16,
-                        fontWeight: selected ? '800' : '500',
-                        color: selected ? palette.tintStrong : palette.text,
-                      }}>
-                      {formatMonthIdDisplay(item)}
-                    </Text>
-                  </Pressable>
-                );
-              }}
-            />
-            </View>
-          </View>
-        </Modal>
+        <FluxBottomSheet
+          visible={webOpen}
+          onClose={() => setWebOpen(false)}
+          snapPoints={['75%']}
+        >
+          <Text style={[styles.webSheetTitle, { color: palette.text }]}>
+            Choose month
+          </Text>
+          {webMonths.map((item) => {
+            const selected = item === value;
+            return (
+              <Pressable
+                key={item}
+                onPress={() => {
+                  onChange(item);
+                  setWebOpen(false);
+                }}
+                style={[
+                  styles.webRow,
+                  {
+                    backgroundColor: selected ? palette.tintMuted : 'transparent',
+                    borderBottomColor: palette.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    width: '100%',
+                    textAlign: 'center',
+                    fontSize: 16,
+                    fontWeight: selected ? '800' : '500',
+                    color: selected ? palette.tintStrong : palette.text,
+                  }}
+                >
+                  {formatMonthIdDisplay(item)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </FluxBottomSheet>
       ) : null}
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  modalRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalRootCentered: {
-    justifyContent: 'center',
-  },
   trigger: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -227,7 +207,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     minHeight: 50,
   },
-  /** Same width left + right so the month label stays visually centered with the calendar on the right. */
   triggerSide: {
     width: 28,
     alignItems: 'center',
@@ -238,17 +217,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#00000055',
-  },
-  iosSheet: {
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    borderBottomWidth: 0,
-    overflow: 'hidden',
-    alignItems: 'stretch',
   },
   iosToolbar: {
     flexDirection: 'row',
@@ -280,14 +248,6 @@ const styles = StyleSheet.create({
   iosPickerHost: {
     alignSelf: 'center',
     alignItems: 'center',
-  },
-  webSheet: {
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-    maxHeight: '75%',
-    alignSelf: 'center',
-    width: '88%',
-    maxWidth: 420,
   },
   webSheetTitle: {
     fontSize: 17,

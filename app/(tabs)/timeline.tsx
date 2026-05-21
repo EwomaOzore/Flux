@@ -30,7 +30,8 @@ import {
   type MonthId,
 } from "@/src/domain/month";
 import { logActivity } from "@/src/lib/activityLog";
-import { formatNgn } from "@/src/lib/formatCurrency";
+import { formatMoney } from "@/src/lib/formatCurrency";
+import { useCurrencyStore } from "@/src/state/currencyStore";
 import type { MonthRollup, PaydayLine } from "@/src/domain/types";
 import { computeRollups, useBudgetStore } from "@/src/state/budgetStore";
 import { scheduleLineUndo } from "@/src/state/lineUndoStore";
@@ -104,6 +105,7 @@ export default function TimelineScreen() {
     currentPaydayMonthId(),
   );
   const deleteLine = useBudgetStore((s) => s.deleteLine);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const query = searchText.trim().toLowerCase();
   const allMonthsSelected = monthFilterEnabled === false;
   const hasFilters = query.length > 0 || monthFilterEnabled;
@@ -117,11 +119,12 @@ export default function TimelineScreen() {
       .map((r) => ({
         ...r,
         lines: r.lines.filter((l) => {
-          const amountText = formatNgn(l.amount).toLowerCase();
+          const amountText = formatMoney(l.amount, currencyCode).toLowerCase();
+          const amountDigits = String(Math.round(l.amount));
           return (
             l.label.toLowerCase().includes(query) ||
             amountText.includes(query) ||
-            amountText.replace("₦", "").includes(query)
+            amountDigits.includes(query.replace(/\D/g, ""))
           );
         }),
       }))
@@ -129,9 +132,9 @@ export default function TimelineScreen() {
         (r) =>
           r.lines.length > 0 ||
           formatMonthIdDisplay(r.month).toLowerCase().includes(query) ||
-          formatNgn(r.totalPaydayOutflow).toLowerCase().includes(query),
+          formatMoney(r.totalPaydayOutflow, currencyCode).toLowerCase().includes(query),
       );
-  }, [monthFilter, monthFilterEnabled, query, rollups]);
+  }, [currencyCode, monthFilter, monthFilterEnabled, query, rollups]);
 
   const onDelete = (line: PaydayLine) => {
     if (Platform.OS !== "web") {

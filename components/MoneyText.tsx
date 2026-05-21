@@ -1,7 +1,8 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
 import { font } from '@/constants/typography';
-import { formatNgn } from '@/src/lib/formatCurrency';
+import { formatMoney } from '@/src/lib/formatCurrency';
+import { useCurrencyStore } from '@/src/state/currencyStore';
 
 type Props = TextProps & {
   amount: number;
@@ -9,9 +10,10 @@ type Props = TextProps & {
 };
 
 export function MoneyText({ amount, variant = 'body', style, ...rest }: Props) {
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   return (
     <Text {...rest} style={[variant === 'titleEmphasis' ? styles.titleEmphasis : styles.body, style]}>
-      {formatNgn(amount)}
+      {formatMoney(amount, currencyCode)}
     </Text>
   );
 }

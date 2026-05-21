@@ -8,7 +8,12 @@ import { DangerOutlineButton, FluxTextInput, FormField, useFluxPalette } from '@
 import { radii, spacing } from '@/constants/theme';
 import type { ThemePalette } from '@/constants/Colors';
 import { currentPaydayMonthId } from '@/src/domain/month';
-import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
+import {
+  formatMoney,
+  getCurrencySymbol,
+  parseMoneyInput,
+} from '@/src/lib/formatCurrency';
+import { useCurrencyStore } from '@/src/state/currencyStore';
 import { useBudgetStore } from '@/src/state/budgetStore';
 
 import { MonthPickerField } from '@/components/MonthPickerField';
@@ -24,6 +29,7 @@ export function IncomeStreamBottomSheet({ streamId, onClose }: Props) {
   const { palette } = useFluxPalette();
   const pickerPalette = palette as ThemePalette;
   const visible = streamId != null;
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const stream = useBudgetStore((s) =>
     streamId ? s.incomeStreams.find((x) => x.id === streamId) : undefined,
@@ -135,16 +141,16 @@ export function IncomeStreamBottomSheet({ streamId, onClose }: Props) {
               />
             </FormField>
           ) : null}
-          <FormField label="Amount (₦)">
+          <FormField label={`Amount (${getCurrencySymbol(currencyCode)})`}>
             <FluxTextInput
-              value={stream.amountNgn > 0 ? formatNgn(stream.amountNgn) : ''}
+              value={stream.amountNgn > 0 ? formatMoney(stream.amountNgn, currencyCode) : ''}
               onChangeText={(t) => {
-                const n = parseNgnInput(t);
+                const n = parseMoneyInput(t);
                 updateIncomeStream(stream.id, { amountNgn: Math.max(0, n) });
               }}
               keyboardType="number-pad"
               money
-              placeholder="₦0"
+              placeholder={formatMoney(0, currencyCode)}
             />
           </FormField>
           <FormField label="Note (optional)">

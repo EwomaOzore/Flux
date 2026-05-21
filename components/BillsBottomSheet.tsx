@@ -8,13 +8,14 @@ import { MoneyText } from '@/components/MoneyText';
 import { Text } from '@/components/Themed';
 import { FluxTextInput, FormField, PrimaryButton, useFluxPalette } from '@/components/ui';
 import { radii, spacing } from '@/constants/theme';
-import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
+import { formatMoney, parseMoneyInput, sampleMoneyPlaceholder } from '@/src/lib/formatCurrency';
+import { useCurrencyStore } from '@/src/state/currencyStore';
 import { totalBillsAmount } from '@/src/domain/types';
 import { useBudgetStore } from '@/src/state/budgetStore';
 
 function moneyDraftFromText(text: string): string {
   if (!text.replace(/\D/g, '')) return '';
-  return formatNgn(parseNgnInput(text));
+  return formatMoney(parseMoneyInput(text));
 }
 
 type Props = {
@@ -33,6 +34,7 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
   const [newLabel, setNewLabel] = useState('');
   const [newAmount, setNewAmount] = useState('');
 
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const sum = useMemo(() => totalBillsAmount(billItems), [billItems]);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
   }, [visible]);
 
   const onAdd = useCallback(() => {
-    const amount = parseNgnInput(newAmount || '0');
+    const amount = parseMoneyInput(newAmount || '0');
     if (amount <= 0) {
       Alert.alert('Amount needed', 'Enter a positive amount.');
       return;
@@ -70,7 +72,9 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
         onClose={onClose}
         subtitle="Monthly costs between paydays — add each one; we total them for your cushion."
       />
-      <Text style={[styles.sumLine, { color: palette.textMuted }]}>Total: {formatNgn(sum)}</Text>
+      <Text style={[styles.sumLine, { color: palette.textMuted }]}>
+        Total: {formatMoney(sum, currencyCode)}
+      </Text>
       <View style={[styles.scrollInner, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         {billItems.length > 0 ? (
           <View style={[styles.list, { borderColor: palette.border }]}>
@@ -120,7 +124,7 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
             onChangeText={(t) => setNewAmount(moneyDraftFromText(t))}
             keyboardType="number-pad"
             money
-            placeholder="e.g. ₦25,000"
+            placeholder={`e.g. ${sampleMoneyPlaceholder(25000)}`}
           />
         </FormField>
 

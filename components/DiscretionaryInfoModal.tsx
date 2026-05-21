@@ -5,7 +5,8 @@ import { FluxBottomSheet, FluxBottomSheetHeader } from '@/components/FluxBottomS
 import { Text } from '@/components/Themed';
 import { useFluxPalette } from '@/components/ui/useFluxPalette';
 import { spacing } from '@/constants/theme';
-import { formatNgn } from '@/src/lib/formatCurrency';
+import { formatMoney } from '@/src/lib/formatCurrency';
+import { useCurrencyStore } from '@/src/state/currencyStore';
 
 type Props = {
   readonly visible: boolean;
@@ -28,6 +29,7 @@ export function DiscretionaryInfoModal({
 }: Props) {
   const { palette } = useFluxPalette();
   const insets = useSafeAreaInsets();
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   return (
     <FluxBottomSheet visible={visible} onClose={onClose} enableDynamicSizing variant="view">
@@ -44,11 +46,11 @@ export function DiscretionaryInfoModal({
             spending and anything you haven&apos;t listed yet — we call that discretionary in plain language.
           </Text>
           <View style={styles.rows}>
-            <Row palette={palette} label="Take-home (all income streams)" value={formatNgn(income)} />
-            <Row palette={palette} label="Monthly bills (from Plan)" value={`−${formatNgn(billsTotal)}`} />
-            <Row palette={palette} label="This month's payday line items" value={`−${formatNgn(paydayOutflow)}`} />
+            <Row palette={palette} label="Take-home (all income streams)" value={formatMoney(income, currencyCode)} />
+            <Row palette={palette} label="Monthly bills (from Plan)" value={`−${formatMoney(billsTotal, currencyCode)}`} />
+            <Row palette={palette} label="This month's payday line items" value={`−${formatMoney(paydayOutflow, currencyCode)}`} />
             <View style={[styles.rule, { backgroundColor: palette.border }]} />
-            <Row palette={palette} label="Cushion after bills" value={formatNgn(cushion)} emphasis />
+            <Row palette={palette} label="Cushion after bills" value={formatMoney(cushion, currencyCode)} emphasis />
           </View>
         </View>
       </View>

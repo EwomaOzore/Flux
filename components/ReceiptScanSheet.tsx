@@ -20,7 +20,7 @@ import { Text } from '@/components/Themed';
 import { FluxTextInput, FormField, PrimaryButton, useFluxPalette } from '@/components/ui';
 import { MonthPickerField } from '@/components/MonthPickerField';
 import { hairlineBorder, radii, spacing } from '@/constants/theme';
-import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
+import { formatMoney, parseMoneyInput, sampleMoneyPlaceholder } from '@/src/lib/formatCurrency';
 import { formatMonthIdDisplay, type MonthId } from '@/src/domain/month';
 import { guessReceiptLabelFromText, parseReceiptAmountFromText } from '@/src/lib/parseReceiptText';
 import { getLastReceiptLabel, setLastReceiptLabel } from '@/src/lib/receiptPrefs';
@@ -28,7 +28,7 @@ import { useBudgetStore } from '@/src/state/budgetStore';
 
 function moneyDraftFromText(text: string): string {
   if (!text.replace(/\D/g, '')) return '';
-  return formatNgn(parseNgnInput(text));
+  return formatMoney(parseMoneyInput(text));
 }
 
 type Props = {
@@ -78,7 +78,7 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
     const guessed = guessReceiptLabelFromText(fullText);
     const label = guessed.trim() || lastMerchantRef.current || '';
     setLabelDraft(label);
-    setAmountDraft(amount != null && amount > 0 ? formatNgn(amount) : '');
+    setAmountDraft(amount != null && amount > 0 ? formatMoney(amount) : '');
   }, []);
 
   const runOcrOnUri = useCallback(
@@ -171,7 +171,7 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
   }, [runOcrOnUri]);
 
   const onSave = useCallback((keepOpen: boolean = false) => {
-    const amount = parseNgnInput(amountDraft || '0');
+    const amount = parseMoneyInput(amountDraft || '0');
     if (amount <= 0) {
       Alert.alert('Amount needed', 'Enter a positive amount from the receipt.');
       return;
@@ -306,7 +306,7 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
             onChangeText={(t) => setAmountDraft(moneyDraftFromText(t))}
             keyboardType="number-pad"
             money
-            placeholder="e.g. ₦12,500"
+            placeholder={`e.g. ${sampleMoneyPlaceholder(12500)}`}
           />
         </FormField>
 

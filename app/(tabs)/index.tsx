@@ -28,7 +28,8 @@ import {
   formatMonthIdDisplay,
 } from "@/src/domain/month";
 import { totalBillsAmount } from "@/src/domain/types";
-import { formatNgn } from "@/src/lib/formatCurrency";
+import { formatMoney, getCurrencySymbol } from "@/src/lib/formatCurrency";
+import { useCurrencyStore } from "@/src/state/currencyStore";
 import { planningStreakMonths } from "@/src/lib/planningInsights";
 import { useBudgetStore } from "@/src/state/budgetStore";
 
@@ -81,6 +82,7 @@ export default function HomeScreen() {
     [budgetForRollup.lines, paydayMonth],
   );
 
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const cushion = roll?.cushionAfterBills ?? 0;
   const positive = cushion >= 0;
   const cushionColor = positive ? palette.success : palette.danger;
@@ -160,22 +162,22 @@ export default function HomeScreen() {
             />
             <RNView style={styles.statRow}>
               <StatChip
-                label="Income (₦)"
-                value={formatNgn(roll?.income ?? 0)}
+                label={`Income (${getCurrencySymbol(currencyCode)})`}
+                value={formatMoney(roll?.income ?? 0, currencyCode)}
                 accent={palette.accentBlue}
                 muted={palette.infoMuted}
                 palette={palette}
               />
               <StatChip
                 label="Bills"
-                value={formatNgn(roll?.billsTotal ?? 0)}
+                value={formatMoney(roll?.billsTotal ?? 0, currencyCode)}
                 accent={palette.accentViolet}
                 muted={palette.tintMuted}
                 palette={palette}
               />
               <StatChip
                 label="Payday out"
-                value={formatNgn(roll?.totalPaydayOutflow ?? 0)}
+                value={formatMoney(roll?.totalPaydayOutflow ?? 0, currencyCode)}
                 accent={palette.accentAmber}
                 muted={palette.warningMuted}
                 palette={palette}
@@ -183,8 +185,8 @@ export default function HomeScreen() {
             </RNView>
             <Text style={[styles.insight, { color: palette.textSecondary }]}>
               {positive
-                ? `You have about ${formatNgn(cushion)} left for discretionary spending this payday — after bills and the line items you’ve planned.`
-                : `You’re short about ${formatNgn(Math.abs(cushion))} after bills and planned outflows — trim a line or defer one.`}
+              ? `You have about ${formatMoney(cushion, currencyCode)} left for discretionary spending this payday — after bills and the line items you’ve planned.`
+              : `You’re short about ${formatMoney(Math.abs(cushion), currencyCode)} after bills and planned outflows — trim a line or defer one.`}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -218,12 +220,12 @@ export default function HomeScreen() {
               >
                 Last payday ({formatMonthIdDisplay(prevMonth)}):{" "}
                 <Text style={{ fontWeight: "700", color: palette.text }}>
-                  {formatNgn(prevRoll.cushionAfterBills)}
+                  {formatMoney(prevRoll.cushionAfterBills, currencyCode)}
                 </Text>
                 {" · "}
                 This payday ({formatMonthIdDisplay(paydayMonth)}):{" "}
                 <Text style={{ fontWeight: "700", color: palette.text }}>
-                  {formatNgn(cushion)}
+                  {formatMoney(cushion, currencyCode)}
                 </Text>
               </Text>
               <Text style={[styles.compareHint, { color: palette.textMuted }]}>

@@ -25,16 +25,23 @@ import {
 } from "@/src/domain/month";
 import { incomeNgnForMonth, totalBillsAmount } from "@/src/domain/types";
 import { logActivity } from "@/src/lib/activityLog";
-import { formatNgn, parseNgnInput } from "@/src/lib/formatCurrency";
+import {
+  formatMoney,
+  parseMoneyInput,
+  sampleMoneyPlaceholder,
+} from "@/src/lib/formatCurrency";
 import { useBudgetStore } from "@/src/state/budgetStore";
+import type { CurrencyCode } from "@/src/lib/currencies";
+import { useCurrencyStore } from "@/src/state/currencyStore";
 
-function moneyDraftFromText(text: string): string {
+function moneyDraftFromText(text: string, code: CurrencyCode) {
   if (!text.replaceAll(/\D/g, "")) return "";
-  return formatNgn(parseNgnInput(text));
+  return formatMoney(parseMoneyInput(text), code);
 }
 
 export default function PlanScreen() {
   const { palette } = useFluxPalette();
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const incomeStreams = useBudgetStore((s) => s.incomeStreams);
   const billItems = useBudgetStore((s) => s.billItems);
@@ -84,7 +91,7 @@ export default function PlanScreen() {
   };
 
   const onAddLine = () => {
-    const amount = parseNgnInput(addAmount || "0");
+    const amount = parseMoneyInput(addAmount || "0");
     if (amount <= 0) {
       Alert.alert("Amount needed", "Enter a positive amount.");
       return;
@@ -132,7 +139,7 @@ export default function PlanScreen() {
     });
     setAddLabel("");
     setAddAmount("");
-    logActivity("add-line", `${label} · ${formatNgn(amount)}`).catch(() => {});
+    logActivity("add-line", `${label} · ${formatMoney(amount, currencyCode)}`).catch(() => {});
     Alert.alert(
       "Added",
       addLineRecurrence === "monthly"
@@ -166,7 +173,7 @@ export default function PlanScreen() {
   const billsSummary =
     billItems.length === 0
       ? "Tap to add rent, utilities, subscriptions…"
-      : `${billItems.length} ${billItems.length === 1 ? "item" : "items"} · ${formatNgn(billsSum)}`;
+      : `${billItems.length} ${billItems.length === 1 ? "item" : "items"} · ${formatMoney(billsSum, currencyCode)}`;
 
   return (
     <>
@@ -233,11 +240,11 @@ export default function PlanScreen() {
                       {stream.recurrence === "one_time" && stream.oneTimeMonth
                         ? `One-time · ${formatMonthIdDisplay(stream.oneTimeMonth)} · ${
                             stream.amountNgn > 0
-                              ? formatNgn(stream.amountNgn)
+                              ? formatMoney(stream.amountNgn, currencyCode)
                               : "No amount yet"
                           }`
                         : stream.amountNgn > 0
-                          ? `${formatNgn(stream.amountNgn)} · every payday`
+                          ? `${formatMoney(stream.amountNgn, currencyCode)} · every payday`
                           : "No amount yet · every payday"}
                     </Text>
                   </RNView>
@@ -254,7 +261,7 @@ export default function PlanScreen() {
             <Text style={[styles.incomeSumLine, { color: palette.textMuted }]}>
               Take-home this payday (
               {formatMonthIdDisplay(currentPaydayMonthId())}):{" "}
-              {formatNgn(incomeSum)}
+              {formatMoney(incomeSum, currencyCode)}
             </Text>
           ) : null}
           <PrimaryButton label="Add income source" onPress={onAddIncomeRow} />
@@ -437,10 +444,10 @@ export default function PlanScreen() {
           <FormField label="Amount">
             <FluxTextInput
               value={addAmount}
-              onChangeText={(t) => setAddAmount(moneyDraftFromText(t))}
+              onChangeText={(t) => setAddAmount(moneyDraftFromText(t, currencyCode))}
               keyboardType="number-pad"
               money
-              placeholder="e.g. ₦85,000"
+              placeholder={`e.g. ${sampleMoneyPlaceholder(85000)}`}
             />
           </FormField>
 

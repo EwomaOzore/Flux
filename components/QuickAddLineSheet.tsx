@@ -6,13 +6,13 @@ import { FluxBottomSheet, FluxBottomSheetHeader } from '@/components/FluxBottomS
 import { FluxTextInput, FormField, PrimaryButton, useFluxPalette } from '@/components/ui';
 import { radii, spacing } from '@/constants/theme';
 import { type MonthId, currentPaydayMonthId } from '@/src/domain/month';
-import { formatNgn, parseNgnInput } from '@/src/lib/formatCurrency';
+import { formatMoney, parseMoneyInput, sampleMoneyPlaceholder } from '@/src/lib/formatCurrency';
 import { useBudgetStore } from '@/src/state/budgetStore';
 import { MonthPickerField } from '@/components/MonthPickerField';
 
 function moneyDraftFromText(text: string): string {
   if (!text.replaceAll(/\D/g, '')) return '';
-  return formatNgn(parseNgnInput(text));
+  return formatMoney(parseMoneyInput(text));
 }
 
 type Props = {
@@ -41,7 +41,7 @@ export function QuickAddLineSheet({ visible, onClose, initialMonth }: Props) {
   }, [onClose, reset]);
 
   const onAdd = () => {
-    const n = parseNgnInput(amount || '0');
+    const n = parseMoneyInput(amount || '0');
     if (n <= 0) {
       Alert.alert('Amount needed', 'Enter a positive amount.');
       return;
@@ -79,7 +79,7 @@ export function QuickAddLineSheet({ visible, onClose, initialMonth }: Props) {
               onChangeText={(t) => setAmount(moneyDraftFromText(t))}
               keyboardType="number-pad"
               money
-              placeholder="e.g. ₦35,000"
+              placeholder={`e.g. ${sampleMoneyPlaceholder(35000)}`}
             />
           </FormField>
           <PrimaryButton label="Add item" onPress={onAdd} />

@@ -23,6 +23,7 @@ import "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BiometricGate } from "@/components/BiometricGate";
+import { CurrencyOnboardingRedirect } from "@/components/CurrencyOnboardingRedirect";
 import { UndoBanner } from "@/components/UndoBanner";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
@@ -99,9 +100,14 @@ function RootLayoutNav() {
         <BottomSheetModalProvider>
           <ReminderBootstrap />
           <EASUpdateSync />
+          <CurrencyOnboardingRedirect />
           <BiometricGate>
             <View style={{ flex: 1 }}>
               <Stack>
+                <Stack.Screen
+                  name="onboarding"
+                  options={{ headerShown: false, gestureEnabled: false }}
+                />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="backup"

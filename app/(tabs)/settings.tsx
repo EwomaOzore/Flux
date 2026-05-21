@@ -18,12 +18,16 @@ import {
   loadBiometricLockEnabled,
   saveBiometricLockEnabled,
 } from "@/src/lib/biometricPrefs";
+import { CurrencyPickerList } from "@/components/CurrencyPickerList";
+import { FluxBottomSheet, FluxBottomSheetHeader } from "@/components/FluxBottomSheet";
+import { currencyOption } from "@/src/lib/currencies";
 import {
   applyReminderPrefs,
   defaultReminderPrefs,
   loadReminderPrefs,
   type ReminderPrefs,
 } from "@/src/lib/paydayReminders";
+import { useCurrencyStore } from "@/src/state/currencyStore";
 
 type MenuRowProps = {
   readonly href: "/upcoming" | "/backup";
@@ -75,6 +79,10 @@ export default function SettingsScreen() {
   const [reminderPrefs, setReminderPrefs] =
     useState<ReminderPrefs>(defaultReminderPrefs);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [currencySheetOpen, setCurrencySheetOpen] = useState(false);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
+  const setCurrency = useCurrencyStore((s) => s.setCurrency);
+  const currency = currencyOption(currencyCode);
 
   useEffect(() => {
     loadReminderPrefs()
@@ -153,6 +161,65 @@ export default function SettingsScreen() {
 
   return (
     <ScreenScroll>
+      <RNView style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
+          Preferences
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Change currency"
+          onPress={() => setCurrencySheetOpen(true)}
+          style={({ pressed }) => [
+            styles.row,
+            {
+              borderBottomColor: palette.border,
+              borderTopColor: palette.border,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              backgroundColor: palette.surface,
+              opacity: pressed ? 0.92 : 1,
+            },
+          ]}
+        >
+          <RNView style={styles.rowMain}>
+            <FontAwesome name="money" size={16} color={palette.tintStrong} />
+            <RNView style={styles.textCol}>
+              <Text style={[styles.rowTitle, { color: palette.text }]}>
+                Currency
+              </Text>
+              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                {currency.label} ({currency.code})
+              </Text>
+            </RNView>
+          </RNView>
+          <RNView style={styles.chevronWrap}>
+            <FontAwesome
+              name="chevron-right"
+              size={14}
+              color={palette.textMuted}
+            />
+          </RNView>
+        </Pressable>
+      </RNView>
+
+      <FluxBottomSheet
+        visible={currencySheetOpen}
+        onClose={() => setCurrencySheetOpen(false)}
+        snapPoints={["75%"]}
+      >
+        <FluxBottomSheetHeader
+          title="Currency"
+          onClose={() => setCurrencySheetOpen(false)}
+          subtitle="All amounts in Flux will use the currency you pick."
+        />
+        <CurrencyPickerList
+          selected={currencyCode}
+          onSelect={(code) => {
+            setCurrency(code);
+            setCurrencySheetOpen(false);
+          }}
+        />
+      </FluxBottomSheet>
+
       <RNView style={styles.section}>
         <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
           Planning

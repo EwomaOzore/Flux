@@ -54,7 +54,6 @@ export function buildRollupsForMonths(
     requested[0],
     requested.at(-1) ?? requested[0],
   );
-  let carryFromPrevious = 0;
   const byMonth = new Map<MonthId, MonthRollup>();
   for (const month of fullRange) {
     const monthLines = lines
@@ -71,8 +70,7 @@ export function buildRollupsForMonths(
       .sort((a, b) => a.label.localeCompare(b.label));
     const totalPaydayOutflow = monthLines.reduce((s, l) => s + l.amount, 0);
     const income = incomeForMonth(month);
-    const remainderBeforeBills =
-      carryFromPrevious + income - totalPaydayOutflow;
+    const remainderBeforeBills = income - totalPaydayOutflow;
     const cushionAfterBills = remainderBeforeBills - billsTotal;
 
     byMonth.set(month, {
@@ -84,7 +82,6 @@ export function buildRollupsForMonths(
       remainderBeforeBills,
       cushionAfterBills,
     });
-    carryFromPrevious = cushionAfterBills;
   }
   return requested.map((m) => byMonth.get(m)).filter(Boolean) as MonthRollup[];
 }

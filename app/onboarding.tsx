@@ -49,6 +49,7 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.lg,
+    marginTop: 60,
   },
   kicker: {
     fontSize: 13,

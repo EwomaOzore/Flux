@@ -1,11 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 
 import { buildRollupsFromStreams, monthsForRollups } from '@/src/domain/engine';
 import { compareMonthId, currentPaydayMonthId, monthRangeInclusive, type MonthId } from '@/src/domain/month';
 import type { BillItem, IncomeStream, PaydayLine } from '@/src/domain/types';
 import { totalBillsAmount } from '@/src/domain/types';
+import { createSSRSafeJSONStorage } from '@/src/lib/ssrSafeStorage';
 
 const STORAGE_KEY = 'flux-budget-v6';
 
@@ -118,7 +118,7 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createSSRSafeJSONStorage(),
       version: 6,
       migrate: (persistedState, fromVersion) => {
         if (!persistedState || typeof persistedState !== 'object') {

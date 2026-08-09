@@ -17,11 +17,11 @@ export function FluxTextInput({ style, money, placeholderTextColor, ...rest }: P
   const fieldStyle = useMemo(
     () => ({
       fontFamily: typeface.regular,
-      borderColor: palette.borderStrong,
-      color: palette.text,
-      backgroundColor: palette.surfaceMuted,
+      borderColor: palette.cardBorder,
+      color: palette.inputText,
+      backgroundColor: palette.inputBackground,
     }),
-    [palette.borderStrong, palette.text, palette.surfaceMuted]
+    [palette.cardBorder, palette.inputText, palette.inputBackground]
   );
 
   return (
@@ -35,7 +35,7 @@ export function FluxTextInput({ style, money, placeholderTextColor, ...rest }: P
 
 const styles = StyleSheet.create({
   base: {
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 14,

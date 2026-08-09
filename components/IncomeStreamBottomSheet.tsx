@@ -102,8 +102,10 @@ export function IncomeStreamBottomSheet({ streamId, onClose }: Props) {
                     style={[
                       styles.recChip,
                       {
-                        borderColor: active ? palette.tint : palette.border,
-                        backgroundColor: active ? palette.tintMuted : palette.surfaceMuted,
+                        borderColor: active ? palette.tint : palette.cardBorder,
+                        backgroundColor: active
+                          ? palette.tintMuted
+                          : palette.inputBackground,
                       },
                     ]}
                   >
@@ -133,10 +135,10 @@ export function IncomeStreamBottomSheet({ streamId, onClose }: Props) {
                 onChange={(m) => updateIncomeStream(stream.id, { oneTimeMonth: m })}
                 palette={pickerPalette}
                 triggerStyle={{
-                  borderWidth: StyleSheet.hairlineWidth,
+                  borderWidth: 1,
                   borderRadius: radii.md,
-                  borderColor: palette.borderStrong,
-                  backgroundColor: palette.surfaceMuted,
+                  borderColor: palette.cardBorder,
+                  backgroundColor: palette.inputBackground,
                 }}
               />
             </FormField>

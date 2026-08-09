@@ -51,10 +51,10 @@ export function QuickAddLineSheet({ visible, onClose, initialMonth }: Props) {
   };
 
   const triggerStyle = {
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderRadius: radii.md,
-    borderColor: palette.borderStrong,
-    backgroundColor: palette.surfaceMuted,
+    borderColor: palette.cardBorder,
+    backgroundColor: palette.inputBackground,
   };
 
   return (

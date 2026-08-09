@@ -1,3 +1,7 @@
+import { Text } from "@/components/Themed";
+import { useFluxPalette } from "@/components/ui";
+import { radii, spacing } from "@/constants/theme";
+import { typeface } from "@/constants/typography";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -13,10 +17,6 @@ import {
   useRef,
 } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-
-import { Text } from "@/components/Themed";
-import { useFluxPalette } from "@/components/ui";
-import { radii, spacing } from "@/constants/theme";
 
 export { BottomSheetScrollView, BottomSheetView } from "@gorhom/bottom-sheet";
 
@@ -85,13 +85,21 @@ export function FluxBottomSheet({
 
   const body =
     variant === "view" ? (
-      <BottomSheetView style={styles.viewBody}>{children}</BottomSheetView>
+      <BottomSheetView
+        style={[styles.viewBody, { backgroundColor: palette.background }]}
+      >
+        {children}
+      </BottomSheetView>
     ) : (
       <BottomSheetScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        style={{ backgroundColor: palette.background }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { backgroundColor: palette.background },
+        ]}
       >
         {children}
       </BottomSheetScrollView>
@@ -108,11 +116,13 @@ export function FluxBottomSheet({
       enablePanDownToClose={enablePanDownToClose}
       stackBehavior="push"
       handleIndicatorStyle={{
-        backgroundColor: palette.borderStrong,
+        backgroundColor: palette.cardBorder,
         width: 36,
       }}
+      style={{ backgroundColor: palette.background }}
+      containerStyle={{ backgroundColor: "transparent" }}
       backgroundStyle={{
-        backgroundColor: palette.surface,
+        backgroundColor: palette.background,
         borderTopLeftRadius: radii.xl,
         borderTopRightRadius: radii.xl,
       }}
@@ -138,10 +148,11 @@ export function FluxBottomSheetHeader({
   subtitle,
   closeLabel = "Done",
 }: HeaderProps) {
-  const { palette } = useFluxPalette();
+  const { palette, colorScheme } = useFluxPalette();
+  const accent = colorScheme === "dark" ? "#48B872" : "#2B7A50";
   return (
     <View>
-      <View style={[styles.header, { borderBottomColor: palette.border }]}>
+      <View style={[styles.header, { borderBottomColor: palette.cardBorder }]}>
         <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
         <Pressable
           onPress={onClose}
@@ -149,13 +160,11 @@ export function FluxBottomSheetHeader({
           accessibilityRole="button"
           accessibilityLabel={closeLabel}
         >
-          <Text style={{ color: palette.tint, fontSize: 17, fontWeight: "700" }}>
-            {closeLabel}
-          </Text>
+          <Text style={[styles.close, { color: accent }]}>{closeLabel}</Text>
         </Pressable>
       </View>
       {subtitle ? (
-        <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
+        <Text style={[styles.subtitle, { color: palette.textMuted }]}>
           {subtitle}
         </Text>
       ) : null}
@@ -178,16 +187,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,
     paddingBottom: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
   },
   title: {
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: -0.3,
+    fontFamily: typeface.displayRegular,
+    fontSize: 18,
+    lineHeight: 18,
+    letterSpacing: -0.45,
+  },
+  close: {
+    fontFamily: typeface.bold,
+    fontSize: 15,
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontFamily: typeface.regular,
+    fontSize: 13,
+    lineHeight: 19,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
   },

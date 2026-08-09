@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
 import { spacing } from '@/constants/theme';
+import { typeface } from '@/constants/typography';
 
 type Props = {
   label: string;
@@ -24,9 +25,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
+    fontFamily: typeface.bold,
+    fontSize: 11,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     opacity: 0.75,
   },

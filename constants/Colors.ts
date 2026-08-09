@@ -19,6 +19,9 @@ const light = {
   borderStrong: '#9A9188',
   /** Shared 1px card stroke (cushion, stats, lists). */
   cardBorder: '#E0DAD3',
+  /** Form fields / sheet controls — white on screen parchment in both themes. */
+  inputBackground: '#FFFFFF',
+  inputText: '#1C1814',
 
   // Content hierarchy
   textSecondary: '#5A5349',
@@ -68,6 +71,8 @@ const dark = {
   border: '#3A332C',
   borderStrong: '#5A5349',
   cardBorder: '#3A332C',
+  inputBackground: '#232019',
+  inputText: '#EDE8E0',
 
   textSecondary: '#9A9188',
   textMuted: '#9A9188',

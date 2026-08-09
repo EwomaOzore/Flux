@@ -77,21 +77,34 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
       </Text>
       <View style={[styles.scrollInner, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         {billItems.length > 0 ? (
-          <View style={[styles.list, { borderColor: palette.border }]}>
+          <View
+            style={[
+              styles.list,
+              {
+                borderColor: palette.cardBorder,
+                backgroundColor: palette.inputBackground,
+              },
+            ]}
+          >
             {billItems.map((item, idx) => (
               <View
                 key={item.id}
                 style={[
                   styles.row,
                   idx < billItems.length - 1 && {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: palette.border,
+                    borderBottomWidth: 1,
+                    borderBottomColor: palette.cardBorder,
                   },
                 ]}
               >
-                <Text style={[styles.rowLabel, { color: palette.text }]}>{item.label}</Text>
+                <Text style={[styles.rowLabel, { color: palette.inputText }]}>
+                  {item.label}
+                </Text>
                 <View style={styles.rowRight}>
-                  <MoneyText amount={item.amount} style={{ color: palette.textSecondary, fontWeight: '700' }} />
+                  <MoneyText
+                    amount={item.amount}
+                    style={{ color: palette.textSecondary, fontWeight: '700' }}
+                  />
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`Remove ${item.label}`}

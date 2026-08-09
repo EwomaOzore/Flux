@@ -99,7 +99,7 @@ export function MonthPickerField({ value, onChange, palette, triggerStyle }: Pro
       >
         <View style={styles.triggerSide} />
         <Text
-          style={[styles.triggerText, { color: palette.text }]}
+          style={[styles.triggerText, { color: palette.inputText }]}
           numberOfLines={1}
         >
           {formatMonthIdDisplay(value)}

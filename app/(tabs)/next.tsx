@@ -1,11 +1,6 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useMemo } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  View as RNView,
-} from "react-native";
+import { View as RNView, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
 
@@ -14,7 +9,7 @@ import { MoneyText } from "@/components/MoneyText";
 import { Text } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
-import { cardElevation, radii, spacing } from "@/constants/theme";
+import { spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
 import { buildRollupsFromStreams } from "@/src/domain/engine";
 import {
@@ -27,8 +22,11 @@ import {
 import { totalBillsAmount } from "@/src/domain/types";
 import { useBudgetStore } from "@/src/state/budgetStore";
 
+const CARD_BORDER_LIGHT = "#E0DAD3";
+
 export default function NextScreen() {
   const colorScheme = useColorScheme();
+  const dark = colorScheme === "dark";
   const palette = Colors[colorScheme ?? "light"];
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
@@ -40,6 +38,11 @@ export default function NextScreen() {
       lines: s.lines,
     })),
   );
+
+  const featuredGreen = dark ? "#48B872" : "#2B7A50";
+  const cardBorder = dark ? palette.cardBorder : CARD_BORDER_LIGHT;
+  const secondaryCardBg = dark ? palette.inputBackground : "#FFFFFF";
+  const billsCardBg = secondaryCardBg;
 
   const upcoming = useMemo(() => {
     const months = [
@@ -70,7 +73,7 @@ export default function NextScreen() {
       showsVerticalScrollIndicator={false}
     >
       <RNView style={styles.titleRow}>
-        <BrandMark size={28} />
+        <BrandMark size={24} />
         <RNView style={styles.titleCol}>
           <Text style={[styles.title, { color: palette.text }]}>Upcoming</Text>
           <Text style={[styles.subtitle, { color: palette.textMuted }]}>
@@ -87,6 +90,11 @@ export default function NextScreen() {
           ",",
           "",
         );
+        const mutedOnCard = featured
+          ? "rgba(255,255,255,0.72)"
+          : palette.textMuted;
+        const strongOnCard = featured ? "#FFFFFF" : palette.text;
+        const dividerColor = featured ? "rgba(255,255,255,0.22)" : cardBorder;
 
         return (
           <RNView
@@ -94,43 +102,23 @@ export default function NextScreen() {
             style={[
               styles.monthCard,
               featured
-                ? { backgroundColor: palette.tint }
+                ? { backgroundColor: featuredGreen }
                 : {
-                    backgroundColor: palette.surface,
-                    borderWidth: StyleSheet.hairlineWidth,
-                    borderColor: palette.border,
+                    backgroundColor: secondaryCardBg,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
                   },
-              !featured && cardElevation(colorScheme),
             ]}
           >
             <RNView style={styles.monthTop}>
-              <RNView style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.nextLabel,
-                    { color: featured ? "rgba(255,255,255,0.75)" : palette.textMuted },
-                  ]}
-                >
-                  {featured ? `NEXT · ${days} DAYS` : `${days} DAYS`}
+              <RNView style={styles.monthMeta}>
+                <Text style={[styles.nextLabel, { color: mutedOnCard }]}>
+                  {featured ? `NEXT • ${days} DAYS` : `${days} DAYS`}
                 </Text>
-                <Text
-                  style={[
-                    styles.monthName,
-                    { color: featured ? "#fff" : palette.text },
-                  ]}
-                >
+                <Text style={[styles.monthName, { color: strongOnCard }]}>
                   {monthTitle}
                 </Text>
-                <Text
-                  style={[
-                    styles.paydayLine,
-                    {
-                      color: featured
-                        ? "rgba(255,255,255,0.8)"
-                        : palette.textMuted,
-                    },
-                  ]}
-                >
+                <Text style={[styles.paydayLine, { color: mutedOnCard }]}>
                   Payday: {formatPaydayDate(monthRoll.month)}
                 </Text>
               </RNView>
@@ -139,8 +127,10 @@ export default function NextScreen() {
                   styles.cushionBadge,
                   {
                     backgroundColor: featured
-                      ? "rgba(255,255,255,0.16)"
-                      : palette.successMuted,
+                      ? "rgba(0,0,0,0.18)"
+                      : dark
+                        ? "rgba(72,184,114,0.16)"
+                        : palette.successMuted,
                   },
                 ]}
               >
@@ -148,9 +138,7 @@ export default function NextScreen() {
                   style={[
                     styles.cushionBadgeLabel,
                     {
-                      color: featured
-                        ? "rgba(255,255,255,0.75)"
-                        : palette.success,
+                      color: featured ? "rgba(255,255,255,0.7)" : featuredGreen,
                     },
                   ]}
                 >
@@ -162,9 +150,9 @@ export default function NextScreen() {
                   signed
                   style={{
                     color: featured
-                      ? "#fff"
+                      ? "#FFFFFF"
                       : positive
-                        ? palette.success
+                        ? featuredGreen
                         : palette.danger,
                     fontSize: 16,
                   }}
@@ -173,14 +161,7 @@ export default function NextScreen() {
             </RNView>
 
             <RNView
-              style={[
-                styles.monthDivider,
-                {
-                  backgroundColor: featured
-                    ? "rgba(255,255,255,0.2)"
-                    : palette.border,
-                },
-              ]}
+              style={[styles.monthDivider, { backgroundColor: dividerColor }]}
             />
 
             <RNView style={styles.statCols}>
@@ -190,25 +171,26 @@ export default function NextScreen() {
                   ["BILLS", monthRoll.billsTotal],
                   ["OUTFLOWS", monthRoll.totalPaydayOutflow],
                 ] as const
-              ).map(([label, amount]) => (
-                <RNView key={label} style={styles.statCol}>
-                  <Text
-                    style={[
-                      styles.statColLabel,
-                      {
-                        color: featured
-                          ? "rgba(255,255,255,0.7)"
-                          : palette.textMuted,
-                      },
-                    ]}
-                  >
+              ).map(([label, amount], i) => (
+                <RNView
+                  key={label}
+                  style={[
+                    styles.statCol,
+                    i > 0 && {
+                      borderLeftWidth: 1,
+                      borderLeftColor: dividerColor,
+                      paddingLeft: spacing.md,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.statColLabel, { color: mutedOnCard }]}>
                     {label}
                   </Text>
                   <MoneyText
                     amount={amount}
                     variant="compact"
                     style={{
-                      color: featured ? "#fff" : palette.text,
+                      color: strongOnCard,
                       fontSize: 15,
                     }}
                   />
@@ -220,22 +202,20 @@ export default function NextScreen() {
       })}
 
       <RNView style={styles.sectionDivider}>
-        <RNView
-          style={[styles.dividerLine, { backgroundColor: palette.border }]}
-        />
+        <RNView style={[styles.dividerLine, { backgroundColor: cardBorder }]} />
         <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
           BILLS DUE THIS MONTH
         </Text>
-        <RNView
-          style={[styles.dividerLine, { backgroundColor: palette.border }]}
-        />
+        <RNView style={[styles.dividerLine, { backgroundColor: cardBorder }]} />
       </RNView>
 
       <RNView
         style={[
           styles.billsCard,
-          { backgroundColor: palette.surface },
-          cardElevation(colorScheme),
+          {
+            backgroundColor: billsCardBg,
+            borderColor: cardBorder,
+          },
         ]}
       >
         {billsThisMonth.length === 0 ? (
@@ -249,23 +229,11 @@ export default function NextScreen() {
               style={[
                 styles.billRow,
                 i < billsThisMonth.length - 1 && {
-                  borderBottomWidth: StyleSheet.hairlineWidth,
-                  borderBottomColor: palette.border,
+                  borderBottomWidth: 1,
+                  borderBottomColor: cardBorder,
                 },
               ]}
             >
-              <RNView
-                style={[
-                  styles.dayBadge,
-                  { backgroundColor: palette.surfaceMuted },
-                ]}
-              >
-                <FontAwesome
-                  name="calendar-o"
-                  size={12}
-                  color={palette.accentBills}
-                />
-              </RNView>
               <Text style={[styles.billLabel, { color: palette.text }]}>
                 {bill.label.trim() || "Bill"}
               </Text>
@@ -299,49 +267,56 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontFamily: typeface.display,
-    fontSize: 32,
-    letterSpacing: -0.6,
+    fontFamily: typeface.displayRegular,
+    fontSize: 18,
+    lineHeight: 18,
+    letterSpacing: -0.45,
   },
   subtitle: {
-    fontSize: 14,
-    marginTop: 2,
+    fontFamily: typeface.regular,
+    fontSize: 13,
+    marginTop: 4,
   },
   monthCard: {
-    borderRadius: radii.xxl,
+    borderRadius: 22,
     padding: spacing.lg,
     gap: spacing.md,
   },
   monthTop: {
     flexDirection: "row",
     gap: spacing.md,
+    alignItems: "flex-start",
+  },
+  monthMeta: {
+    flex: 1,
   },
   nextLabel: {
+    fontFamily: typeface.bold,
     fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    marginBottom: 4,
+    letterSpacing: 0.9,
+    marginBottom: 6,
   },
   monthName: {
+    fontFamily: typeface.bold,
     fontSize: 22,
-    fontWeight: "700",
-    letterSpacing: -0.3,
+    letterSpacing: -0.35,
   },
   paydayLine: {
+    fontFamily: typeface.regular,
     fontSize: 13,
     marginTop: 4,
   },
   cushionBadge: {
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     alignItems: "flex-end",
-    minWidth: 88,
+    minWidth: 92,
   },
   cushionBadgeLabel: {
+    fontFamily: typeface.bold,
     fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.8,
+    letterSpacing: 0.9,
     marginBottom: 2,
   },
   monthDivider: {
@@ -352,12 +327,12 @@ const styles = StyleSheet.create({
   },
   statCol: {
     flex: 1,
-    gap: 4,
+    gap: 5,
   },
   statColLabel: {
+    fontFamily: typeface.semibold,
     fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 0.7,
+    letterSpacing: 0.8,
   },
   sectionDivider: {
     flexDirection: "row",
@@ -370,15 +345,17 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   sectionLabel: {
+    fontFamily: typeface.semibold,
     fontSize: 11,
-    fontWeight: "600",
     letterSpacing: 1,
   },
   billsCard: {
-    borderRadius: radii.xl,
+    borderRadius: 18,
     overflow: "hidden",
+    borderWidth: 1,
   },
   empty: {
+    fontFamily: typeface.regular,
     padding: spacing.lg,
     fontSize: 14,
   },
@@ -390,16 +367,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  dayBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   billLabel: {
     flex: 1,
+    fontFamily: typeface.medium,
     fontSize: 15,
-    fontWeight: "500",
   },
 });

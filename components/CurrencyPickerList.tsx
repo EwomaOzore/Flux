@@ -10,10 +10,66 @@ import { CURRENCY_OPTIONS, type CurrencyCode } from "@/src/lib/currencies";
 type Props = {
   readonly selected: CurrencyCode;
   readonly onSelect: (code: CurrencyCode) => void;
+  /** `sheet` = compact list (settings). `cards` = onboarding pill rows. */
+  readonly variant?: "sheet" | "cards";
 };
 
-export function CurrencyPickerList({ selected, onSelect }: Props) {
-  const { palette } = useFluxPalette();
+export function CurrencyPickerList({
+  selected,
+  onSelect,
+  variant = "sheet",
+}: Props) {
+  const { palette, colorScheme } = useFluxPalette();
+  const dark = colorScheme === "dark";
+  const accent = dark ? "#48B872" : "#2B7A50";
+  const cardBorder = dark ? palette.cardBorder : "#E0DAD3";
+  const cardBg = dark ? palette.inputBackground : "#FFFFFF";
+
+  if (variant === "cards") {
+    return (
+      <View style={styles.cardList}>
+        {CURRENCY_OPTIONS.map((c) => {
+          const active = c.code === selected;
+          return (
+            <Pressable
+              key={c.code}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${c.label}, ${c.code}`}
+              onPress={() => onSelect(c.code)}
+              style={({ pressed }) => [
+                styles.cardRow,
+                {
+                  backgroundColor: active ? accent : cardBg,
+                  borderColor: active ? accent : cardBorder,
+                  opacity: pressed ? 0.92 : 1,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.cardLabel,
+                  { color: active ? "#FFFFFF" : palette.text },
+                ]}
+              >
+                {c.code} — {titleCase(c.label)}
+              </Text>
+              <Text
+                style={[
+                  styles.cardSymbol,
+                  {
+                    color: active ? "#FFFFFF" : palette.textMuted,
+                  },
+                ]}
+              >
+                {c.symbol}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.list}>
@@ -64,6 +120,10 @@ export function CurrencyPickerList({ selected, onSelect }: Props) {
   );
 }
 
+function titleCase(value: string) {
+  return value.replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
 const styles = StyleSheet.create({
   list: {
     borderRadius: radii.xl,
@@ -94,14 +154,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   label: {
+    fontFamily: typeface.regular,
     fontSize: 16,
-    fontWeight: "700",
   },
   code: {
+    fontFamily: typeface.regular,
     fontSize: 12,
     marginTop: 2,
   },
   sample: {
     fontSize: 13,
+  },
+  cardList: {
+    gap: spacing.sm,
+  },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 16,
+    minHeight: 56,
+  },
+  cardLabel: {
+    flex: 1,
+    fontFamily: typeface.medium,
+    fontSize: 16,
+  },
+  cardSymbol: {
+    fontFamily: typeface.currency,
+    fontSize: 18,
+    marginLeft: spacing.sm,
   },
 });

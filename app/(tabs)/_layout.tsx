@@ -6,7 +6,7 @@ import { GlassTabBar } from "@/components/GlassTabBar";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
-import { font } from "@/constants/typography";
+import { typeface } from "@/constants/typography";
 
 function TabBarIcon(
   props: Readonly<{
@@ -14,7 +14,7 @@ function TabBarIcon(
     color: string;
   }>,
 ) {
-  return <FontAwesome size={22} style={{ marginBottom: -1 }} {...props} />;
+  return <FontAwesome size={20} style={{ marginBottom: -1 }} {...props} />;
 }
 
 export default function TabLayout() {
@@ -38,7 +38,7 @@ export default function TabLayout() {
           backgroundColor: palette.headerBackground,
         },
         headerTitleStyle: {
-          fontFamily: font.bold,
+          fontFamily: typeface.bold,
           fontSize: 18,
           letterSpacing: -0.3,
           color: palette.text,
@@ -51,6 +51,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
@@ -58,8 +59,9 @@ export default function TabLayout() {
         name="timeline"
         options={{
           title: "Timeline",
+          headerShown: false,
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="calendar" color={color} />
+            <TabBarIcon name="bars" color={color} />
           ),
         }}
       />
@@ -67,8 +69,19 @@ export default function TabLayout() {
         name="plan"
         options={{
           title: "Plan",
+          headerShown: false,
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="sliders" color={color} />
+            <TabBarIcon name="plus-square-o" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="next"
+        options={{
+          title: "Next",
+          headerShown: false,
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="calendar-o" color={color} />
           ),
         }}
       />
@@ -76,8 +89,9 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: "Settings",
+          headerShown: false,
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="cog" color={color} />
+            <TabBarIcon name="sun-o" color={color} />
           ),
         }}
       />

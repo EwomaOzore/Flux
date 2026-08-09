@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-nat
 
 import { Text } from '@/components/Themed';
 import { cardElevation, radii, spacing } from '@/constants/theme';
+import { typeface } from '@/constants/typography';
 
 import { useFluxPalette } from '@/components/ui/useFluxPalette';
 
@@ -23,7 +24,7 @@ export function PrimaryButton({ label, onPress, style }: Props) {
         { backgroundColor: palette.tint, opacity: pressed ? 0.9 : 1 },
         style,
       ]}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { fontFamily: typeface.bold }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -38,7 +39,6 @@ const styles = StyleSheet.create({
   label: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '800',
     letterSpacing: 0.2,
   },
 });

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet, TextInput, type TextInputProps } from 'react-native';
 
-import { font } from '@/constants/typography';
+import { typeface } from '@/constants/typography';
 import { radii, spacing } from '@/constants/theme';
 
 import { useFluxPalette } from '@/components/ui/useFluxPalette';
@@ -16,7 +16,7 @@ export function FluxTextInput({ style, money, placeholderTextColor, ...rest }: P
 
   const fieldStyle = useMemo(
     () => ({
-      fontFamily: font.regular,
+      fontFamily: typeface.regular,
       borderColor: palette.borderStrong,
       color: palette.text,
       backgroundColor: palette.surfaceMuted,
@@ -42,6 +42,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   money: {
+    fontFamily: typeface.mono,
     fontVariant: ['tabular-nums'],
   },
 });

@@ -2,11 +2,10 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FluxBottomSheet, FluxBottomSheetHeader } from '@/components/FluxBottomSheet';
+import { MoneyText } from '@/components/MoneyText';
 import { Text } from '@/components/Themed';
 import { useFluxPalette } from '@/components/ui/useFluxPalette';
 import { spacing } from '@/constants/theme';
-import { formatMoney } from '@/src/lib/formatCurrency';
-import { useCurrencyStore } from '@/src/state/currencyStore';
 
 type Props = {
   readonly visible: boolean;
@@ -29,7 +28,6 @@ export function DiscretionaryInfoModal({
 }: Props) {
   const { palette } = useFluxPalette();
   const insets = useSafeAreaInsets();
-  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   return (
     <FluxBottomSheet visible={visible} onClose={onClose} enableDynamicSizing variant="view">
@@ -46,11 +44,11 @@ export function DiscretionaryInfoModal({
             spending and anything you haven&apos;t listed yet — we call that discretionary in plain language.
           </Text>
           <View style={styles.rows}>
-            <Row palette={palette} label="Take-home (all income streams)" value={formatMoney(income, currencyCode)} />
-            <Row palette={palette} label="Monthly bills (from Plan)" value={`−${formatMoney(billsTotal, currencyCode)}`} />
-            <Row palette={palette} label="This month's payday line items" value={`−${formatMoney(paydayOutflow, currencyCode)}`} />
+            <Row palette={palette} label="Take-home (all income streams)" amount={income} />
+            <Row palette={palette} label="Monthly bills (from Plan)" amount={-billsTotal} signed />
+            <Row palette={palette} label="This month's payday line items" amount={-paydayOutflow} signed />
             <View style={[styles.rule, { backgroundColor: palette.border }]} />
-            <Row palette={palette} label="Cushion after bills" value={formatMoney(cushion, currencyCode)} emphasis />
+            <Row palette={palette} label="Cushion after bills" amount={cushion} emphasis />
           </View>
         </View>
       </View>
@@ -61,21 +59,36 @@ export function DiscretionaryInfoModal({
 function Row({
   palette,
   label,
-  value,
+  amount,
   emphasis,
+  signed,
 }: {
   palette: { text: string; textSecondary: string };
   label: string;
-  value: string;
+  amount: number;
   emphasis?: boolean;
+  signed?: boolean;
 }) {
   return (
     <View style={styles.row}>
       <Text
-        style={[styles.rowLabel, { color: emphasis ? palette.text : palette.textSecondary }, emphasis && styles.rowLabelEm]}>
+        style={[
+          styles.rowLabel,
+          { color: emphasis ? palette.text : palette.textSecondary },
+          emphasis && styles.rowLabelEm,
+        ]}
+      >
         {label}
       </Text>
-      <Text style={[styles.rowValue, { color: palette.text }, emphasis && styles.rowValueEm]}>{value}</Text>
+      <MoneyText
+        amount={amount}
+        signed={signed}
+        style={[
+          styles.rowValue,
+          { color: palette.text },
+          emphasis && styles.rowValueEm,
+        ]}
+      />
     </View>
   );
 }
@@ -83,11 +96,11 @@ function Row({
 const styles = StyleSheet.create({
   body: {
     paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
   lede: {
     fontSize: 15,
     lineHeight: 22,
-    marginBottom: spacing.md,
   },
   ledeStrong: {
     fontWeight: '700',
@@ -97,8 +110,8 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
     gap: spacing.md,
   },
   rowLabel: {
@@ -111,12 +124,8 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
   },
   rowValueEm: {
-    fontWeight: '800',
     fontSize: 16,
   },
   rule: {

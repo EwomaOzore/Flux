@@ -1,10 +1,11 @@
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { MoneyText } from "@/components/MoneyText";
 import { Text } from "@/components/Themed";
 import { useFluxPalette } from "@/components/ui";
 import { radii, spacing } from "@/constants/theme";
+import { typeface } from "@/constants/typography";
 import { CURRENCY_OPTIONS, type CurrencyCode } from "@/src/lib/currencies";
-import { formatMoney } from "@/src/lib/formatCurrency";
 
 type Props = {
   readonly selected: CurrencyCode;
@@ -51,9 +52,11 @@ export function CurrencyPickerList({ selected, onSelect }: Props) {
                 </Text>
               </View>
             </View>
-            <Text style={[styles.sample, { color: palette.textSecondary }]}>
-              {formatMoney(125000, c.code)}
-            </Text>
+            <MoneyText
+              amount={125000}
+              currencyCode={c.code}
+              style={[styles.sample, { color: palette.textSecondary }]}
+            />
           </Pressable>
         );
       })}
@@ -63,7 +66,7 @@ export function CurrencyPickerList({ selected, onSelect }: Props) {
 
 const styles = StyleSheet.create({
   list: {
-    borderRadius: radii.md,
+    borderRadius: radii.xl,
     overflow: "hidden",
   },
   row: {
@@ -82,8 +85,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   symbol: {
+    fontFamily: typeface.currency,
     fontSize: 20,
-    fontWeight: "800",
     width: 36,
     textAlign: "center",
   },
@@ -100,7 +103,5 @@ const styles = StyleSheet.create({
   },
   sample: {
     fontSize: 13,
-    fontWeight: "600",
-    fontVariant: ["tabular-nums"],
   },
 });

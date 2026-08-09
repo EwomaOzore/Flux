@@ -6,24 +6,22 @@ import { BlurView } from 'expo-blur';
 import { useContext, useLayoutEffect } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import Colors from '@/constants/Colors';
-import { font } from '@/constants/typography';
-import { radii, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
+import { radii, spacing } from '@/constants/theme';
+import { typeface } from '@/constants/typography';
 
-const BAR_HEIGHT = 54;
-const SIDE_INSET = 18;
-/** Space between pill and bottom safe inset */
+const BAR_HEIGHT = 58;
+const SIDE_INSET = 14;
 const FLOAT_ABOVE_HOME = 8;
-/** Extra space above the pill so scroll content clears it */
 const CLEAR_ABOVE_PILL = 12;
 
 function webFallbackBackground(dark: boolean) {
-  return dark ? 'rgba(30,41,59,0.82)' : 'rgba(255,255,255,0.78)';
+  return dark ? 'rgba(42,36,32,0.88)' : 'rgba(255,255,255,0.88)';
 }
 
 function glassBorderColor(dark: boolean) {
-  return dark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.65)';
+  return dark ? 'rgba(255,255,255,0.1)' : 'rgba(208,202,194,0.9)';
 }
 
 export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
@@ -50,7 +48,8 @@ export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
         bottom: 0,
         height: reservedHeight,
         backgroundColor: 'transparent',
-      }}>
+      }}
+    >
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         <View
           style={[
@@ -61,8 +60,10 @@ export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
               bottom,
               height: BAR_HEIGHT,
               borderColor: glassBorderColor(dark),
+              backgroundColor: dark ? palette.tabBarBackground : '#FFFFFF',
             },
-          ]}>
+          ]}
+        >
           {Platform.OS === 'web' ? (
             <View style={[styles.webFill, { backgroundColor: webFallbackBackground(dark) }]}>
               <TabRow
@@ -74,14 +75,14 @@ export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
               />
             </View>
           ) : (
-            <BlurView tint={dark ? 'dark' : 'light'} intensity={dark ? 48 : 72} style={styles.blurFill}>
+            <BlurView tint={dark ? 'dark' : 'light'} intensity={dark ? 40 : 64} style={styles.blurFill}>
               <View style={styles.blurStack}>
                 <View
                   pointerEvents="none"
                   style={[
                     StyleSheet.absoluteFill,
                     {
-                      backgroundColor: dark ? 'rgba(15,23,42,0.3)' : 'rgba(255,255,255,0.2)',
+                      backgroundColor: dark ? 'rgba(28,24,20,0.35)' : 'rgba(255,255,255,0.45)',
                     },
                   ]}
                 />
@@ -143,8 +144,9 @@ function TabRow({ state, descriptors, navigation, activeColor, inactiveColor }: 
             accessibilityLabel={options.tabBarAccessibilityLabel ?? String(label)}
             onPress={onPress}
             onLongPress={onLongPress}
-            style={({ pressed }) => [styles.tab, { opacity: pressed ? 0.75 : 1 }]}>
-            {options.tabBarIcon?.({ focused, color, size: 22 }) ?? null}
+            style={({ pressed }) => [styles.tab, { opacity: pressed ? 0.75 : 1 }]}
+          >
+            {options.tabBarIcon?.({ focused, color, size: 20 }) ?? null}
             <Text style={[styles.label, { color }]} numberOfLines={1}>
               {label}
             </Text>
@@ -163,13 +165,13 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     ...Platform.select({
       ios: {
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: StyleSheet.hairlineWidth },
-        shadowOpacity: 0.18,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
         shadowRadius: 16,
       },
       android: {
-        elevation: 14,
+        elevation: 12,
       },
       default: {},
     }),
@@ -190,7 +192,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: 4,
   },
   tab: {
     flex: 1,
@@ -200,8 +202,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   label: {
-    fontFamily: font.bold,
+    fontFamily: typeface.medium,
     fontSize: 10,
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
 });

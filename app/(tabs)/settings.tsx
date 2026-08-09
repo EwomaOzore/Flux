@@ -1,6 +1,7 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Constants from "expo-constants";
 import * as LocalAuthentication from "expo-local-authentication";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -9,17 +10,23 @@ import {
   StyleSheet,
   Switch,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BrandMark } from "@/components/BrandMark";
+import { CurrencyPickerList } from "@/components/CurrencyPickerList";
+import {
+  FluxBottomSheet,
+  FluxBottomSheetHeader,
+} from "@/components/FluxBottomSheet";
 import { Text } from "@/components/Themed";
 import { ScreenScroll, useFluxPalette } from "@/components/ui";
-import { radii, spacing } from "@/constants/theme";
+import { cardElevation, radii, spacing } from "@/constants/theme";
+import { typeface } from "@/constants/typography";
 import { notifyBiometricPrefsChanged } from "@/src/lib/biometricEvents";
 import {
   loadBiometricLockEnabled,
   saveBiometricLockEnabled,
 } from "@/src/lib/biometricPrefs";
-import { CurrencyPickerList } from "@/components/CurrencyPickerList";
-import { FluxBottomSheet, FluxBottomSheetHeader } from "@/components/FluxBottomSheet";
 import { currencyOption } from "@/src/lib/currencies";
 import {
   applyReminderPrefs,
@@ -27,55 +34,12 @@ import {
   loadReminderPrefs,
   type ReminderPrefs,
 } from "@/src/lib/paydayReminders";
+import { useAppearanceStore } from "@/src/state/appearanceStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 
-type MenuRowProps = {
-  readonly href: "/upcoming" | "/backup";
-  readonly icon: React.ComponentProps<typeof FontAwesome>["name"];
-  readonly title: string;
-  readonly subtitle: string;
-  readonly palette: ReturnType<typeof useFluxPalette>["palette"];
-};
-
-function MenuRow({ href, icon, title, subtitle, palette }: MenuRowProps) {
-  return (
-    <Link href={href} asChild>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={title}
-        style={({ pressed }) => [
-          styles.row,
-          {
-            borderBottomColor: palette.border,
-            opacity: pressed ? 0.92 : 1,
-          },
-        ]}
-      >
-        <RNView style={styles.rowMain}>
-          <FontAwesome name={icon} size={16} color={palette.tintStrong} />
-          <RNView style={styles.textCol}>
-            <Text style={[styles.rowTitle, { color: palette.text }]}>
-              {title}
-            </Text>
-            <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-              {subtitle}
-            </Text>
-          </RNView>
-        </RNView>
-        <RNView style={styles.chevronWrap}>
-          <FontAwesome
-            name="chevron-right"
-            size={14}
-            color={palette.textMuted}
-          />
-        </RNView>
-      </Pressable>
-    </Link>
-  );
-}
-
 export default function SettingsScreen() {
-  const { palette } = useFluxPalette();
+  const { palette, colorScheme } = useFluxPalette();
+  const insets = useSafeAreaInsets();
   const [reminderPrefs, setReminderPrefs] =
     useState<ReminderPrefs>(defaultReminderPrefs);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -83,6 +47,9 @@ export default function SettingsScreen() {
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const setCurrency = useCurrencyStore((s) => s.setCurrency);
   const currency = currencyOption(currencyCode);
+  const appearance = useAppearanceStore((s) => s.preference);
+  const setAppearance = useAppearanceStore((s) => s.setPreference);
+  const darkModeOn = appearance === "dark";
 
   useEffect(() => {
     loadReminderPrefs()
@@ -140,12 +107,6 @@ export default function SettingsScreen() {
     }
   };
 
-  const onReminderEveToggle = async (alsoRemindEve: boolean) => {
-    const next = { ...reminderPrefs, alsoRemindEve };
-    setReminderPrefs(next);
-    await applyReminderPrefs(next);
-  };
-
   const onReminderDayChange = async (nextDay: number) => {
     const day = Math.max(1, Math.min(28, nextDay));
     const next = { ...reminderPrefs, dayOfMonth: day };
@@ -153,53 +114,357 @@ export default function SettingsScreen() {
     await applyReminderPrefs(next);
   };
 
-  const onReminderTimePreset = async (hour: number, minute: number) => {
-    const next = { ...reminderPrefs, hour, minute };
-    setReminderPrefs(next);
-    await applyReminderPrefs(next);
-  };
+  const version =
+    Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? "1.0.0";
 
   return (
     <ScreenScroll>
-      <RNView style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
-          Preferences
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Change currency"
-          onPress={() => setCurrencySheetOpen(true)}
-          style={({ pressed }) => [
-            styles.row,
-            {
-              borderBottomColor: palette.border,
-              borderTopColor: palette.border,
-              borderTopWidth: StyleSheet.hairlineWidth,
-              backgroundColor: palette.surface,
-              opacity: pressed ? 0.92 : 1,
-            },
+      <RNView style={{ height: insets.top }} />
+      <RNView style={styles.titleRow}>
+        <BrandMark size={28} />
+        <Text style={[styles.title, { color: palette.text }]}>Settings</Text>
+      </RNView>
+
+      <SettingsGroup title="DISPLAY" palette={palette}>
+        <RNView
+          style={[
+            styles.card,
+            { backgroundColor: palette.surface },
+            cardElevation(colorScheme),
           ]}
         >
-          <RNView style={styles.rowMain}>
-            <FontAwesome name="money" size={16} color={palette.tintStrong} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setCurrencySheetOpen(true)}
+            style={({ pressed }) => [
+              styles.row,
+              {
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: palette.border,
+                opacity: pressed ? 0.92 : 1,
+              },
+            ]}
+          >
+            <RNView
+              style={[
+                styles.iconWrap,
+                { backgroundColor: palette.surfaceMuted },
+              ]}
+            >
+              <Text style={[styles.currencyGlyph, { color: palette.text }]}>
+                {currency.symbol}
+              </Text>
+            </RNView>
             <RNView style={styles.textCol}>
               <Text style={[styles.rowTitle, { color: palette.text }]}>
                 Currency
               </Text>
               <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-                {currency.label} ({currency.code})
+                {currency.label}
               </Text>
             </RNView>
-          </RNView>
-          <RNView style={styles.chevronWrap}>
+            <Text style={[styles.code, { color: palette.tint }]}>
+              {currency.code}
+            </Text>
             <FontAwesome
               name="chevron-right"
-              size={14}
+              size={12}
               color={palette.textMuted}
             />
+          </Pressable>
+
+          <RNView style={styles.row}>
+            <RNView
+              style={[
+                styles.iconWrap,
+                { backgroundColor: palette.surfaceMuted },
+              ]}
+            >
+              <FontAwesome name="moon-o" size={16} color={palette.textSecondary} />
+            </RNView>
+            <RNView style={styles.textCol}>
+              <Text style={[styles.rowTitle, { color: palette.text }]}>
+                Dark mode
+              </Text>
+              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                {darkModeOn ? "On" : appearance === "system" ? "System" : "Off"}
+              </Text>
+            </RNView>
+            <Switch
+              accessibilityLabel="Toggle dark mode"
+              value={darkModeOn}
+              onValueChange={(on) => setAppearance(on ? "dark" : "light")}
+              trackColor={{ false: palette.border, true: palette.tint }}
+              thumbColor="#fff"
+            />
           </RNView>
-        </Pressable>
-      </RNView>
+        </RNView>
+      </SettingsGroup>
+
+      <SettingsGroup title="SECURITY" palette={palette}>
+        <RNView
+          style={[
+            styles.card,
+            { backgroundColor: palette.surface },
+            cardElevation(colorScheme),
+          ]}
+        >
+          <RNView style={styles.row}>
+            <RNView
+              style={[
+                styles.iconWrap,
+                { backgroundColor: palette.surfaceMuted },
+              ]}
+            >
+              <FontAwesome name="lock" size={16} color={palette.textSecondary} />
+            </RNView>
+            <RNView style={styles.textCol}>
+              <Text style={[styles.rowTitle, { color: palette.text }]}>
+                Biometric lock
+              </Text>
+              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                Face ID / Fingerprint
+              </Text>
+            </RNView>
+            <Switch
+              accessibilityLabel="Toggle biometric lock"
+              value={biometricEnabled}
+              onValueChange={(v) => void onBiometricToggle(v)}
+              trackColor={{ false: palette.border, true: palette.tint }}
+              thumbColor="#fff"
+            />
+          </RNView>
+        </RNView>
+      </SettingsGroup>
+
+      <SettingsGroup title="NOTIFICATIONS" palette={palette}>
+        <RNView
+          style={[
+            styles.card,
+            { backgroundColor: palette.surface },
+            cardElevation(colorScheme),
+          ]}
+        >
+          <RNView
+            style={[
+              styles.row,
+              reminderPrefs.enabled && {
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: palette.border,
+              },
+            ]}
+          >
+            <RNView
+              style={[
+                styles.iconWrap,
+                { backgroundColor: palette.surfaceMuted },
+              ]}
+            >
+              <FontAwesome name="bell-o" size={16} color={palette.textSecondary} />
+            </RNView>
+            <RNView style={styles.textCol}>
+              <Text style={[styles.rowTitle, { color: palette.text }]}>
+                Payday reminders
+              </Text>
+              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                Notify on the {reminderPrefs.dayOfMonth}
+                {ordinal(reminderPrefs.dayOfMonth)}
+              </Text>
+            </RNView>
+            <Switch
+              accessibilityLabel="Toggle payday reminder"
+              value={reminderPrefs.enabled}
+              onValueChange={(v) => void onReminderToggle(v)}
+              trackColor={{ false: palette.border, true: palette.tint }}
+              thumbColor="#fff"
+            />
+          </RNView>
+          {reminderPrefs.enabled ? (
+            <RNView style={styles.row}>
+              <RNView style={styles.textCol}>
+                <Text style={[styles.rowTitle, { color: palette.text }]}>
+                  Day of month
+                </Text>
+              </RNView>
+              <RNView style={styles.stepper}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() =>
+                    void onReminderDayChange(reminderPrefs.dayOfMonth - 1)
+                  }
+                  style={[
+                    styles.stepperBtn,
+                    {
+                      borderColor: palette.border,
+                      backgroundColor: palette.surfaceMuted,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: palette.text, fontWeight: "700" }}>
+                    −
+                  </Text>
+                </Pressable>
+                <Text style={[styles.stepperValue, { color: palette.text }]}>
+                  {reminderPrefs.dayOfMonth}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() =>
+                    void onReminderDayChange(reminderPrefs.dayOfMonth + 1)
+                  }
+                  style={[
+                    styles.stepperBtn,
+                    {
+                      borderColor: palette.border,
+                      backgroundColor: palette.surfaceMuted,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: palette.text, fontWeight: "700" }}>
+                    +
+                  </Text>
+                </Pressable>
+              </RNView>
+            </RNView>
+          ) : null}
+        </RNView>
+      </SettingsGroup>
+
+      <SettingsGroup title="DATA" palette={palette}>
+        <RNView
+          style={[
+            styles.card,
+            { backgroundColor: palette.surface },
+            cardElevation(colorScheme),
+          ]}
+        >
+          <RNView
+            style={[
+              styles.row,
+              {
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: palette.border,
+              },
+            ]}
+          >
+            <RNView
+              style={[
+                styles.iconWrap,
+                { backgroundColor: palette.surfaceMuted },
+              ]}
+            >
+              <FontAwesome
+                name="download"
+                size={16}
+                color={palette.textSecondary}
+              />
+            </RNView>
+            <RNView style={styles.textCol}>
+              <Text style={[styles.rowTitle, { color: palette.text }]}>
+                Export data
+              </Text>
+              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                CSV of all records
+              </Text>
+            </RNView>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push("/backup")}
+              style={[
+                styles.actionChip,
+                { backgroundColor: palette.tintMuted },
+              ]}
+            >
+              <Text style={{ color: palette.tint, fontWeight: "700" }}>
+                Export
+              </Text>
+            </Pressable>
+          </RNView>
+          <RNView style={styles.row}>
+            <RNView
+              style={[
+                styles.iconWrap,
+                { backgroundColor: palette.surfaceMuted },
+              ]}
+            >
+              <FontAwesome
+                name="upload"
+                size={16}
+                color={palette.textSecondary}
+              />
+            </RNView>
+            <RNView style={styles.textCol}>
+              <Text style={[styles.rowTitle, { color: palette.text }]}>
+                Import backup
+              </Text>
+              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                Restore from export
+              </Text>
+            </RNView>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push("/backup")}
+              style={[
+                styles.actionChip,
+                { backgroundColor: palette.surfaceMuted },
+              ]}
+            >
+              <Text style={{ color: palette.textSecondary, fontWeight: "700" }}>
+                Import
+              </Text>
+            </Pressable>
+          </RNView>
+        </RNView>
+      </SettingsGroup>
+
+      <SettingsGroup title="ABOUT" palette={palette}>
+        <RNView
+          style={[
+            styles.card,
+            { backgroundColor: palette.surface },
+            cardElevation(colorScheme),
+          ]}
+        >
+          <Link href="/modal" asChild>
+            <Pressable
+              style={({ pressed }) => [
+                styles.row,
+                { opacity: pressed ? 0.92 : 1 },
+              ]}
+            >
+              <RNView
+                style={[
+                  styles.iconWrap,
+                  { backgroundColor: palette.surfaceMuted },
+                ]}
+              >
+                <FontAwesome
+                  name="info"
+                  size={16}
+                  color={palette.textSecondary}
+                />
+              </RNView>
+              <RNView style={styles.textCol}>
+                <Text style={[styles.rowTitle, { color: palette.text }]}>
+                  About Flux
+                </Text>
+                <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                  How cushion and payday planning works
+                </Text>
+              </RNView>
+              <FontAwesome
+                name="chevron-right"
+                size={12}
+                color={palette.textMuted}
+              />
+            </Pressable>
+          </Link>
+        </RNView>
+      </SettingsGroup>
+
+      <Text style={[styles.version, { color: palette.textMuted }]}>
+        {version}
+      </Text>
 
       <FluxBottomSheet
         visible={currencySheetOpen}
@@ -219,324 +484,100 @@ export default function SettingsScreen() {
           }}
         />
       </FluxBottomSheet>
-
-      <RNView style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
-          Planning
-        </Text>
-        <RNView style={styles.sectionRows}>
-          <MenuRow
-            href="/upcoming"
-            icon="clock-o"
-            title="Upcoming"
-            subtitle="See the next three payday runs at a glance."
-            palette={palette}
-          />
-          <MenuRow
-            href="/backup"
-            icon="download"
-            title="Backup & import"
-            subtitle="Export files, import snapshots, and resolve merge conflicts."
-            palette={palette}
-          />
-        </RNView>
-      </RNView>
-
-      <RNView style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
-          Security
-        </Text>
-        <RNView
-          style={[
-            styles.reminderCard,
-            { borderColor: palette.border, backgroundColor: palette.surface },
-          ]}
-        >
-          <RNView style={styles.reminderRow}>
-            <RNView style={styles.reminderTextCol}>
-              <Text style={[styles.rowTitle, { color: palette.text }]}>
-                Biometric lock
-              </Text>
-              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-                Require Face ID, Touch ID, or device PIN when you return to Flux.
-              </Text>
-            </RNView>
-            <Switch
-              accessibilityLabel="Toggle biometric lock"
-              value={biometricEnabled}
-              onValueChange={(v) => void onBiometricToggle(v)}
-              trackColor={{ false: palette.border, true: palette.tintMuted }}
-              thumbColor={palette.surface}
-            />
-          </RNView>
-        </RNView>
-      </RNView>
-
-      <RNView style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
-          Notifications
-        </Text>
-        <RNView
-          style={[
-            styles.reminderCard,
-            { borderColor: palette.border, backgroundColor: palette.surface },
-          ]}
-        >
-          <RNView style={styles.reminderRow}>
-            <RNView style={styles.reminderTextCol}>
-              <Text style={[styles.rowTitle, { color: palette.text }]}>
-                Payday reminder
-              </Text>
-              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-                Day {reminderPrefs.dayOfMonth} at{" "}
-                {String(reminderPrefs.hour).padStart(2, "0")}:
-                {String(reminderPrefs.minute).padStart(2, "0")}
-              </Text>
-            </RNView>
-            <Switch
-              accessibilityLabel="Toggle payday reminder"
-              value={reminderPrefs.enabled}
-              onValueChange={onReminderToggle}
-              trackColor={{ false: palette.border, true: palette.tintMuted }}
-              thumbColor={palette.surface}
-            />
-          </RNView>
-          {reminderPrefs.enabled ? (
-            <>
-              <RNView style={styles.reminderDivider} />
-              <RNView style={styles.reminderRow}>
-                <Text style={[styles.rowTitle, { color: palette.text }]}>
-                  Check-in day
-                </Text>
-                <RNView style={styles.stepperWrap}>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() =>
-                      void onReminderDayChange(reminderPrefs.dayOfMonth - 1)
-                    }
-                    style={({ pressed }) => [
-                      styles.stepperBtn,
-                      {
-                        opacity: pressed ? 0.85 : 1,
-                        borderColor: palette.borderStrong,
-                        backgroundColor: palette.surfaceMuted,
-                      },
-                    ]}
-                  >
-                    <Text style={{ color: palette.text }}>-</Text>
-                  </Pressable>
-                  <Text
-                    style={{ color: palette.textSecondary, fontWeight: "700" }}
-                  >
-                    Day {reminderPrefs.dayOfMonth}
-                  </Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() =>
-                      void onReminderDayChange(reminderPrefs.dayOfMonth + 1)
-                    }
-                    style={({ pressed }) => [
-                      styles.stepperBtn,
-                      {
-                        opacity: pressed ? 0.85 : 1,
-                        borderColor: palette.borderStrong,
-                        backgroundColor: palette.surfaceMuted,
-                      },
-                    ]}
-                  >
-                    <Text style={{ color: palette.text }}>+</Text>
-                  </Pressable>
-                </RNView>
-              </RNView>
-              <RNView style={styles.chipRow}>
-                {[
-                  { label: "08:00", hour: 8, minute: 0 },
-                  { label: "09:00", hour: 9, minute: 0 },
-                  { label: "18:00", hour: 18, minute: 0 },
-                ].map((t) => {
-                  const selected =
-                    reminderPrefs.hour === t.hour &&
-                    reminderPrefs.minute === t.minute;
-                  return (
-                    <Pressable
-                      key={t.label}
-                      accessibilityRole="button"
-                      onPress={() =>
-                        void onReminderTimePreset(t.hour, t.minute)
-                      }
-                      style={({ pressed }) => [
-                        styles.timeChip,
-                        {
-                          borderColor: selected ? palette.tint : palette.border,
-                          backgroundColor: selected
-                            ? palette.tintMuted
-                            : palette.surfaceMuted,
-                          opacity: pressed ? 0.9 : 1,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: selected
-                            ? palette.tintStrong
-                            : palette.textSecondary,
-                          fontWeight: "700",
-                        }}
-                      >
-                        {t.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </RNView>
-              {reminderPrefs.dayOfMonth > 1 ? (
-                <RNView style={styles.reminderRow}>
-                  <RNView style={styles.reminderTextCol}>
-                    <Text style={[styles.rowTitle, { color: palette.text }]}>
-                      Day-before ping
-                    </Text>
-                    <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-                      Also remind on day {reminderPrefs.dayOfMonth - 1}.
-                    </Text>
-                  </RNView>
-                  <Switch
-                    accessibilityLabel="Toggle day-before payday reminder"
-                    value={reminderPrefs.alsoRemindEve}
-                    onValueChange={(v) => void onReminderEveToggle(v)}
-                    trackColor={{
-                      false: palette.border,
-                      true: palette.tintMuted,
-                    }}
-                    thumbColor={palette.surface}
-                  />
-                </RNView>
-              ) : null}
-            </>
-          ) : null}
-        </RNView>
-      </RNView>
-
-      <RNView style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
-          About
-        </Text>
-        <Link href="/modal" asChild>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="About Flux"
-            style={({ pressed }) => [
-              styles.row,
-              {
-                borderTopColor: palette.border,
-                borderBottomColor: palette.border,
-                borderTopWidth: StyleSheet.hairlineWidth,
-                backgroundColor: palette.surface,
-                opacity: pressed ? 0.92 : 1,
-              },
-            ]}
-          >
-            <RNView style={styles.rowMain}>
-              <FontAwesome
-                name="question-circle-o"
-                size={16}
-                color={palette.tintStrong}
-              />
-              <RNView style={styles.textCol}>
-                <Text style={[styles.rowTitle, { color: palette.text }]}>
-                  About Flux
-                </Text>
-                <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-                  How cushion and payday planning works.
-                </Text>
-              </RNView>
-            </RNView>
-            <RNView style={styles.chevronWrap}>
-              <FontAwesome
-                name="chevron-right"
-                size={14}
-                color={palette.textMuted}
-              />
-            </RNView>
-          </Pressable>
-        </Link>
-      </RNView>
     </ScreenScroll>
   );
 }
 
+function SettingsGroup({
+  title,
+  children,
+  palette,
+}: Readonly<{
+  title: string;
+  children: React.ReactNode;
+  palette: ReturnType<typeof useFluxPalette>["palette"];
+}>) {
+  return (
+    <RNView style={styles.group}>
+      <Text style={[styles.groupTitle, { color: palette.textMuted }]}>
+        {title}
+      </Text>
+      {children}
+    </RNView>
+  );
+}
+
+function ordinal(n: number) {
+  const j = n % 10;
+  const k = n % 100;
+  if (j === 1 && k !== 11) return "st";
+  if (j === 2 && k !== 12) return "nd";
+  if (j === 3 && k !== 13) return "rd";
+  return "th";
+}
+
 const styles = StyleSheet.create({
-  section: {
-    marginTop: spacing.lg,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: "800",
-    marginBottom: spacing.xs,
-  },
-  sectionRows: {
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  title: {
+    fontFamily: typeface.display,
+    fontSize: 32,
+    letterSpacing: -0.6,
+  },
+  group: {
+    gap: spacing.sm,
+  },
+  groupTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
+  card: {
+    borderRadius: radii.xl,
+    overflow: "hidden",
   },
   row: {
-    position: "relative",
-    minHeight: 62,
-    paddingHorizontal: spacing.sm,
-    paddingRight: 34,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    minHeight: 64,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
   },
-  rowMain: {
-    flex: 1,
-    flexDirection: "row",
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
     alignItems: "center",
-    gap: spacing.sm,
-    minWidth: 0,
+    justifyContent: "center",
+  },
+  currencyGlyph: {
+    fontFamily: typeface.currency,
+    fontSize: 16,
   },
   textCol: {
     flex: 1,
+    minWidth: 0,
   },
   rowTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   rowSub: {
     marginTop: 2,
     fontSize: 13,
-    lineHeight: 18,
   },
-  chevronWrap: {
-    position: "absolute",
-    right: spacing.sm,
-    top: 0,
-    bottom: 0,
-    width: 18,
-    justifyContent: "center",
-    alignItems: "flex-end",
+  code: {
+    fontFamily: typeface.displayMedium,
+    fontSize: 14,
+    fontWeight: "600",
+    marginRight: 4,
   },
-  reminderCard: {
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: spacing.sm,
-    gap: spacing.sm,
-  },
-  reminderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  reminderTextCol: {
-    flex: 1,
-  },
-  reminderDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    opacity: 0.5,
-  },
-  stepperWrap: {
+  stepper: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
@@ -544,22 +585,25 @@ const styles = StyleSheet.create({
   stepperBtn: {
     width: 32,
     height: 32,
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chipRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  timeChip: {
-    minHeight: 36,
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+  },
+  stepperValue: {
+    fontFamily: typeface.monoBold,
+    fontSize: 16,
+    minWidth: 24,
+    textAlign: "center",
+  },
+  actionChip: {
+    borderRadius: radii.md,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  version: {
+    textAlign: "center",
+    fontSize: 12,
+    marginTop: spacing.sm,
   },
 });

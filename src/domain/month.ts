@@ -26,6 +26,39 @@ export function formatMonthIdDisplay(id: MonthId, locale: string = 'en-US'): str
   return `${monthName}, ${year}`;
 }
 
+/** Short label, e.g. `'Aug 2026'`. */
+export function formatMonthIdShort(id: MonthId, locale: string = 'en-US'): string {
+  const { year, month } = parseMonthId(id);
+  const d = new Date(Date.UTC(year, month - 1, 1));
+  const monthName = new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    timeZone: 'UTC',
+  }).format(d);
+  return `${monthName} ${year}`;
+}
+
+/** Last calendar day of the payday month, e.g. `'Aug 31'`. */
+export function formatPaydayDate(id: MonthId, locale: string = 'en-US'): string {
+  const { year, month } = parseMonthId(id);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const d = new Date(Date.UTC(year, month - 1, lastDay));
+  return new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(d);
+}
+
+/** Days from `now` until the end-of-month payday for `id` (0 if past). */
+export function daysUntilPayday(id: MonthId, now: Date = new Date()): number {
+  const { year, month } = parseMonthId(id);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const payday = new Date(year, month - 1, lastDay, 12, 0, 0, 0);
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0);
+  const diff = Math.ceil((payday.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, diff);
+}
+
 const EN_MONTHS_FULL = [
   'january',
   'february',

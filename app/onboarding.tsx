@@ -6,6 +6,7 @@ import { CurrencyPickerList } from "@/components/CurrencyPickerList";
 import { Text } from "@/components/Themed";
 import { PrimaryButton, ScreenScroll, useFluxPalette } from "@/components/ui";
 import { spacing } from "@/constants/theme";
+import { typeface } from "@/constants/typography";
 import { DEFAULT_CURRENCY, type CurrencyCode } from "@/src/lib/currencies";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 
@@ -59,8 +60,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   title: {
+    fontFamily: typeface.display,
     fontSize: 28,
-    fontWeight: "800",
     letterSpacing: -0.5,
     marginBottom: spacing.sm,
   },

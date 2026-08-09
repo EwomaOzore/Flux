@@ -11,10 +11,10 @@
     "splash": {
       "image": "./assets/images/splash-light.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0F766E",
+      "backgroundColor": "#2B7A50",
       "dark": {
         "image": "./assets/images/splash-dark.png",
-        "backgroundColor": "#0B1120"
+        "backgroundColor": "#1C1814"
       }
     },
     "ios": {
@@ -35,7 +35,7 @@
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0f766e"
+        "backgroundColor": "#2B7A50"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -54,10 +54,10 @@
         {
           "image": "./assets/images/splash-light.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0F766E",
+          "backgroundColor": "#2B7A50",
           "dark": {
             "image": "./assets/images/splash-dark.png",
-            "backgroundColor": "#0B1120"
+            "backgroundColor": "#1C1814"
           }
         }
       ],
@@ -74,7 +74,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/icon-light.png",
-          "color": "#0f766e",
+          "color": "#2B7A50",
           "sounds": []
         }
       ],

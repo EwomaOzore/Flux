@@ -1,10 +1,19 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, View as RNView, StyleSheet } from "react-native";
+import {
+  Alert,
+  Pressable,
+  View as RNView,
+  StyleSheet,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BillsBottomSheet } from "@/components/BillsBottomSheet";
+import { BrandMark } from "@/components/BrandMark";
 import { IncomeStreamBottomSheet } from "@/components/IncomeStreamBottomSheet";
+import { MoneyText } from "@/components/MoneyText";
 import { MonthPickerField } from "@/components/MonthPickerField";
+import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { ReceiptScanSheet } from "@/components/ReceiptScanSheet";
 import { Text } from "@/components/Themed";
 import {
@@ -13,25 +22,23 @@ import {
   FormField,
   PrimaryButton,
   ScreenScroll,
-  SectionCard,
   useFluxPalette,
 } from "@/components/ui";
-import { hairlineBorder, radii, spacing } from "@/constants/theme";
+import { cardElevation, radii, spacing } from "@/constants/theme";
+import { typeface } from "@/constants/typography";
 import {
   compareMonthId,
   currentPaydayMonthId,
-  formatMonthIdDisplay,
   type MonthId,
 } from "@/src/domain/month";
-import { incomeNgnForMonth, totalBillsAmount } from "@/src/domain/types";
 import { logActivity } from "@/src/lib/activityLog";
 import {
   formatMoney,
   parseMoneyInput,
   sampleMoneyPlaceholder,
 } from "@/src/lib/formatCurrency";
-import { useBudgetStore } from "@/src/state/budgetStore";
 import type { CurrencyCode } from "@/src/lib/currencies";
+import { useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 
 function moneyDraftFromText(text: string, code: CurrencyCode) {
@@ -40,18 +47,25 @@ function moneyDraftFromText(text: string, code: CurrencyCode) {
 }
 
 export default function PlanScreen() {
-  const { palette } = useFluxPalette();
+  const { palette, colorScheme } = useFluxPalette();
+  const insets = useSafeAreaInsets();
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const incomeStreams = useBudgetStore((s) => s.incomeStreams);
   const billItems = useBudgetStore((s) => s.billItems);
+  const lines = useBudgetStore((s) => s.lines);
 
   const addIncomeStream = useBudgetStore((s) => s.addIncomeStream);
+  const removeIncomeStream = useBudgetStore((s) => s.removeIncomeStream);
+  const deleteBill = useBudgetStore((s) => s.deleteBill);
   const addLine = useBudgetStore((s) => s.addLine);
+  const deleteLine = useBudgetStore((s) => s.deleteLine);
   const resetBudget = useBudgetStore((s) => s.resetBudget);
 
   const [billsOpen, setBillsOpen] = useState(false);
   const [receiptScanOpen, setReceiptScanOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [showOutflowForm, setShowOutflowForm] = useState(false);
   const [incomeStreamSheetId, setIncomeStreamSheetId] = useState<string | null>(
     null,
   );
@@ -68,10 +82,18 @@ export default function PlanScreen() {
   const [addLabel, setAddLabel] = useState("");
   const [addAmount, setAddAmount] = useState("");
 
-  const billsSum = useMemo(() => totalBillsAmount(billItems), [billItems]);
-  const incomeSum = useMemo(
-    () => incomeNgnForMonth(incomeStreams, currentPaydayMonthId()),
-    [incomeStreams],
+  const paydayMonth = currentPaydayMonthId();
+  const monthLines = useMemo(
+    () =>
+      lines.filter((line) => {
+        if (line.recurrence === "monthly") {
+          const start = line.startMonth ?? line.month;
+          const end = line.endMonth ?? line.month;
+          return paydayMonth >= start && paydayMonth <= end;
+        }
+        return line.month === paydayMonth;
+      }),
+    [lines, paydayMonth],
   );
 
   const monthTriggerStyle = useMemo(
@@ -90,6 +112,13 @@ export default function PlanScreen() {
     setIncomeStreamSheetId(id);
   };
 
+  const onAddBill = () => setBillsOpen(true);
+
+  const onAddOutflow = () => {
+    setShowOutflowForm(true);
+    setQuickAddOpen(true);
+  };
+
   const onAddLine = () => {
     const amount = parseMoneyInput(addAmount || "0");
     if (amount <= 0) {
@@ -97,27 +126,6 @@ export default function PlanScreen() {
       return;
     }
     const label = addLabel.trim() || "Payday item";
-    if (amount > 500_000_000) {
-      Alert.alert(
-        "Large amount",
-        "That amount looks unusually high. Please confirm before adding.",
-      );
-      return;
-    }
-    const duplicateInMonth = useBudgetStore
-      .getState()
-      .lines.some(
-        (line) =>
-          line.month === addMonth &&
-          line.label.trim().toLowerCase() === label.toLowerCase(),
-      );
-    if (duplicateInMonth) {
-      Alert.alert(
-        "Possible duplicate",
-        "A line with this label already exists in that month.",
-      );
-      return;
-    }
     if (
       addLineRecurrence === "monthly" &&
       compareMonthId(addEndMonth, addMonth) < 0
@@ -139,19 +147,17 @@ export default function PlanScreen() {
     });
     setAddLabel("");
     setAddAmount("");
-    logActivity("add-line", `${label} · ${formatMoney(amount, currencyCode)}`).catch(() => {});
-    Alert.alert(
-      "Added",
-      addLineRecurrence === "monthly"
-        ? `“${label}” will repeat monthly from ${formatMonthIdDisplay(addMonth)} to ${formatMonthIdDisplay(addEndMonth)}.`
-        : `“${label}” for ${formatMonthIdDisplay(addMonth)} was added. It will show on Home and Timeline.`,
-    );
+    setShowOutflowForm(false);
+    logActivity(
+      "add-line",
+      `${label} · ${formatMoney(amount, currencyCode)}`,
+    ).catch(() => {});
   };
 
   const onStartOver = () => {
     Alert.alert(
       "Start over?",
-      "This clears income streams, payday outflows, bills, and reminders stay unless you turn them off.",
+      "This clears income streams, payday outflows, and bills.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -170,53 +176,44 @@ export default function PlanScreen() {
     );
   };
 
-  const billsSummary =
-    billItems.length === 0
-      ? "Tap to add rent, utilities, subscriptions…"
-      : `${billItems.length} ${billItems.length === 1 ? "item" : "items"} · ${formatMoney(billsSum, currencyCode)}`;
-
   return (
     <>
       <ScreenScroll>
-        <RNView style={styles.titleBlock}>
-          <RNView
-            style={[styles.titleAccent, { backgroundColor: palette.tint }]}
-          />
-          <Text style={styles.title}>Plan</Text>
-          <Text style={[styles.caption, { color: palette.textSecondary }]}>
-            Add each payday source in naira (convert dollars, pounds, etc.
-            yourself). Most income is every payday; add a one-time stream when
-            money lands once (a loan paid back to you, a gig). Cushions use
-            take-home for each month, including any one-off amounts in that
-            month only.
-          </Text>
+        <RNView style={{ height: insets.top }} />
+        <RNView style={styles.titleRow}>
+          <BrandMark size={28} />
+          <RNView style={styles.titleCol}>
+            <Text style={[styles.title, { color: palette.text }]}>Plan</Text>
+            <Text style={[styles.subtitle, { color: palette.textMuted }]}>
+              Income streams, bills & outflows
+            </Text>
+          </RNView>
         </RNView>
 
-        <SectionCard
-          title="Income streams"
-          subtitle="Recurring pay plus one-off amounts (loan repaid to you, gigs) for a single month — tap a row to edit"
+        <PlanSection
+          title="INCOME STREAMS"
+          onAdd={onAddIncomeRow}
+          palette={palette}
         >
-          {incomeStreams.length === 0 ? (
-            <Text style={[styles.hint, { color: palette.textMuted }]}>
-              No streams yet — add one for each place pay hits your account
-              (salary, contract, side gig).
-            </Text>
-          ) : (
-            <RNView
-              style={[
-                styles.incomeList,
-                { borderColor: palette.border },
-                hairlineBorder(palette.border),
-              ]}
-            >
-              {incomeStreams.map((stream, idx) => (
+          <RNView
+            style={[
+              styles.card,
+              { backgroundColor: palette.surface },
+              cardElevation(colorScheme),
+            ]}
+          >
+            {incomeStreams.length === 0 ? (
+              <Text style={[styles.empty, { color: palette.textMuted }]}>
+                No income streams yet.
+              </Text>
+            ) : (
+              incomeStreams.map((stream, idx) => (
                 <Pressable
                   key={stream.id}
                   accessibilityRole="button"
-                  accessibilityHint="Opens editor for this income source"
                   onPress={() => setIncomeStreamSheetId(stream.id)}
                   style={({ pressed }) => [
-                    styles.incomeListRow,
+                    styles.itemRow,
                     idx < incomeStreams.length - 1 && {
                       borderBottomWidth: StyleSheet.hairlineWidth,
                       borderBottomColor: palette.border,
@@ -224,235 +221,307 @@ export default function PlanScreen() {
                     { opacity: pressed ? 0.92 : 1 },
                   ]}
                 >
-                  <RNView style={styles.incomeListTextCol}>
-                    <Text
-                      style={[styles.incomeListTitle, { color: palette.text }]}
-                      numberOfLines={1}
-                    >
-                      {stream.label.trim() || "Untitled"}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.incomeListSub,
-                        { color: palette.textMuted },
-                      ]}
-                    >
-                      {stream.recurrence === "one_time" && stream.oneTimeMonth
-                        ? `One-time · ${formatMonthIdDisplay(stream.oneTimeMonth)} · ${
-                            stream.amountNgn > 0
-                              ? formatMoney(stream.amountNgn, currencyCode)
-                              : "No amount yet"
-                          }`
-                        : stream.amountNgn > 0
-                          ? `${formatMoney(stream.amountNgn, currencyCode)} · every payday`
-                          : "No amount yet · every payday"}
-                    </Text>
-                  </RNView>
-                  <FontAwesome
-                    name="chevron-right"
-                    size={14}
-                    color={palette.textMuted}
+                  <RNView
+                    style={[
+                      styles.dot,
+                      { backgroundColor: palette.accentIncome },
+                    ]}
                   />
+                  <Text
+                    style={[styles.itemLabel, { color: palette.text }]}
+                    numberOfLines={1}
+                  >
+                    {stream.label.trim() || "Untitled"}
+                  </Text>
+                  <MoneyText
+                    amount={stream.amountNgn}
+                    style={{ color: palette.text }}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${stream.label || "income"}`}
+                    hitSlop={8}
+                    onPress={() => removeIncomeStream(stream.id)}
+                  >
+                    <FontAwesome
+                      name="times"
+                      size={14}
+                      color={palette.textMuted}
+                    />
+                  </Pressable>
                 </Pressable>
-              ))}
-            </RNView>
-          )}
-          {incomeStreams.length > 0 ? (
-            <Text style={[styles.incomeSumLine, { color: palette.textMuted }]}>
-              Take-home this payday (
-              {formatMonthIdDisplay(currentPaydayMonthId())}):{" "}
-              {formatMoney(incomeSum, currencyCode)}
-            </Text>
-          ) : null}
-          <PrimaryButton label="Add income source" onPress={onAddIncomeRow} />
-        </SectionCard>
+              ))
+            )}
+          </RNView>
+        </PlanSection>
 
-        <SectionCard title="Bills" subtitle="Monthly, between paydays">
-          <FormField label="Bills (between paydays)">
-            <Pressable
-              accessibilityRole="button"
-              accessibilityHint="Opens list of monthly bills"
-              onPress={() => setBillsOpen(true)}
-              style={({ pressed }) => [
-                styles.billsTrigger,
-                monthTriggerStyle,
-                { opacity: pressed ? 0.9 : 1 },
-              ]}
-            >
-              <Text
-                style={[styles.billsTriggerText, { color: palette.text }]}
-                numberOfLines={2}
-              >
-                {billsSummary}
-              </Text>
-              <FontAwesome name="list" size={18} color={palette.tint} />
-            </Pressable>
-          </FormField>
-        </SectionCard>
-
-        <SectionCard
-          title="Receipt scan"
-          subtitle="Photo or clipboard — add an expense from a receipt for the selected month."
+        <PlanSection
+          title="RECURRING BILLS"
+          onAdd={onAddBill}
+          palette={palette}
         >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityHint="Opens camera or photo library to scan a receipt"
-            onPress={() => setReceiptScanOpen(true)}
-            style={({ pressed }) => [
-              styles.scanTrigger,
-              monthTriggerStyle,
-              { opacity: pressed ? 0.9 : 1 },
+          <RNView
+            style={[
+              styles.card,
+              { backgroundColor: palette.surface },
+              cardElevation(colorScheme),
             ]}
           >
-            <FontAwesome name="camera" size={20} color={palette.tint} />
-            <Text style={[styles.scanTriggerText, { color: palette.text }]}>
-              Scan or import receipt
+            {billItems.length === 0 ? (
+              <Text style={[styles.empty, { color: palette.textMuted }]}>
+                No bills yet.
+              </Text>
+            ) : (
+              billItems.map((bill, idx) => (
+                <RNView
+                  key={bill.id}
+                  style={[
+                    styles.itemRow,
+                    idx < billItems.length - 1 && {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: palette.border,
+                    },
+                  ]}
+                >
+                  <RNView
+                    style={[
+                      styles.dot,
+                      { backgroundColor: palette.accentBills },
+                    ]}
+                  />
+                  <Text
+                    style={[styles.itemLabel, { color: palette.text }]}
+                    numberOfLines={1}
+                  >
+                    {bill.label.trim() || "Bill"}
+                  </Text>
+                  <MoneyText
+                    amount={bill.amount}
+                    style={{ color: palette.text }}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${bill.label || "bill"}`}
+                    hitSlop={8}
+                    onPress={() => deleteBill(bill.id)}
+                  >
+                    <FontAwesome
+                      name="times"
+                      size={14}
+                      color={palette.textMuted}
+                    />
+                  </Pressable>
+                </RNView>
+              ))
+            )}
+          </RNView>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setBillsOpen(true)}
+            style={({ pressed }) => [
+              styles.manageLink,
+              { opacity: pressed ? 0.8 : 1 },
+            ]}
+          >
+            <Text style={{ color: palette.tint, fontWeight: "600" }}>
+              Manage bills
             </Text>
-            <FontAwesome
-              name="chevron-right"
-              size={14}
-              color={palette.textMuted}
-            />
           </Pressable>
-        </SectionCard>
+        </PlanSection>
 
-        <SectionCard
-          title="Add payday outflow"
-          subtitle="One-off for one month, or repeat monthly from a start month"
+        <PlanSection
+          title="PAYDAY OUTFLOWS"
+          onAdd={onAddOutflow}
+          palette={palette}
         >
-          <FormField label="When this applies">
-            <RNView style={styles.recurRow}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{
-                  selected: addLineRecurrence === "one_time",
-                }}
-                onPress={() => setAddLineRecurrence("one_time")}
-                style={({ pressed }) => [
-                  styles.recurChip,
-                  {
-                    borderColor:
-                      addLineRecurrence === "one_time"
-                        ? palette.tint
-                        : palette.border,
-                    backgroundColor:
-                      addLineRecurrence === "one_time"
-                        ? palette.tintMuted
-                        : palette.surfaceMuted,
-                    opacity: pressed ? 0.92 : 1,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color:
-                      addLineRecurrence === "one_time"
-                        ? palette.tintStrong
-                        : palette.textSecondary,
-                    fontWeight: "700",
-                  }}
+          <RNView
+            style={[
+              styles.card,
+              { backgroundColor: palette.surface },
+              cardElevation(colorScheme),
+            ]}
+          >
+            {monthLines.length === 0 ? (
+              <Text style={[styles.empty, { color: palette.textMuted }]}>
+                No payday outflows this month.
+              </Text>
+            ) : (
+              monthLines.map((line, idx) => (
+                <RNView
+                  key={line.id}
+                  style={[
+                    styles.itemRow,
+                    idx < monthLines.length - 1 && {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: palette.border,
+                    },
+                  ]}
                 >
-                  One-time
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{
-                  selected: addLineRecurrence === "monthly",
-                }}
-                onPress={() => setAddLineRecurrence("monthly")}
-                style={({ pressed }) => [
-                  styles.recurChip,
-                  {
-                    borderColor:
-                      addLineRecurrence === "monthly"
-                        ? palette.tint
-                        : palette.border,
-                    backgroundColor:
-                      addLineRecurrence === "monthly"
-                        ? palette.tintMuted
-                        : palette.surfaceMuted,
-                    opacity: pressed ? 0.92 : 1,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color:
-                      addLineRecurrence === "monthly"
-                        ? palette.tintStrong
-                        : palette.textSecondary,
-                    fontWeight: "700",
-                  }}
-                >
-                  Monthly
-                </Text>
-              </Pressable>
-            </RNView>
-            <Text style={[styles.recurHint, { color: palette.textMuted }]}>
-              {addLineRecurrence === "monthly"
-                ? "This line will appear every month from your selected start month."
-                : "This line applies only to the selected month."}
+                  <RNView
+                    style={[
+                      styles.dot,
+                      { backgroundColor: palette.accentOutflow },
+                    ]}
+                  />
+                  <Text
+                    style={[styles.itemLabel, { color: palette.text }]}
+                    numberOfLines={1}
+                  >
+                    {line.label.trim() || "Outflow"}
+                  </Text>
+                  <MoneyText
+                    amount={line.amount}
+                    style={{ color: palette.text }}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${line.label || "outflow"}`}
+                    hitSlop={8}
+                    onPress={() => deleteLine(line.id)}
+                  >
+                    <FontAwesome
+                      name="times"
+                      size={14}
+                      color={palette.textMuted}
+                    />
+                  </Pressable>
+                </RNView>
+              ))
+            )}
+          </RNView>
+        </PlanSection>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setReceiptScanOpen(true)}
+          style={({ pressed }) => [
+            styles.scanRow,
+            {
+              backgroundColor: palette.surface,
+              opacity: pressed ? 0.92 : 1,
+            },
+            cardElevation(colorScheme),
+          ]}
+        >
+          <FontAwesome name="camera" size={16} color={palette.tint} />
+          <Text style={[styles.scanText, { color: palette.text }]}>
+            Scan receipt
+          </Text>
+          <FontAwesome
+            name="chevron-right"
+            size={14}
+            color={palette.textMuted}
+          />
+        </Pressable>
+
+        {showOutflowForm ? (
+          <RNView
+            style={[
+              styles.formCard,
+              { backgroundColor: palette.surface },
+              cardElevation(colorScheme),
+            ]}
+          >
+            <Text style={[styles.formTitle, { color: palette.text }]}>
+              Add payday outflow
             </Text>
-          </FormField>
-          {addLineRecurrence === "monthly" ? (
-            <RNView style={styles.rangeRow}>
-              <RNView style={styles.rangeCol}>
-                <Text style={styles.rangeLabel}>Start month</Text>
+            <FormField label="When this applies">
+              <RNView style={styles.recurRow}>
+                {(
+                  [
+                    ["one_time", "One-time"],
+                    ["monthly", "Monthly"],
+                  ] as const
+                ).map(([value, label]) => {
+                  const selected = addLineRecurrence === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      onPress={() => setAddLineRecurrence(value)}
+                      style={[
+                        styles.recurChip,
+                        {
+                          borderColor: selected ? palette.tint : palette.border,
+                          backgroundColor: selected
+                            ? palette.tintMuted
+                            : palette.surfaceMuted,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: selected
+                            ? palette.tintStrong
+                            : palette.textSecondary,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </RNView>
+            </FormField>
+            {addLineRecurrence === "monthly" ? (
+              <RNView style={styles.rangeRow}>
+                <RNView style={styles.rangeCol}>
+                  <Text style={[styles.rangeLabel, { color: palette.textMuted }]}>
+                    Start
+                  </Text>
+                  <MonthPickerField
+                    value={addMonth}
+                    onChange={(m) => {
+                      setAddMonth(m);
+                      if (compareMonthId(addEndMonth, m) < 0) setAddEndMonth(m);
+                    }}
+                    palette={palette}
+                    triggerStyle={monthTriggerStyle}
+                  />
+                </RNView>
+                <RNView style={styles.rangeCol}>
+                  <Text style={[styles.rangeLabel, { color: palette.textMuted }]}>
+                    End
+                  </Text>
+                  <MonthPickerField
+                    value={addEndMonth}
+                    onChange={setAddEndMonth}
+                    palette={palette}
+                    triggerStyle={monthTriggerStyle}
+                  />
+                </RNView>
+              </RNView>
+            ) : (
+              <FormField label="Month">
                 <MonthPickerField
                   value={addMonth}
-                  onChange={(m) => {
-                    setAddMonth(m);
-                    if (
-                      addLineRecurrence === "monthly" &&
-                      compareMonthId(addEndMonth, m) < 0
-                    ) {
-                      setAddEndMonth(m);
-                    }
-                  }}
+                  onChange={setAddMonth}
                   palette={palette}
                   triggerStyle={monthTriggerStyle}
                 />
-              </RNView>
-              <RNView style={styles.rangeCol}>
-                <Text style={styles.rangeLabel}>End month</Text>
-                <MonthPickerField
-                  value={addEndMonth}
-                  onChange={setAddEndMonth}
-                  palette={palette}
-                  triggerStyle={monthTriggerStyle}
-                />
-              </RNView>
-            </RNView>
-          ) : (
-            <FormField label="Month">
-              <MonthPickerField
-                value={addMonth}
-                onChange={setAddMonth}
-                palette={palette}
-                triggerStyle={monthTriggerStyle}
+              </FormField>
+            )}
+            <FormField label="Label">
+              <FluxTextInput
+                value={addLabel}
+                onChangeText={setAddLabel}
+                placeholder="e.g. Family support"
               />
             </FormField>
-          )}
-          <FormField label="Label">
-            <FluxTextInput
-              value={addLabel}
-              onChangeText={setAddLabel}
-              placeholder="e.g. Rent, loan, major purchase"
-            />
-          </FormField>
-          <FormField label="Amount">
-            <FluxTextInput
-              value={addAmount}
-              onChangeText={(t) => setAddAmount(moneyDraftFromText(t, currencyCode))}
-              keyboardType="number-pad"
-              money
-              placeholder={`e.g. ${sampleMoneyPlaceholder(85000)}`}
-            />
-          </FormField>
-
-          <PrimaryButton label="Add item" onPress={onAddLine} />
-        </SectionCard>
+            <FormField label="Amount">
+              <FluxTextInput
+                value={addAmount}
+                onChangeText={(t) =>
+                  setAddAmount(moneyDraftFromText(t, currencyCode))
+                }
+                keyboardType="number-pad"
+                money
+                placeholder={`e.g. ${sampleMoneyPlaceholder(30000)}`}
+              />
+            </FormField>
+            <PrimaryButton label="Add item" onPress={onAddLine} />
+          </RNView>
+        ) : null}
 
         <DangerOutlineButton label="Start over" onPress={onStartOver} />
       </ScreenScroll>
@@ -471,93 +540,135 @@ export default function PlanScreen() {
         streamId={incomeStreamSheetId}
         onClose={() => setIncomeStreamSheetId(null)}
       />
+      <QuickAddLineSheet
+        visible={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        initialMonth={paydayMonth}
+      />
     </>
   );
 }
 
+function PlanSection({
+  title,
+  onAdd,
+  children,
+  palette,
+}: Readonly<{
+  title: string;
+  onAdd: () => void;
+  children: React.ReactNode;
+  palette: ReturnType<typeof useFluxPalette>["palette"];
+}>) {
+  return (
+    <RNView style={styles.section}>
+      <RNView style={styles.sectionHead}>
+        <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>
+          {title}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onAdd}
+          style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+        >
+          <Text style={[styles.addBtn, { color: palette.tint }]}>+ Add</Text>
+        </Pressable>
+      </RNView>
+      {children}
+    </RNView>
+  );
+}
+
 const styles = StyleSheet.create({
-  titleBlock: {
-    marginBottom: 0,
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
-  titleAccent: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 12,
+  titleCol: {
+    flex: 1,
   },
   title: {
+    fontFamily: typeface.display,
     fontSize: 32,
-    fontWeight: "800",
-    letterSpacing: -0.8,
+    letterSpacing: -0.6,
   },
-  caption: {
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 12,
-  },
-  hint: {
-    fontSize: 14,
-    marginBottom: spacing.sm,
-  },
-  incomeList: {
-    borderRadius: radii.md,
-    overflow: "hidden",
-    marginBottom: spacing.sm,
-  },
-  incomeListRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    minHeight: 52,
-  },
-  incomeListTextCol: {
-    flex: 1,
-    minWidth: 0,
-  },
-  incomeListTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  incomeListSub: {
+  subtitle: {
     fontSize: 14,
     marginTop: 2,
-    fontWeight: "600",
   },
-  incomeSumLine: {
+  section: {
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
+  addBtn: {
     fontSize: 14,
     fontWeight: "700",
-    marginBottom: spacing.sm,
   },
-  scanTrigger: {
+  card: {
+    borderRadius: radii.xl,
+    overflow: "hidden",
+  },
+  empty: {
+    padding: spacing.lg,
+    fontSize: 14,
+  },
+  itemRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: spacing.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    minHeight: 50,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
-  scanTriggerText: {
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  itemLabel: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "500",
   },
-  billsTrigger: {
+  manageLink: {
+    alignSelf: "flex-start",
+    paddingVertical: spacing.xs,
+  },
+  scanRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    minHeight: 50,
-    gap: 10,
+    gap: spacing.sm,
+    borderRadius: radii.xl,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
   },
-  billsTriggerText: {
-    fontSize: 16,
-    fontWeight: "600",
+  scanText: {
     flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  formCard: {
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  formTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: spacing.xs,
   },
   recurRow: {
     flexDirection: "row",
@@ -570,16 +681,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  recurHint: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: spacing.sm,
   },
   rangeRow: {
-    marginTop: spacing.md,
     flexDirection: "row",
     gap: spacing.sm,
   },
@@ -592,20 +695,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.4,
     textTransform: "uppercase",
-    opacity: 0.75,
-  },
-  templateRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  templateChip: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.md,
-    minHeight: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
   },
 });

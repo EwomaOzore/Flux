@@ -6,39 +6,97 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
 
-import { DeferLineToNextMonthButton } from "@/components/DeferLineToNextMonthButton";
+import { BrandMark } from "@/components/BrandMark";
 import { DiscretionaryInfoModal } from "@/components/DiscretionaryInfoModal";
 import { MoneyText } from "@/components/MoneyText";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
-import { Text, View } from "@/components/Themed";
+import { Text } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors, { type ThemePalette } from "@/constants/Colors";
-import {
-  cardElevation,
-  hairlineBorder,
-  radii,
-  spacing,
-} from "@/constants/theme";
+import { cardElevation, radii, spacing } from "@/constants/theme";
+import { typeface } from "@/constants/typography";
 import { buildRollupsFromStreams } from "@/src/domain/engine";
 import {
   addMonthsId,
   currentPaydayMonthId,
   formatMonthIdDisplay,
 } from "@/src/domain/month";
-import { totalBillsAmount } from "@/src/domain/types";
-import { formatMoney, getCurrencySymbol } from "@/src/lib/formatCurrency";
-import { useCurrencyStore } from "@/src/state/currencyStore";
-import { planningStreakMonths } from "@/src/lib/planningInsights";
+import {
+  incomeNgnForMonth,
+  totalBillsAmount,
+  type BillItem,
+  type IncomeStream,
+  type PaydayLine,
+} from "@/src/domain/types";
 import { useBudgetStore } from "@/src/state/budgetStore";
+
+type MonthFeedItem = {
+  id: string;
+  label: string;
+  amount: number;
+  kind: "income" | "bill" | "outflow";
+};
+
+function buildMonthFeed(
+  month: string,
+  streams: IncomeStream[],
+  bills: BillItem[],
+  lines: PaydayLine[],
+): MonthFeedItem[] {
+  const items: MonthFeedItem[] = [];
+
+  for (const stream of streams) {
+    const rec = stream.recurrence ?? "recurring";
+    const include =
+      rec === "recurring" ||
+      (rec === "one_time" && stream.oneTimeMonth === month);
+    if (!include || stream.amountNgn <= 0) continue;
+    items.push({
+      id: `income-${stream.id}`,
+      label: stream.label.trim() || "Income",
+      amount: stream.amountNgn,
+      kind: "income",
+    });
+  }
+
+  for (const bill of bills) {
+    if (bill.amount <= 0) continue;
+    items.push({
+      id: `bill-${bill.id}`,
+      label: bill.label.trim() || "Bill",
+      amount: -bill.amount,
+      kind: "bill",
+    });
+  }
+
+  for (const line of lines) {
+    const start = line.startMonth ?? line.month;
+    const end = line.endMonth ?? line.month;
+    const inRange =
+      line.recurrence === "monthly"
+        ? month >= start && month <= end
+        : line.month === month;
+    if (!inRange || line.amount <= 0) continue;
+    items.push({
+      id: `line-${line.id}`,
+      label: line.label.trim() || "Outflow",
+      amount: -line.amount,
+      kind: "outflow",
+    });
+  }
+
+  return items;
+}
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? "light"];
   const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
   const paydayMonth = currentPaydayMonthId();
-  const incomeStreamCount = useBudgetStore((s) => s.incomeStreams.length);
   const budgetForRollup = useBudgetStore(
     useShallow((s) => ({
       incomeStreams: s.incomeStreams,
@@ -77,222 +135,180 @@ export default function HomeScreen() {
     [budgetForRollup, prevMonth, billsTotal],
   );
 
-  const streak = useMemo(
-    () => planningStreakMonths(budgetForRollup.lines, paydayMonth),
-    [budgetForRollup.lines, paydayMonth],
-  );
-
-  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const cushion = roll?.cushionAfterBills ?? 0;
   const positive = cushion >= 0;
-  const cushionColor = positive ? palette.success : palette.danger;
-  const cushionBg = positive ? palette.successMuted : palette.dangerMuted;
+  const vsLast = cushion - (prevRoll?.cushionAfterBills ?? 0);
+
+  const feed = useMemo(
+    () =>
+      buildMonthFeed(
+        paydayMonth,
+        budgetForRollup.incomeStreams,
+        budgetForRollup.billItems,
+        budgetForRollup.lines,
+      ),
+    [budgetForRollup, paydayMonth],
+  );
+
+  const incomeForMonth = useMemo(
+    () => incomeNgnForMonth(budgetForRollup.incomeStreams, paydayMonth),
+    [budgetForRollup.incomeStreams, paydayMonth],
+  );
 
   return (
-    <RNView style={styles.screen}>
+    <RNView style={[styles.screen, { backgroundColor: palette.background }]}>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
           {
+            paddingTop: insets.top + spacing.md,
             paddingBottom: Math.max(spacing.xl + 72, tabBarHeight + spacing.md),
           },
         ]}
-        style={{ backgroundColor: palette.background }}
         showsVerticalScrollIndicator={false}
       >
-        <RNView style={styles.decorTop}>
-          <RNView
-            style={[styles.decorBlob, { backgroundColor: palette.tint }]}
-          />
-          <RNView
-            style={[styles.decorBlob2, { backgroundColor: palette.info }]}
-          />
-        </RNView>
-
-        <View style={styles.container}>
-          <RNView style={[styles.brandRow, hairlineBorder(palette.border)]}>
-            <RNView
-              style={[styles.brandDot, { backgroundColor: palette.tint }]}
-            />
-            <Text style={[styles.brandText, { color: palette.textSecondary }]}>
-              Payday snapshot
+        <RNView style={styles.container}>
+          <RNView style={styles.headerRow}>
+            <RNView style={styles.brandLockup}>
+              <BrandMark size={26} />
+              <Text style={[styles.brandName, { color: palette.text }]}>
+                flux
+              </Text>
+            </RNView>
+            <Text style={[styles.monthChip, { color: palette.textMuted }]}>
+              {formatMonthIdDisplay(paydayMonth).replace(",", "")}
             </Text>
           </RNView>
 
-          <Text style={[styles.kicker, { color: palette.tintStrong }]}>
-            End-of-month payday
-          </Text>
-          <Text style={styles.monthLabel}>
-            {formatMonthIdDisplay(paydayMonth)}
-          </Text>
-          <Text style={[styles.caption, { color: palette.textSecondary }]}>
-            Salary lands for the month ahead; big bills hit the same run.
-            {incomeStreamCount > 1
-              ? ` You have ${incomeStreamCount} income streams combined below.`
-              : null}
-          </Text>
-
-          <RNView
-            style={[
+          <Pressable
+            accessibilityRole="button"
+            accessibilityHint="Shows how cushion is calculated"
+            onPress={() => setInfoOpen(true)}
+            style={({ pressed }) => [
               styles.hero,
               {
                 backgroundColor: palette.surface,
-                borderColor: palette.border,
+                opacity: pressed ? 0.97 : 1,
               },
               cardElevation(colorScheme),
             ]}
           >
-            <RNView
-              style={[styles.heroAccent, { backgroundColor: palette.tint }]}
-            />
-            <RNView
-              style={[styles.cushionBadge, { backgroundColor: cushionBg }]}
-            >
-              <Text style={[styles.cushionBadgeLabel, { color: cushionColor }]}>
-                {positive ? "Healthy cushion" : "Below bills"}
-              </Text>
-            </RNView>
-            <Text style={[styles.heroLabel, { color: palette.textSecondary }]}>
-              Cushion after bills
+            <Text style={[styles.heroLabel, { color: palette.textMuted }]}>
+              CUSHION AFTER BILLS
             </Text>
             <MoneyText
               amount={cushion}
               variant="titleEmphasis"
-              style={{ color: cushionColor }}
+              style={{ color: positive ? palette.tint : palette.danger }}
             />
-            <RNView style={styles.statRow}>
-              <StatChip
-                label={`Income (${getCurrencySymbol(currencyCode)})`}
-                value={formatMoney(roll?.income ?? 0, currencyCode)}
-                accent={palette.accentBlue}
-                muted={palette.infoMuted}
-                palette={palette}
-              />
-              <StatChip
-                label="Bills"
-                value={formatMoney(roll?.billsTotal ?? 0, currencyCode)}
-                accent={palette.accentViolet}
-                muted={palette.tintMuted}
-                palette={palette}
-              />
-              <StatChip
-                label="Payday out"
-                value={formatMoney(roll?.totalPaydayOutflow ?? 0, currencyCode)}
-                accent={palette.accentAmber}
-                muted={palette.warningMuted}
-                palette={palette}
-              />
-            </RNView>
-            <Text style={[styles.insight, { color: palette.textSecondary }]}>
-              {positive
-              ? `You have about ${formatMoney(cushion, currencyCode)} left for discretionary spending this payday — after bills and the line items you’ve planned.`
-              : `You’re short about ${formatMoney(Math.abs(cushion), currencyCode)} after bills and planned outflows — trim a line or defer one.`}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityHint="Shows how cushion is calculated"
-              onPress={() => setInfoOpen(true)}
-              style={({ pressed }) => [
-                styles.infoLinkRow,
-                { opacity: pressed ? 0.75 : 1 },
-              ]}
-            >
-              <Text style={[styles.infoLink, { color: palette.tint }]}>
-                What&apos;s included? Bills vs payday lines
-              </Text>
-            </Pressable>
-
-            <RNView
-              style={[
-                styles.compareCard,
-                {
-                  backgroundColor: palette.surfaceMuted,
-                  borderColor: palette.border,
-                },
-                hairlineBorder(palette.border),
-              ]}
-            >
-              <Text style={[styles.compareTitle, { color: palette.textMuted }]}>
-                Cushion snapshot
-              </Text>
-              <Text
-                style={[styles.compareBody, { color: palette.textSecondary }]}
+            <RNView style={styles.heroMeta}>
+              <RNView
+                style={[
+                  styles.statusPill,
+                  {
+                    backgroundColor: positive
+                      ? palette.successMuted
+                      : palette.dangerMuted,
+                  },
+                ]}
               >
-                Last payday ({formatMonthIdDisplay(prevMonth)}):{" "}
-                <Text style={{ fontWeight: "700", color: palette.text }}>
-                  {formatMoney(prevRoll.cushionAfterBills, currencyCode)}
+                <RNView
+                  style={[
+                    styles.statusDot,
+                    {
+                      backgroundColor: positive
+                        ? palette.success
+                        : palette.danger,
+                    },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: positive ? palette.success : palette.danger },
+                  ]}
+                >
+                  {positive ? "Healthy cushion" : "Below bills"}
                 </Text>
-                {" · "}
-                This payday ({formatMonthIdDisplay(paydayMonth)}):{" "}
-                <Text style={{ fontWeight: "700", color: palette.text }}>
-                  {formatMoney(cushion, currencyCode)}
+              </RNView>
+              <RNView style={styles.vsLastRow}>
+                <MoneyText
+                  amount={vsLast}
+                  variant="compact"
+                  signed
+                  style={{ color: palette.textMuted, fontSize: 13 }}
+                />
+                <Text style={[styles.vsLast, { color: palette.textMuted }]}>
+                  {" "}
+                  vs last
                 </Text>
-              </Text>
-              <Text style={[styles.compareHint, { color: palette.textMuted }]}>
-                No score — just visibility across paydays.
-              </Text>
+              </RNView>
             </RNView>
+          </Pressable>
 
-            {streak >= 2 ? (
-              <Text style={[styles.streakLine, { color: palette.textMuted }]}>
-                You&apos;ve logged spending {streak} paydays in a row. Steady
-                rhythm.
-              </Text>
-            ) : null}
-          </RNView>
-
-          <DiscretionaryInfoModal
-            visible={infoOpen}
-            onClose={() => setInfoOpen(false)}
-            monthLabel={formatMonthIdDisplay(paydayMonth)}
-            income={roll?.income ?? 0}
-            billsTotal={roll?.billsTotal ?? 0}
-            paydayOutflow={roll?.totalPaydayOutflow ?? 0}
-            cushion={cushion}
-          />
-
-          <RNView style={styles.sectionHead}>
-            <RNView
-              style={[styles.sectionBar, { backgroundColor: palette.tint }]}
+          <RNView style={styles.statRow}>
+            <StatCard
+              label="INCOME"
+              amount={incomeForMonth}
+              background={palette.accentIncomeMuted}
+              valueColor={palette.accentIncome}
+              palette={palette}
             />
-            <Text style={styles.sectionTitle}>
-              {"This payday's line items"}
-            </Text>
+            <StatCard
+              label="BILLS"
+              amount={roll?.billsTotal ?? 0}
+              background={palette.accentBillsMuted}
+              valueColor={palette.accentBills}
+              palette={palette}
+            />
+            <StatCard
+              label="OUTFLOWS"
+              amount={roll?.totalPaydayOutflow ?? 0}
+              background={palette.accentOutflowMuted}
+              valueColor={palette.accentOutflow}
+              palette={palette}
+            />
           </RNView>
 
-          {(roll?.lines.length ?? 0) === 0 ? (
+          <RNView style={styles.sectionDivider}>
+            <RNView
+              style={[styles.dividerLine, { backgroundColor: palette.border }]}
+            />
+            <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
+              THIS MONTH
+            </Text>
+            <RNView
+              style={[styles.dividerLine, { backgroundColor: palette.border }]}
+            />
+          </RNView>
+
+          {feed.length === 0 ? (
             <RNView
               style={[
                 styles.emptyCard,
-                {
-                  backgroundColor: palette.surfaceMuted,
-                  borderColor: palette.border,
-                },
-                hairlineBorder(palette.border),
+                { backgroundColor: palette.surface },
+                cardElevation(colorScheme),
               ]}
             >
               <Text style={[styles.empty, { color: palette.textMuted }]}>
-                Nothing here yet. Add one thing you&apos;re saving for — rent
-                top-up, a trip, a bill — so this payday reflects real life.
+                Nothing planned yet. Add income, bills, or a payday outflow in
+                Plan — or tap + below.
               </Text>
             </RNView>
           ) : (
             <RNView
               style={[
-                styles.linesCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.border,
-                },
+                styles.listCard,
+                { backgroundColor: palette.surface },
                 cardElevation(colorScheme),
               ]}
             >
-              {roll!.lines.map((l, i) => (
+              {feed.map((item, i) => (
                 <RNView
-                  key={l.id}
+                  key={item.id}
                   style={[
-                    styles.lineRow,
-                    i < roll!.lines.length - 1 && {
+                    styles.feedRow,
+                    i < feed.length - 1 && {
                       borderBottomWidth: StyleSheet.hairlineWidth,
                       borderBottomColor: palette.border,
                     },
@@ -300,24 +316,43 @@ export default function HomeScreen() {
                 >
                   <RNView
                     style={[
-                      styles.lineDot,
-                      { backgroundColor: palette.accentViolet },
+                      styles.feedDot,
+                      {
+                        backgroundColor:
+                          item.kind === "income"
+                            ? palette.accentIncome
+                            : item.kind === "bill"
+                              ? palette.accentBills
+                              : palette.accentOutflow,
+                      },
                     ]}
                   />
-                  <Text style={[styles.lineLabel, { color: palette.text }]}>
-                    {l.label}
+                  <Text
+                    style={[styles.feedLabel, { color: palette.text }]}
+                    numberOfLines={1}
+                  >
+                    {item.label}
                   </Text>
-                  <DeferLineToNextMonthButton line={l} />
                   <MoneyText
-                    amount={-l.amount}
-                    style={[styles.lineAmount, { color: palette.danger }]}
+                    amount={item.amount}
+                    signed
+                    style={[
+                      styles.feedAmount,
+                      {
+                        color:
+                          item.amount >= 0
+                            ? palette.accentIncome
+                            : palette.text,
+                      },
+                    ]}
                   />
                 </RNView>
               ))}
             </RNView>
           )}
-        </View>
+        </RNView>
       </ScrollView>
+
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Quick add payday outflow"
@@ -334,6 +369,16 @@ export default function HomeScreen() {
       >
         <Text style={styles.quickFabText}>+</Text>
       </Pressable>
+
+      <DiscretionaryInfoModal
+        visible={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        monthLabel={formatMonthIdDisplay(paydayMonth)}
+        income={roll?.income ?? 0}
+        billsTotal={roll?.billsTotal ?? 0}
+        paydayOutflow={roll?.totalPaydayOutflow ?? 0}
+        cushion={cushion}
+      />
       <QuickAddLineSheet
         visible={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
@@ -343,27 +388,30 @@ export default function HomeScreen() {
   );
 }
 
-function StatChip({
+function StatCard({
   label,
-  value,
-  accent,
-  muted,
+  amount,
+  background,
+  valueColor,
   palette,
 }: Readonly<{
   label: string;
-  value: string;
-  accent: string;
-  muted: string;
+  amount: number;
+  background: string;
+  valueColor: string;
   palette: ThemePalette;
 }>) {
   return (
-    <RNView style={[styles.statChip, { backgroundColor: muted }]}>
-      <Text style={[styles.statChipLabel, { color: palette.textMuted }]}>
+    <RNView style={[styles.statCard, { backgroundColor: background }]}>
+      <Text style={[styles.statLabel, { color: palette.textMuted }]}>
         {label}
       </Text>
-      <Text style={[styles.statChipValue, { color: accent }]} numberOfLines={1}>
-        {value}
-      </Text>
+      <MoneyText
+        amount={amount}
+        variant="compact"
+        signed={false}
+        style={{ color: valueColor, fontSize: 16 }}
+      />
     </RNView>
   );
 }
@@ -374,30 +422,6 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    paddingBottom: spacing.xl,
-  },
-  decorTop: {
-    height: 120,
-    marginBottom: -72,
-    overflow: "hidden",
-  },
-  decorBlob: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    top: -80,
-    right: -40,
-    opacity: 0.85,
-  },
-  decorBlob2: {
-    position: "absolute",
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    top: -20,
-    left: -50,
-    opacity: 0.55,
   },
   container: {
     flex: 1,
@@ -405,197 +429,132 @@ const styles = StyleSheet.create({
     maxWidth: 560,
     width: "100%",
     alignSelf: "center",
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  brandRow: {
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.xs,
+  },
+  brandLockup: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.full,
-    marginBottom: spacing.sm,
   },
-  brandDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  brandName: {
+    fontFamily: typeface.display,
+    fontSize: 28,
+    letterSpacing: -0.6,
   },
-  brandText: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
-  },
-  kicker: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginTop: spacing.xs,
-  },
-  monthLabel: {
-    fontSize: 36,
-    fontWeight: "800",
-    marginTop: 4,
-    letterSpacing: -1,
-  },
-  caption: {
-    marginTop: spacing.xs,
-    fontSize: 15,
-    lineHeight: 22,
+  monthChip: {
+    fontSize: 13,
+    fontWeight: "500",
   },
   hero: {
-    marginTop: spacing.lg,
-    borderRadius: radii.xl,
+    borderRadius: radii.xxl,
     padding: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
-  },
-  heroAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
-  cushionBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radii.sm,
-    marginBottom: spacing.sm,
-  },
-  cushionBadgeLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
+    gap: spacing.sm,
   },
   heroLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "600",
+    letterSpacing: 1.1,
+  },
+  heroMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radii.full,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  vsLastRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
+  vsLast: {
+    fontSize: 13,
   },
   statRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: spacing.sm,
-    marginTop: spacing.lg,
   },
-  statChip: {
-    flexGrow: 1,
-    minWidth: "28%",
-    borderRadius: radii.md,
-    paddingVertical: spacing.sm,
+  statCard: {
+    flex: 1,
+    borderRadius: radii.xl,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
+    gap: 4,
   },
-  statChipLabel: {
-    fontSize: 11,
+  statLabel: {
+    fontSize: 10,
     fontWeight: "600",
-    marginBottom: 4,
+    letterSpacing: 0.8,
   },
-  statChipValue: {
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: -0.2,
-  },
-  insight: {
-    marginTop: spacing.md,
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: "500",
-  },
-  infoLinkRow: {
-    marginTop: spacing.sm,
-    minHeight: 44,
-    justifyContent: "center",
-  },
-  infoLink: {
-    fontSize: 15,
-    fontWeight: "700",
-    textDecorationLine: "underline",
-  },
-  compareCard: {
-    marginTop: spacing.md,
-    borderRadius: radii.md,
-    padding: spacing.md,
-  },
-  compareTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginBottom: spacing.xs,
-  },
-  compareBody: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  compareHint: {
-    fontSize: 12,
-    marginTop: spacing.sm,
-    lineHeight: 17,
-  },
-  streakLine: {
-    marginTop: spacing.md,
-    fontSize: 14,
-    lineHeight: 20,
-    fontStyle: "italic",
-  },
-  sectionHead: {
+  sectionDivider: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
   },
-  sectionBar: {
-    width: 4,
-    height: 20,
-    borderRadius: 2,
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    letterSpacing: -0.3,
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1,
   },
   emptyCard: {
-    marginTop: spacing.sm,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     padding: spacing.lg,
   },
   empty: {
     fontSize: 15,
     lineHeight: 22,
   },
-  linesCard: {
-    marginTop: spacing.sm,
+  listCard: {
     borderRadius: radii.xl,
-    borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
-  lineRow: {
+  feedRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     minHeight: 52,
-    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
-  lineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  feedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  lineLabel: {
+  feedLabel: {
     flex: 1,
     fontSize: 15,
-    lineHeight: 20,
     fontWeight: "500",
   },
-  lineAmount: {
+  feedAmount: {
     fontSize: 15,
-    fontWeight: "700",
   },
   quickFab: {
     position: "absolute",
@@ -610,7 +569,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 32,
     lineHeight: 34,
-    fontWeight: "800",
+    fontFamily: typeface.bold,
     marginTop: -2,
   },
 });

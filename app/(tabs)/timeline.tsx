@@ -19,16 +19,15 @@ import { Text, View } from "@/components/Themed";
 import { FluxTextInput } from "@/components/ui";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
-import { cardElevation, radii, spacing } from "@/constants/theme";
+import { spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
-import {
-  formatMonthIdDisplay,
-  formatMonthIdShort,
-} from "@/src/domain/month";
+import { formatMonthIdDisplay, formatMonthIdShort } from "@/src/domain/month";
 import type { MonthRollup } from "@/src/domain/types";
 import { formatMoney } from "@/src/lib/formatCurrency";
 import { computeRollups, useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
+
+const CARD_BORDER = "#E0DAD3";
 
 export default function TimelineScreen() {
   const colorScheme = useColorScheme();
@@ -50,6 +49,8 @@ export default function TimelineScreen() {
   const [searchText, setSearchText] = useState("");
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const query = searchText.trim().toLowerCase();
+
+  const borderColor = colorScheme === "dark" ? palette.cardBorder : CARD_BORDER;
 
   const filteredRollups = useMemo(() => {
     if (!query) return rollups;
@@ -97,17 +98,25 @@ export default function TimelineScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: MonthRollup }) => {
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: MonthRollup;
+    index: number;
+  }) => {
     const positive = item.cushionAfterBills >= 0;
     const accent = positive ? palette.success : palette.danger;
     const out = item.billsTotal + item.totalPaydayOutflow;
+    const isLast = index === filteredRollups.length - 1;
 
     return (
       <RNView
         style={[
           styles.row,
-          {
-            borderBottomColor: palette.border,
+          !isLast && {
+            borderBottomWidth: 1,
+            borderBottomColor: borderColor,
           },
         ]}
       >
@@ -119,18 +128,14 @@ export default function TimelineScreen() {
           <RNView style={styles.flowRow}>
             <MoneyText
               amount={item.income}
-              variant="compact"
-              style={{ color: palette.textMuted, fontSize: 13 }}
+              variant="stat"
+              style={styles.flowAmount}
             />
             <Text style={[styles.flowSep, { color: palette.textMuted }]}>
               {" "}
               in ·{" "}
             </Text>
-            <MoneyText
-              amount={out}
-              variant="compact"
-              style={{ color: palette.textMuted, fontSize: 13 }}
-            />
+            <MoneyText amount={out} variant="stat" style={styles.flowAmount} />
             <Text style={[styles.flowSep, { color: palette.textMuted }]}>
               {" "}
               out
@@ -140,7 +145,7 @@ export default function TimelineScreen() {
         <RNView style={styles.rowRight}>
           <MoneyText
             amount={item.cushionAfterBills}
-            variant="compactEmphasis"
+            variant="stat"
             signed
             style={{ color: accent }}
           />
@@ -156,13 +161,13 @@ export default function TimelineScreen() {
           style={({ pressed }) => [
             styles.clearBtn,
             {
-              backgroundColor: pressed
-                ? palette.dangerMuted
-                : palette.surfaceMuted,
+              backgroundColor: palette.dangerMuted,
+              borderColor,
+              opacity: pressed ? 0.85 : 1,
             },
           ]}
         >
-          <FontAwesome name="times" size={12} color={palette.danger} />
+          <FontAwesome name="times" size={11} color={palette.danger} />
         </Pressable>
       </RNView>
     );
@@ -186,7 +191,7 @@ export default function TimelineScreen() {
         ListHeaderComponent={
           <RNView style={styles.headerBlock}>
             <RNView style={styles.titleRow}>
-              <BrandMark size={28} />
+              <BrandMark size={24} />
               <RNView style={styles.titleCol}>
                 <Text style={[styles.title, { color: palette.text }]}>
                   Timeline
@@ -201,9 +206,8 @@ export default function TimelineScreen() {
                 styles.searchWrap,
                 {
                   backgroundColor: palette.surface,
-                  borderColor: palette.border,
+                  borderColor,
                 },
-                cardElevation(colorScheme),
               ]}
             >
               <FontAwesome
@@ -216,11 +220,13 @@ export default function TimelineScreen() {
                 value={searchText}
                 onChangeText={setSearchText}
                 placeholder="Search months..."
+                placeholderTextColor={palette.textMuted}
                 style={[
                   styles.searchInput,
                   {
                     backgroundColor: "transparent",
                     borderColor: "transparent",
+                    color: palette.text,
                   },
                 ]}
               />
@@ -231,8 +237,10 @@ export default function TimelineScreen() {
           <RNView
             style={[
               styles.emptyCard,
-              { backgroundColor: palette.surface },
-              cardElevation(colorScheme),
+              {
+                backgroundColor: palette.surface,
+                borderColor,
+              },
             ]}
           >
             <Text style={[styles.empty, { color: palette.textMuted }]}>
@@ -276,19 +284,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontFamily: typeface.display,
-    fontSize: 32,
-    letterSpacing: -0.6,
+    fontFamily: typeface.displayRegular,
+    fontSize: 18,
+    lineHeight: 18,
+    letterSpacing: -0.45,
   },
   subtitle: {
-    fontSize: 14,
-    marginTop: 2,
+    fontFamily: typeface.regular,
+    fontSize: 13,
+    marginTop: 4,
   },
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: radii.full,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 13,
+    borderWidth: 1,
     paddingLeft: spacing.md,
     overflow: "hidden",
   },
@@ -299,6 +309,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 0,
     paddingVertical: 12,
+    fontFamily: typeface.regular,
+    fontSize: 14,
   },
   row: {
     flexDirection: "row",
@@ -307,7 +319,6 @@ const styles = StyleSheet.create({
     minHeight: 72,
     paddingVertical: spacing.md,
     paddingRight: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
     backgroundColor: "transparent",
   },
   accentBar: {
@@ -322,15 +333,21 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   monthLabel: {
-    fontSize: 17,
-    fontWeight: "700",
+    fontFamily: typeface.bold,
+    fontSize: 16,
   },
   flowRow: {
     flexDirection: "row",
     alignItems: "baseline",
     flexWrap: "wrap",
   },
+  flowAmount: {
+    color: "#9A9188",
+    fontSize: 13,
+    lineHeight: 18,
+  },
   flowSep: {
+    fontFamily: typeface.regular,
     fontSize: 13,
   },
   rowRight: {
@@ -338,22 +355,25 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   statusLabel: {
+    fontFamily: typeface.regular,
     fontSize: 12,
-    fontWeight: "500",
   },
   clearBtn: {
     width: 28,
     height: 28,
     borderRadius: 14,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
   emptyCard: {
-    borderRadius: radii.xl,
+    borderRadius: 14,
+    borderWidth: 1,
     padding: spacing.lg,
     marginTop: spacing.md,
   },
   empty: {
+    fontFamily: typeface.regular,
     fontSize: 15,
     lineHeight: 22,
   },

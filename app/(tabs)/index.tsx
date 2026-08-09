@@ -373,7 +373,7 @@ export default function HomeScreen() {
         style={({ pressed }) => [
           styles.quickFab,
           {
-            backgroundColor: palette.tint,
+            backgroundColor: "#48B872",
             bottom: Math.max(spacing.lg, tabBarHeight + spacing.xs),
             opacity: pressed ? 0.9 : 1,
           },
@@ -582,17 +582,14 @@ const styles = StyleSheet.create({
   quickFab: {
     position: "absolute",
     right: spacing.lg,
-    width: 56,
-    height: 56,
+    width: 52,
+    height: 52,
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
   },
   quickFabText: {
     color: "#fff",
-    fontSize: 32,
-    lineHeight: 34,
-    fontFamily: typeface.bold,
-    marginTop: -2,
+    fontSize: 22,
   },
 });

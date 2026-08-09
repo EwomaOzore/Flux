@@ -1,7 +1,7 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Constants from "expo-constants";
 import * as LocalAuthentication from "expo-local-authentication";
-import { Link, router } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -20,7 +20,7 @@ import {
 } from "@/components/FluxBottomSheet";
 import { Text } from "@/components/Themed";
 import { ScreenScroll, useFluxPalette } from "@/components/ui";
-import { cardElevation, radii, spacing } from "@/constants/theme";
+import { spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
 import { notifyBiometricPrefsChanged } from "@/src/lib/biometricEvents";
 import {
@@ -37,8 +37,11 @@ import {
 import { useAppearanceStore } from "@/src/state/appearanceStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 
+const CARD_BORDER_LIGHT = "#E0DAD3";
+
 export default function SettingsScreen() {
   const { palette, colorScheme } = useFluxPalette();
+  const dark = colorScheme === "dark";
   const insets = useSafeAreaInsets();
   const [reminderPrefs, setReminderPrefs] =
     useState<ReminderPrefs>(defaultReminderPrefs);
@@ -50,6 +53,12 @@ export default function SettingsScreen() {
   const appearance = useAppearanceStore((s) => s.preference);
   const setAppearance = useAppearanceStore((s) => s.setPreference);
   const darkModeOn = appearance === "dark";
+
+  const accent = dark ? "#48B872" : "#2B7A50";
+  const cardBorder = dark ? palette.cardBorder : CARD_BORDER_LIGHT;
+  const cardBg = dark ? palette.inputBackground : "#FFFFFF";
+  const iconBg = dark ? "#2A2520" : palette.surfaceMuted;
+  const rowDivider = cardBorder;
 
   useEffect(() => {
     loadReminderPrefs()
@@ -121,7 +130,7 @@ export default function SettingsScreen() {
     <ScreenScroll>
       <RNView style={{ height: insets.top }} />
       <RNView style={styles.titleRow}>
-        <BrandMark size={28} />
+        <BrandMark size={24} />
         <Text style={[styles.title, { color: palette.text }]}>Settings</Text>
       </RNView>
 
@@ -129,8 +138,7 @@ export default function SettingsScreen() {
         <RNView
           style={[
             styles.card,
-            { backgroundColor: palette.surface },
-            cardElevation(colorScheme),
+            { backgroundColor: cardBg, borderColor: cardBorder },
           ]}
         >
           <Pressable
@@ -139,18 +147,13 @@ export default function SettingsScreen() {
             style={({ pressed }) => [
               styles.row,
               {
-                borderBottomWidth: StyleSheet.hairlineWidth,
-                borderBottomColor: palette.border,
+                borderBottomWidth: 1,
+                borderBottomColor: rowDivider,
                 opacity: pressed ? 0.92 : 1,
               },
             ]}
           >
-            <RNView
-              style={[
-                styles.iconWrap,
-                { backgroundColor: palette.surfaceMuted },
-              ]}
-            >
+            <RNView style={[styles.iconWrap, { backgroundColor: iconBg }]}>
               <Text style={[styles.currencyGlyph, { color: palette.text }]}>
                 {currency.symbol}
               </Text>
@@ -163,9 +166,7 @@ export default function SettingsScreen() {
                 {currency.label}
               </Text>
             </RNView>
-            <Text style={[styles.code, { color: palette.tint }]}>
-              {currency.code}
-            </Text>
+            <Text style={[styles.code, { color: accent }]}>{currency.code}</Text>
             <FontAwesome
               name="chevron-right"
               size={12}
@@ -174,13 +175,12 @@ export default function SettingsScreen() {
           </Pressable>
 
           <RNView style={styles.row}>
-            <RNView
-              style={[
-                styles.iconWrap,
-                { backgroundColor: palette.surfaceMuted },
-              ]}
-            >
-              <FontAwesome name="moon-o" size={16} color={palette.textSecondary} />
+            <RNView style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+              <FontAwesome
+                name="moon-o"
+                size={16}
+                color={palette.textSecondary}
+              />
             </RNView>
             <RNView style={styles.textCol}>
               <Text style={[styles.rowTitle, { color: palette.text }]}>
@@ -194,8 +194,8 @@ export default function SettingsScreen() {
               accessibilityLabel="Toggle dark mode"
               value={darkModeOn}
               onValueChange={(on) => setAppearance(on ? "dark" : "light")}
-              trackColor={{ false: palette.border, true: palette.tint }}
-              thumbColor="#fff"
+              trackColor={{ false: palette.border, true: accent }}
+              thumbColor="#FFFFFF"
             />
           </RNView>
         </RNView>
@@ -205,18 +205,16 @@ export default function SettingsScreen() {
         <RNView
           style={[
             styles.card,
-            { backgroundColor: palette.surface },
-            cardElevation(colorScheme),
+            { backgroundColor: cardBg, borderColor: cardBorder },
           ]}
         >
           <RNView style={styles.row}>
-            <RNView
-              style={[
-                styles.iconWrap,
-                { backgroundColor: palette.surfaceMuted },
-              ]}
-            >
-              <FontAwesome name="lock" size={16} color={palette.textSecondary} />
+            <RNView style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+              <FontAwesome
+                name="lock"
+                size={16}
+                color={palette.textSecondary}
+              />
             </RNView>
             <RNView style={styles.textCol}>
               <Text style={[styles.rowTitle, { color: palette.text }]}>
@@ -230,8 +228,8 @@ export default function SettingsScreen() {
               accessibilityLabel="Toggle biometric lock"
               value={biometricEnabled}
               onValueChange={(v) => void onBiometricToggle(v)}
-              trackColor={{ false: palette.border, true: palette.tint }}
-              thumbColor="#fff"
+              trackColor={{ false: palette.border, true: accent }}
+              thumbColor="#FFFFFF"
             />
           </RNView>
         </RNView>
@@ -241,26 +239,24 @@ export default function SettingsScreen() {
         <RNView
           style={[
             styles.card,
-            { backgroundColor: palette.surface },
-            cardElevation(colorScheme),
+            { backgroundColor: cardBg, borderColor: cardBorder },
           ]}
         >
           <RNView
             style={[
               styles.row,
               reminderPrefs.enabled && {
-                borderBottomWidth: StyleSheet.hairlineWidth,
-                borderBottomColor: palette.border,
+                borderBottomWidth: 1,
+                borderBottomColor: rowDivider,
               },
             ]}
           >
-            <RNView
-              style={[
-                styles.iconWrap,
-                { backgroundColor: palette.surfaceMuted },
-              ]}
-            >
-              <FontAwesome name="bell-o" size={16} color={palette.textSecondary} />
+            <RNView style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+              <FontAwesome
+                name="bell-o"
+                size={16}
+                color={palette.textSecondary}
+              />
             </RNView>
             <RNView style={styles.textCol}>
               <Text style={[styles.rowTitle, { color: palette.text }]}>
@@ -275,8 +271,8 @@ export default function SettingsScreen() {
               accessibilityLabel="Toggle payday reminder"
               value={reminderPrefs.enabled}
               onValueChange={(v) => void onReminderToggle(v)}
-              trackColor={{ false: palette.border, true: palette.tint }}
-              thumbColor="#fff"
+              trackColor={{ false: palette.border, true: accent }}
+              thumbColor="#FFFFFF"
             />
           </RNView>
           {reminderPrefs.enabled ? (
@@ -295,12 +291,18 @@ export default function SettingsScreen() {
                   style={[
                     styles.stepperBtn,
                     {
-                      borderColor: palette.border,
-                      backgroundColor: palette.surfaceMuted,
+                      borderColor: cardBorder,
+                      backgroundColor: iconBg,
                     },
                   ]}
                 >
-                  <Text style={{ color: palette.text, fontWeight: "700" }}>
+                  <Text
+                    style={{
+                      color: palette.text,
+                      fontFamily: typeface.bold,
+                      fontSize: 16,
+                    }}
+                  >
                     −
                   </Text>
                 </Pressable>
@@ -315,12 +317,18 @@ export default function SettingsScreen() {
                   style={[
                     styles.stepperBtn,
                     {
-                      borderColor: palette.border,
-                      backgroundColor: palette.surfaceMuted,
+                      borderColor: cardBorder,
+                      backgroundColor: iconBg,
                     },
                   ]}
                 >
-                  <Text style={{ color: palette.text, fontWeight: "700" }}>
+                  <Text
+                    style={{
+                      color: palette.text,
+                      fontFamily: typeface.bold,
+                      fontSize: 16,
+                    }}
+                  >
                     +
                   </Text>
                 </Pressable>
@@ -334,25 +342,19 @@ export default function SettingsScreen() {
         <RNView
           style={[
             styles.card,
-            { backgroundColor: palette.surface },
-            cardElevation(colorScheme),
+            { backgroundColor: cardBg, borderColor: cardBorder },
           ]}
         >
           <RNView
             style={[
               styles.row,
               {
-                borderBottomWidth: StyleSheet.hairlineWidth,
-                borderBottomColor: palette.border,
+                borderBottomWidth: 1,
+                borderBottomColor: rowDivider,
               },
             ]}
           >
-            <RNView
-              style={[
-                styles.iconWrap,
-                { backgroundColor: palette.surfaceMuted },
-              ]}
-            >
+            <RNView style={[styles.iconWrap, { backgroundColor: iconBg }]}>
               <FontAwesome
                 name="download"
                 size={16}
@@ -372,21 +374,20 @@ export default function SettingsScreen() {
               onPress={() => router.push("/backup")}
               style={[
                 styles.actionChip,
-                { backgroundColor: palette.tintMuted },
+                {
+                  backgroundColor: dark
+                    ? "rgba(72,184,114,0.16)"
+                    : palette.tintMuted,
+                },
               ]}
             >
-              <Text style={{ color: palette.tint, fontWeight: "700" }}>
+              <Text style={[styles.actionChipText, { color: accent }]}>
                 Export
               </Text>
             </Pressable>
           </RNView>
           <RNView style={styles.row}>
-            <RNView
-              style={[
-                styles.iconWrap,
-                { backgroundColor: palette.surfaceMuted },
-              ]}
-            >
+            <RNView style={[styles.iconWrap, { backgroundColor: iconBg }]}>
               <FontAwesome
                 name="upload"
                 size={16}
@@ -406,10 +407,15 @@ export default function SettingsScreen() {
               onPress={() => router.push("/backup")}
               style={[
                 styles.actionChip,
-                { backgroundColor: palette.surfaceMuted },
+                { backgroundColor: iconBg },
               ]}
             >
-              <Text style={{ color: palette.textSecondary, fontWeight: "700" }}>
+              <Text
+                style={[
+                  styles.actionChipText,
+                  { color: palette.textSecondary },
+                ]}
+              >
                 Import
               </Text>
             </Pressable>
@@ -421,49 +427,48 @@ export default function SettingsScreen() {
         <RNView
           style={[
             styles.card,
-            { backgroundColor: palette.surface },
-            cardElevation(colorScheme),
+            { backgroundColor: cardBg, borderColor: cardBorder },
           ]}
         >
-          <Link href="/modal" asChild>
-            <Pressable
-              style={({ pressed }) => [
-                styles.row,
-                { opacity: pressed ? 0.92 : 1 },
-              ]}
-            >
-              <RNView
-                style={[
-                  styles.iconWrap,
-                  { backgroundColor: palette.surfaceMuted },
-                ]}
-              >
-                <FontAwesome
-                  name="info"
-                  size={16}
-                  color={palette.textSecondary}
-                />
-              </RNView>
-              <RNView style={styles.textCol}>
-                <Text style={[styles.rowTitle, { color: palette.text }]}>
-                  About Flux
-                </Text>
-                <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-                  How cushion and payday planning works
-                </Text>
-              </RNView>
-              <FontAwesome
-                name="chevron-right"
-                size={12}
-                color={palette.textMuted}
-              />
-            </Pressable>
-          </Link>
+          <RNView
+            style={[
+              styles.row,
+              {
+                borderBottomWidth: 1,
+                borderBottomColor: rowDivider,
+              },
+            ]}
+          >
+            <Text style={[styles.aboutLabel, { color: palette.text }]}>
+              Version
+            </Text>
+            <Text style={[styles.aboutValue, { color: palette.textMuted }]}>
+              {version}
+            </Text>
+          </RNView>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/modal")}
+            style={({ pressed }) => [
+              styles.row,
+              { opacity: pressed ? 0.92 : 1 },
+            ]}
+          >
+            <Text style={[styles.aboutLabel, { color: palette.text }]}>
+              About Flux
+            </Text>
+            <FontAwesome
+              name="chevron-right"
+              size={12}
+              color={palette.textMuted}
+            />
+          </Pressable>
         </RNView>
       </SettingsGroup>
 
-      <Text style={[styles.version, { color: palette.textMuted }]}>
-        {version}
+      <Text style={[styles.footerNote, { color: palette.textMuted }]}>
+        Your data stays on your device. Always.
       </Text>
 
       <FluxBottomSheet
@@ -521,24 +526,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
   },
   title: {
-    fontFamily: typeface.display,
-    fontSize: 32,
-    letterSpacing: -0.6,
+    fontFamily: typeface.displayRegular,
+    fontSize: 18,
+    lineHeight: 18,
+    letterSpacing: -0.45,
   },
   group: {
     gap: spacing.sm,
   },
   groupTitle: {
+    fontFamily: typeface.bold,
     fontSize: 11,
-    fontWeight: "600",
     letterSpacing: 1,
   },
   card: {
-    borderRadius: radii.xl,
+    borderRadius: 18,
     overflow: "hidden",
+    borderWidth: 1,
   },
   row: {
     flexDirection: "row",
@@ -551,7 +558,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: radii.sm,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -564,17 +571,17 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   rowTitle: {
+    fontFamily: typeface.regular,
     fontSize: 16,
-    fontWeight: "600",
   },
   rowSub: {
+    fontFamily: typeface.regular,
     marginTop: 2,
     fontSize: 13,
   },
   code: {
-    fontFamily: typeface.displayMedium,
+    fontFamily: typeface.mono,
     fontSize: 14,
-    fontWeight: "600",
     marginRight: 4,
   },
   stepper: {
@@ -586,7 +593,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -597,13 +604,28 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   actionChip: {
-    borderRadius: radii.md,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  version: {
+  actionChipText: {
+    fontFamily: typeface.regular,
+    fontSize: 13,
+  },
+  aboutLabel: {
+    flex: 1,
+    fontFamily: typeface.regular,
+    fontSize: 16,
+  },
+  aboutValue: {
+    fontFamily: typeface.mono,
+    fontSize: 15,
+  },
+  footerNote: {
+    fontFamily: typeface.regular,
     textAlign: "center",
-    fontSize: 12,
-    marginTop: spacing.sm,
+    fontSize: 13,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
   },
 });

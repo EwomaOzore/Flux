@@ -10,7 +10,7 @@ import { useCurrencyStore } from '@/src/state/currencyStore';
 
 type Props = Omit<TextProps, 'children'> & {
   amount: number;
-  variant?: 'body' | 'titleEmphasis' | 'compact' | 'compactEmphasis';
+  variant?: 'body' | 'titleEmphasis' | 'hero' | 'compact' | 'compactEmphasis' | 'stat';
   /** Force a leading `+` on positive amounts. */
   signed?: boolean;
   /** Override store currency (e.g. currency picker samples). */
@@ -27,34 +27,53 @@ export function MoneyText({
 }: Props) {
   const storeCode = useCurrencyStore((s) => s.currencyCode);
   const currencyCode = currencyCodeProp ?? storeCode;
-  const compact = variant === 'compact' || variant === 'compactEmphasis';
+  const compact =
+    variant === 'compact' ||
+    variant === 'compactEmphasis' ||
+    variant === 'stat';
+  const hero = variant === 'hero';
   const parts = formatMoneyParts(amount, {
     code: currencyCode,
     compact,
-    signed: signed || compact,
+    signed: signed || (compact && variant !== 'stat'),
   } satisfies FormatMoneyPartsOptions);
 
   const base =
-    variant === 'titleEmphasis'
-      ? styles.titleEmphasis
-      : variant === 'compactEmphasis'
-        ? styles.compactEmphasis
-        : variant === 'compact'
-          ? styles.compact
-          : styles.body;
+    variant === 'hero'
+      ? styles.hero
+      : variant === 'titleEmphasis'
+        ? styles.titleEmphasis
+        : variant === 'stat'
+          ? styles.stat
+          : variant === 'compactEmphasis'
+            ? styles.compactEmphasis
+            : variant === 'compact'
+              ? styles.compact
+              : styles.body;
 
   const flat = StyleSheet.flatten(style) as TextStyle | undefined;
   const colorStyle: StyleProp<TextStyle> = flat?.color != null ? { color: flat.color } : null;
+  const amountFace = hero
+    ? styles.displayRegular
+    : variant === 'stat' || variant === 'compact' || variant === 'body'
+      ? styles.monoMedium
+      : styles.monoBold;
+  const symbolFace =
+    hero
+      ? styles.displayRegular
+      : variant === 'stat'
+        ? styles.monoMedium
+        : styles.currency;
 
   return (
     <Text {...rest} style={[base, style]}>
       {parts.sign ? (
-        <Text style={[styles.mono, colorStyle]}>{parts.sign}</Text>
+        <Text style={[amountFace, colorStyle]}>{parts.sign}</Text>
       ) : null}
       {parts.symbol ? (
-        <Text style={[styles.currency, colorStyle]}>{parts.symbol}</Text>
+        <Text style={[symbolFace, colorStyle]}>{parts.symbol}</Text>
       ) : null}
-      <Text style={[styles.mono, colorStyle]}>{parts.value}</Text>
+      <Text style={[amountFace, colorStyle]}>{parts.value}</Text>
     </Text>
   );
 }
@@ -71,15 +90,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontVariant: ['tabular-nums'],
   },
+  stat: {
+    fontSize: 14,
+    lineHeight: 21,
+    fontVariant: ['tabular-nums'],
+  },
   titleEmphasis: {
     fontSize: 40,
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
+  },
+  hero: {
+    fontSize: 50,
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
   currency: {
     fontFamily: typeface.currency,
   },
-  mono: {
+  displayRegular: {
+    fontFamily: typeface.displayRegular,
+  },
+  monoMedium: {
+    fontFamily: typeface.mono,
+  },
+  monoBold: {
     fontFamily: typeface.monoBold,
   },
 });

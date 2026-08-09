@@ -15,7 +15,7 @@ import { MoneyText } from "@/components/MoneyText";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { Text } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
-import Colors, { type ThemePalette } from "@/constants/Colors";
+import Colors from "@/constants/Colors";
 import { cardElevation, radii, spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
 import { buildRollupsFromStreams } from "@/src/domain/engine";
@@ -170,7 +170,7 @@ export default function HomeScreen() {
         <RNView style={styles.container}>
           <RNView style={styles.headerRow}>
             <RNView style={styles.brandLockup}>
-              <BrandMark size={26} />
+              <BrandMark size={24} />
               <Text style={[styles.brandName, { color: palette.text }]}>
                 flux
               </Text>
@@ -188,9 +188,9 @@ export default function HomeScreen() {
               styles.hero,
               {
                 backgroundColor: palette.surface,
+                borderColor: palette.cardBorder,
                 opacity: pressed ? 0.97 : 1,
               },
-              cardElevation(colorScheme),
             ]}
           >
             <Text style={[styles.heroLabel, { color: palette.textMuted }]}>
@@ -198,7 +198,7 @@ export default function HomeScreen() {
             </Text>
             <MoneyText
               amount={cushion}
-              variant="titleEmphasis"
+              variant="hero"
               style={{ color: positive ? palette.tint : palette.danger }}
             />
             <RNView style={styles.heroMeta}>
@@ -236,7 +236,7 @@ export default function HomeScreen() {
                   amount={vsLast}
                   variant="compact"
                   signed
-                  style={{ color: palette.textMuted, fontSize: 13 }}
+                  style={[styles.vsLast, { color: palette.textMuted }]}
                 />
                 <Text style={[styles.vsLast, { color: palette.textMuted }]}>
                   {" "}
@@ -252,33 +252,42 @@ export default function HomeScreen() {
               amount={incomeForMonth}
               background={palette.accentIncomeMuted}
               valueColor={palette.accentIncome}
-              palette={palette}
+              borderColor={palette.cardBorder}
+              labelColor={palette.textMuted}
             />
             <StatCard
               label="BILLS"
               amount={roll?.billsTotal ?? 0}
               background={palette.accentBillsMuted}
               valueColor={palette.accentBills}
-              palette={palette}
+              borderColor={palette.cardBorder}
+              labelColor={palette.textMuted}
             />
             <StatCard
               label="OUTFLOWS"
               amount={roll?.totalPaydayOutflow ?? 0}
               background={palette.accentOutflowMuted}
               valueColor={palette.accentOutflow}
-              palette={palette}
+              borderColor={palette.cardBorder}
+              labelColor={palette.textMuted}
             />
           </RNView>
 
           <RNView style={styles.sectionDivider}>
             <RNView
-              style={[styles.dividerLine, { backgroundColor: palette.border }]}
+              style={[
+                styles.dividerLine,
+                { backgroundColor: palette.cardBorder },
+              ]}
             />
             <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
               THIS MONTH
             </Text>
             <RNView
-              style={[styles.dividerLine, { backgroundColor: palette.border }]}
+              style={[
+                styles.dividerLine,
+                { backgroundColor: palette.cardBorder },
+              ]}
             />
           </RNView>
 
@@ -286,8 +295,10 @@ export default function HomeScreen() {
             <RNView
               style={[
                 styles.emptyCard,
-                { backgroundColor: palette.surface },
-                cardElevation(colorScheme),
+                {
+                  backgroundColor: palette.surface,
+                  borderColor: palette.cardBorder,
+                },
               ]}
             >
               <Text style={[styles.empty, { color: palette.textMuted }]}>
@@ -299,8 +310,10 @@ export default function HomeScreen() {
             <RNView
               style={[
                 styles.listCard,
-                { backgroundColor: palette.surface },
-                cardElevation(colorScheme),
+                {
+                  backgroundColor: palette.surface,
+                  borderColor: palette.cardBorder,
+                },
               ]}
             >
               {feed.map((item, i) => (
@@ -309,8 +322,8 @@ export default function HomeScreen() {
                   style={[
                     styles.feedRow,
                     i < feed.length - 1 && {
-                      borderBottomWidth: StyleSheet.hairlineWidth,
-                      borderBottomColor: palette.border,
+                      borderBottomWidth: 1,
+                      borderBottomColor: palette.cardBorder,
                     },
                   ]}
                 >
@@ -328,7 +341,7 @@ export default function HomeScreen() {
                     ]}
                   />
                   <Text
-                    style={[styles.feedLabel, { color: palette.text }]}
+                    style={[styles.feedLabel, { color: palette.textSecondary }]}
                     numberOfLines={1}
                   >
                     {item.label}
@@ -393,24 +406,26 @@ function StatCard({
   amount,
   background,
   valueColor,
-  palette,
+  borderColor,
+  labelColor,
 }: Readonly<{
   label: string;
   amount: number;
   background: string;
   valueColor: string;
-  palette: ThemePalette;
+  borderColor: string;
+  labelColor: string;
 }>) {
   return (
-    <RNView style={[styles.statCard, { backgroundColor: background }]}>
-      <Text style={[styles.statLabel, { color: palette.textMuted }]}>
-        {label}
-      </Text>
+    <RNView
+      style={[styles.statCard, { backgroundColor: background, borderColor }]}
+    >
+      <Text style={[styles.statLabel, { color: labelColor }]}>{label}</Text>
       <MoneyText
         amount={amount}
-        variant="compact"
+        variant="stat"
         signed={false}
-        style={{ color: valueColor, fontSize: 16 }}
+        style={{ color: valueColor }}
       />
     </RNView>
   );
@@ -440,25 +455,28 @@ const styles = StyleSheet.create({
   brandLockup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   brandName: {
-    fontFamily: typeface.display,
-    fontSize: 28,
-    letterSpacing: -0.6,
+    fontFamily: typeface.displayRegular,
+    fontSize: 18,
+    lineHeight: 18,
+    letterSpacing: -0.45,
   },
   monthChip: {
     fontSize: 13,
     fontWeight: "500",
   },
   hero: {
-    borderRadius: radii.xxl,
-    padding: spacing.lg,
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingVertical: 24,
+    paddingHorizontal: 22,
     gap: spacing.sm,
   },
   heroLabel: {
-    fontSize: 11,
-    fontWeight: "600",
+    fontFamily: typeface.bold,
+    fontSize: 10,
     letterSpacing: 1.1,
   },
   heroMeta: {
@@ -490,7 +508,8 @@ const styles = StyleSheet.create({
     alignItems: "baseline",
   },
   vsLast: {
-    fontSize: 13,
+    fontFamily: typeface.regular,
+    fontSize: 12,
   },
   statRow: {
     flexDirection: "row",
@@ -498,15 +517,17 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    borderRadius: radii.xl,
+    borderRadius: 14,
+    borderWidth: 1,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
     gap: 4,
   },
   statLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 0.8,
+    fontFamily: typeface.bold,
+    fontSize: 9,
+    lineHeight: 13.5,
+    letterSpacing: 0.72,
   },
   sectionDivider: {
     flexDirection: "row",
@@ -524,7 +545,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   emptyCard: {
-    borderRadius: radii.xl,
+    borderRadius: 14,
+    borderWidth: 1,
     padding: spacing.lg,
   },
   empty: {
@@ -532,7 +554,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   listCard: {
-    borderRadius: radii.xl,
+    borderRadius: 14,
+    borderWidth: 1,
     overflow: "hidden",
   },
   feedRow: {
@@ -544,14 +567,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   feedDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   feedLabel: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: "500",
+    fontFamily: typeface.regular,
+    fontSize: 14,
   },
   feedAmount: {
     fontSize: 15,

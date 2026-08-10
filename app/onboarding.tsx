@@ -1,7 +1,7 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CurrencyPickerList } from "@/components/CurrencyPickerList";
@@ -15,6 +15,8 @@ import {
   type CurrencyCode,
 } from "@/src/lib/currencies";
 import { useCurrencyStore } from "@/src/state/currencyStore";
+
+const brandLogo = require("../assets/images/FluxLogo.png");
 
 const FEATURES = [
   { icon: "lock", label: "Private — stays on your device" },
@@ -56,10 +58,14 @@ export default function OnboardingScreen() {
           <View
             style={[
               styles.brandSoft,
-              { backgroundColor: dark ? "rgba(72,184,114,0.18)" : palette.tintMuted },
+              {
+                backgroundColor: dark
+                  ? "rgba(72,184,114,0.18)"
+                  : palette.tintMuted,
+              },
             ]}
           >
-            <FontAwesome name="align-left" size={18} color={accent} />
+            <Image source={brandLogo} style={styles.brandLogo} />
           </View>
 
           <Text style={[styles.welcomeTitle, { color: palette.text }]}>
@@ -194,6 +200,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: spacing.md,
     marginBottom: spacing.xl,
+    overflow: "hidden",
+  },
+  brandLogo: {
+    width: 48,
+    height: 48,
   },
   welcomeTitle: {
     fontFamily: typeface.display,

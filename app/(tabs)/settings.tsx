@@ -1,18 +1,3 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Constants from "expo-constants";
-import * as LocalAuthentication from "expo-local-authentication";
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  View as RNView,
-  StyleSheet,
-  Switch,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import { BrandMark } from "@/components/BrandMark";
 import { CurrencyPickerList } from "@/components/CurrencyPickerList";
 import {
   FluxBottomSheet,
@@ -36,8 +21,23 @@ import {
 } from "@/src/lib/paydayReminders";
 import { useAppearanceStore } from "@/src/state/appearanceStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Constants from "expo-constants";
+import * as LocalAuthentication from "expo-local-authentication";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Image,
+  Pressable,
+  View as RNView,
+  StyleSheet,
+  Switch,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CARD_BORDER_LIGHT = "#E0DAD3";
+const brandLogo = require("../../assets/images/icon.png");
 
 export default function SettingsScreen() {
   const { palette, colorScheme } = useFluxPalette();
@@ -130,7 +130,7 @@ export default function SettingsScreen() {
     <ScreenScroll>
       <RNView style={{ height: insets.top }} />
       <RNView style={styles.titleRow}>
-        <BrandMark size={24} />
+        <Image source={brandLogo} style={styles.brandLogo} />
         <Text style={[styles.title, { color: palette.text }]}>Settings</Text>
       </RNView>
 
@@ -166,7 +166,9 @@ export default function SettingsScreen() {
                 {currency.label}
               </Text>
             </RNView>
-            <Text style={[styles.code, { color: accent }]}>{currency.code}</Text>
+            <Text style={[styles.code, { color: accent }]}>
+              {currency.code}
+            </Text>
             <FontAwesome
               name="chevron-right"
               size={12}
@@ -405,10 +407,7 @@ export default function SettingsScreen() {
             <Pressable
               accessibilityRole="button"
               onPress={() => router.push("/backup")}
-              style={[
-                styles.actionChip,
-                { backgroundColor: iconBg },
-              ]}
+              style={[styles.actionChip, { backgroundColor: iconBg }]}
             >
               <Text
                 style={[
@@ -528,11 +527,16 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.lg,
   },
+  brandLogo: {
+    width: 24,
+    height: 24,
+  },
   title: {
     fontFamily: typeface.displayRegular,
     fontSize: 18,
     lineHeight: 18,
     letterSpacing: -0.45,
+    marginTop: 5,
   },
   group: {
     gap: spacing.sm,

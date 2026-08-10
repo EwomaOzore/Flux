@@ -25,12 +25,12 @@ export const CURRENCY_OPTIONS: readonly CurrencyOption[] = [
   { code: "GBP", label: "British pound", symbol: "£", locale: "en-GB" },
   { code: "EUR", label: "Euro", symbol: "€", locale: "en-IE" },
   { code: "CAD", label: "Canadian dollar", symbol: "$", locale: "en-CA" },
-  { code: "AUD", label: "Australian dollar", symbol: "$", locale: "en-AU" },
+  // { code: "AUD", label: "Australian dollar", symbol: "$", locale: "en-AU" },
   { code: "ZAR", label: "South African rand", symbol: "R", locale: "en-ZA" },
   { code: "KES", label: "Kenyan shilling", symbol: "KSh", locale: "en-KE" },
   { code: "GHS", label: "Ghanaian cedi", symbol: "₵", locale: "en-GH" },
-  { code: "INR", label: "Indian rupee", symbol: "₹", locale: "en-IN" },
-  { code: "AED", label: "UAE dirham", symbol: "د.إ", locale: "en-AE" },
+  // { code: "INR", label: "Indian rupee", symbol: "₹", locale: "en-IN" },
+  // { code: "AED", label: "UAE dirham", symbol: "د.إ", locale: "en-AE" },
 ] as const;
 
 export const DEFAULT_CURRENCY: CurrencyCode = "NGN";

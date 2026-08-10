@@ -1,10 +1,15 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, View as RNView, StyleSheet } from "react-native";
+import {
+  Alert,
+  Image,
+  Pressable,
+  View as RNView,
+  StyleSheet,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BillsBottomSheet } from "@/components/BillsBottomSheet";
-import { BrandMark } from "@/components/BrandMark";
 import { IncomeStreamBottomSheet } from "@/components/IncomeStreamBottomSheet";
 import { MoneyText } from "@/components/MoneyText";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
@@ -22,6 +27,8 @@ import { useBudgetStore } from "@/src/state/budgetStore";
 
 const CARD_BORDER = "#E0DAD3";
 const ADD_GREEN = "#48B872";
+
+const brandLogo = require("../../assets/images/icon.png");
 
 export default function PlanScreen() {
   const { palette, colorScheme } = useFluxPalette();
@@ -89,7 +96,7 @@ export default function PlanScreen() {
       <ScreenScroll>
         <RNView style={{ height: insets.top }} />
         <RNView style={styles.titleRow}>
-          <BrandMark size={24} />
+          <Image source={brandLogo} style={styles.brandLogo} />
           <RNView style={styles.titleCol}>
             <Text style={[styles.title, { color: palette.text }]}>Plan</Text>
             <Text style={[styles.subtitle, { color: palette.textMuted }]}>
@@ -389,6 +396,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  brandLogo: {
+    width: 24,
+    height: 24,
   },
   titleCol: {
     flex: 1,

@@ -1,10 +1,3 @@
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useMemo } from "react";
-import { View as RNView, ScrollView, StyleSheet } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useShallow } from "zustand/react/shallow";
-
-import { BrandMark } from "@/components/BrandMark";
 import { MoneyText } from "@/components/MoneyText";
 import { Text } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -21,8 +14,14 @@ import {
 } from "@/src/domain/month";
 import { totalBillsAmount } from "@/src/domain/types";
 import { useBudgetStore } from "@/src/state/budgetStore";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useMemo } from "react";
+import { Image, View as RNView, ScrollView, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useShallow } from "zustand/react/shallow";
 
 const CARD_BORDER_LIGHT = "#E0DAD3";
+const brandLogo = require("../../assets/images/icon.png");
 
 export default function NextScreen() {
   const colorScheme = useColorScheme();
@@ -73,7 +72,7 @@ export default function NextScreen() {
       showsVerticalScrollIndicator={false}
     >
       <RNView style={styles.titleRow}>
-        <BrandMark size={24} />
+        <Image source={brandLogo} style={styles.brandLogo} />
         <RNView style={styles.titleCol}>
           <Text style={[styles.title, { color: palette.text }]}>Upcoming</Text>
           <Text style={[styles.subtitle, { color: palette.textMuted }]}>
@@ -262,6 +261,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     marginBottom: spacing.sm,
+  },
+  brandLogo: {
+    width: 24,
+    height: 24,
   },
   titleCol: {
     flex: 1,

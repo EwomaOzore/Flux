@@ -1,19 +1,3 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import * as Haptics from "expo-haptics";
-import { useMemo, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Platform,
-  Pressable,
-  View as RNView,
-  StyleSheet,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useShallow } from "zustand/react/shallow";
-
-import { BrandMark } from "@/components/BrandMark";
 import { MoneyText } from "@/components/MoneyText";
 import { Text, View } from "@/components/Themed";
 import { FluxTextInput } from "@/components/ui";
@@ -26,8 +10,25 @@ import type { MonthRollup } from "@/src/domain/types";
 import { formatMoney } from "@/src/lib/formatCurrency";
 import { computeRollups, useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import * as Haptics from "expo-haptics";
+import { useMemo, useState } from "react";
+import {
+  Alert,
+  FlatList,
+  Image,
+  Platform,
+  Pressable,
+  View as RNView,
+  StyleSheet,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useShallow } from "zustand/react/shallow";
 
 const CARD_BORDER = "#E0DAD3";
+
+const brandLogo = require("../../assets/images/icon.png");
 
 export default function TimelineScreen() {
   const colorScheme = useColorScheme();
@@ -191,7 +192,7 @@ export default function TimelineScreen() {
         ListHeaderComponent={
           <RNView style={styles.headerBlock}>
             <RNView style={styles.titleRow}>
-              <BrandMark size={24} />
+              <Image source={brandLogo} style={styles.brandLogo} />
               <RNView style={styles.titleCol}>
                 <Text style={[styles.title, { color: palette.text }]}>
                   Timeline
@@ -376,5 +377,9 @@ const styles = StyleSheet.create({
     fontFamily: typeface.regular,
     fontSize: 15,
     lineHeight: 22,
+  },
+  brandLogo: {
+    width: 24,
+    height: 24,
   },
 });

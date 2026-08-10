@@ -1,15 +1,3 @@
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useMemo, useState } from "react";
-import {
-  Pressable,
-  View as RNView,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useShallow } from "zustand/react/shallow";
-
-import { BrandMark } from "@/components/BrandMark";
 import { DiscretionaryInfoModal } from "@/components/DiscretionaryInfoModal";
 import { MoneyText } from "@/components/MoneyText";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
@@ -32,6 +20,19 @@ import {
   type PaydayLine,
 } from "@/src/domain/types";
 import { useBudgetStore } from "@/src/state/budgetStore";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useMemo, useState } from "react";
+import {
+  Image,
+  Pressable,
+  View as RNView,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useShallow } from "zustand/react/shallow";
+
+const brandLogo = require("../../assets/images/FluxLogo.png");
 
 type MonthFeedItem = {
   id: string;
@@ -170,7 +171,7 @@ export default function HomeScreen() {
         <RNView style={styles.container}>
           <RNView style={styles.headerRow}>
             <RNView style={styles.brandLockup}>
-              <BrandMark size={24} />
+              <Image source={brandLogo} style={styles.brandLogo} />
               <Text style={[styles.brandName, { color: palette.text }]}>
                 flux
               </Text>
@@ -455,13 +456,18 @@ const styles = StyleSheet.create({
   brandLockup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
+    gap: spacing.sm,
+  },
+  brandLogo: {
+    width: 24,
+    height: 24,
   },
   brandName: {
     fontFamily: typeface.displayRegular,
     fontSize: 18,
     lineHeight: 18,
     letterSpacing: -0.45,
+    marginTop: 4,
   },
   monthChip: {
     fontSize: 13,

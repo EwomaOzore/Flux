@@ -23,6 +23,21 @@ type CurrencyActions = {
   completeOnboarding: (code: CurrencyCode) => void;
 };
 
+async function finishCurrencyHydration(state: CurrencyState | undefined) {
+  let hasChosenCurrency = state?.hasChosenCurrency ?? false;
+  if (!hasChosenCurrency && typeof window !== "undefined") {
+    try {
+      const existing = await AsyncStorage.getItem(BUDGET_STORAGE_KEY);
+      if (existing) {
+        hasChosenCurrency = true;
+      }
+    } catch {
+      /* keep onboarding for brand-new installs */
+    }
+  }
+  useCurrencyStore.setState({ hydrated: true, hasChosenCurrency });
+}
+
 export const useCurrencyStore = create<CurrencyState & CurrencyActions>()(
   persist(
     (set) => ({
@@ -40,23 +55,17 @@ export const useCurrencyStore = create<CurrencyState & CurrencyActions>()(
         currencyCode: s.currencyCode,
         hasChosenCurrency: s.hasChosenCurrency,
       }),
-      onRehydrateStorage: () => async (state) => {
-        let hasChosenCurrency = state?.hasChosenCurrency ?? false;
-        if (!hasChosenCurrency && typeof window !== "undefined") {
-          try {
-            const existing = await AsyncStorage.getItem(BUDGET_STORAGE_KEY);
-            if (existing) {
-              hasChosenCurrency = true;
-            }
-          } catch {
-            /* keep onboarding for brand-new installs */
-          }
-        }
-        useCurrencyStore.setState({ hydrated: true, hasChosenCurrency });
-      },
     },
   ),
 );
+
+useCurrencyStore.persist.onFinishHydration((state) => {
+  void finishCurrencyHydration(state);
+});
+
+if (useCurrencyStore.persist.hasHydrated()) {
+  void finishCurrencyHydration(useCurrencyStore.getState());
+}
 
 export function getCurrencyCode(): CurrencyCode {
   const code = useCurrencyStore.getState().currencyCode;

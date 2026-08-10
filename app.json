@@ -4,27 +4,19 @@
     "slug": "flux-budget",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon-light.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "flux-budget",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-light.png",
+      "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2B7A50",
-      "dark": {
-        "image": "./assets/images/splash-dark.png",
-        "backgroundColor": "#1C1814"
-      }
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fluxbudget.app",
       "buildNumber": "1",
-      "icon": {
-        "light": "./assets/images/icon-light.png",
-        "dark": "./assets/images/icon-dark.png"
-      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -34,8 +26,8 @@
       "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#2B7A50"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -46,19 +38,15 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-light.png",
+          "image": "./assets/images/icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#2B7A50",
-          "dark": {
-            "image": "./assets/images/splash-dark.png",
-            "backgroundColor": "#1C1814"
-          }
+          "backgroundColor": "#000000"
         }
       ],
       "expo-router",
@@ -73,8 +61,8 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon-light.png",
-          "color": "#2B7A50",
+          "icon": "./assets/images/icon.png",
+          "color": "#000000",
           "sounds": []
         }
       ],

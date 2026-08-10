@@ -47,6 +47,10 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({
+  duration: 0,
+  fade: false,
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({

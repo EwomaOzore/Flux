@@ -139,6 +139,13 @@ function RootLayoutNav() {
                   name="modal"
                   options={{ presentation: "modal", title: "About" }}
                 />
+                <Stack.Screen
+                  name="privacy"
+                  options={{
+                    title: "Privacy policy",
+                    headerBackButtonDisplayMode: "minimal",
+                  }}
+                />
               </Stack>
               <View
                 pointerEvents="box-none"

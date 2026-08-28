@@ -17,8 +17,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.fluxbudget.app",
       "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Flux uses Face ID or Touch ID to lock the app and protect your budget data."
       }
     },
     "android": {
@@ -31,7 +35,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.RECORD_AUDIO"]
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -40,6 +47,7 @@
     },
     "plugins": [
       "./plugins/withBlackSplashWindow",
+      "./plugins/withRemoveMicrophone",
       [
         "expo-splash-screen",
         {
@@ -65,13 +73,20 @@
           "sounds": []
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Flux uses Face ID or Touch ID to lock the app and protect your budget data."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "router": {},
+      "privacyPolicyUrl": "https://flux-budget.expo.app/privacy",
       "eas": {
         "projectId": "b20d201c-0232-48ec-a191-4884039a1c6b"
       }

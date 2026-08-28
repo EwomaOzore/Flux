@@ -448,6 +448,28 @@ export default function SettingsScreen() {
 
           <Pressable
             accessibilityRole="button"
+            onPress={() => router.push("/privacy")}
+            style={({ pressed }) => [
+              styles.row,
+              {
+                borderBottomWidth: 1,
+                borderBottomColor: rowDivider,
+                opacity: pressed ? 0.92 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.aboutLabel, { color: palette.text }]}>
+              Privacy policy
+            </Text>
+            <FontAwesome
+              name="chevron-right"
+              size={12}
+              color={palette.textMuted}
+            />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
             onPress={() => router.push("/modal")}
             style={({ pressed }) => [
               styles.row,

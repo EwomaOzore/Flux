@@ -87,6 +87,7 @@
     "extra": {
       "router": {},
       "privacyPolicyUrl": "https://flux-budget.expo.app/privacy",
+      "termsOfServiceUrl": "https://flux-budget.expo.app/terms",
       "eas": {
         "projectId": "b20d201c-0232-48ec-a191-4884039a1c6b"
       }

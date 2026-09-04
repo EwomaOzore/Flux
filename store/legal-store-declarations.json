@@ -1,0 +1,41 @@
+{
+  "data_safety_summary": {
+    "collects_budget_or_financial_user_content": false,
+    "collects_personal_info": false,
+    "shares_user_data": false,
+    "sells_user_data": false,
+    "encryption_in_transit_for_collected_data": "N/A for budget data (on-device only). Expo diagnostics use HTTPS.",
+    "users_can_request_deletion": "Delete by clearing app data or uninstalling. No account to delete.",
+    "on_device_processing_only_for_budget": true,
+    "optional_third_party_diagnostics": {
+      "provider": "Expo (expo-insights / EAS Update)",
+      "examples": [
+        "app version",
+        "platform",
+        "OS version",
+        "anonymous client / project identifiers"
+      ],
+      "does_not_include": [
+        "income amounts",
+        "bills",
+        "receipt images",
+        "names",
+        "emails"
+      ]
+    }
+  },
+  "apple_privacy_nutrition_label_guidance": {
+    "data_not_collected_for_tracking": true,
+    "declare_diagnostics_if_expo_insights_active": true,
+    "do_not_declare_financial_info_as_collected_by_developer": "Budget entries are on-device only and not sent off device."
+  },
+  "play_financial_features_guidance": {
+    "does_app_include_financial_features": "Declare carefully. Flux is a personal budgeting calculator, not banking, payments, loans, investing, or advice.",
+    "suggested_selection": "Other — personal payday / budget calculator; amounts entered by user; no money movement or personalized financial advice.",
+    "or_if_form_allows": "The app does not provide any financial features — only if Play treats pure calculators as none; otherwise use Other with the description above."
+  },
+  "public_urls": {
+    "privacy": "https://flux-budget.expo.app/privacy",
+    "terms": "https://flux-budget.expo.app/terms"
+  }
+}

@@ -19,9 +19,9 @@ import { useCurrencyStore } from "@/src/state/currencyStore";
 const brandLogo = require("../assets/images/FluxLogo.png");
 
 const FEATURES = [
-  { icon: "lock", label: "Private — stays on your device" },
+  { icon: "lock", label: "Private — budget stays on your device" },
   { icon: "briefcase", label: "Multi-income ready — salary, gigs, more" },
-  { icon: "star", label: "Plain language, no gamified scores" },
+  { icon: "star", label: "Calculator only — not financial advice" },
 ] as const;
 
 export default function OnboardingScreen() {
@@ -110,6 +110,23 @@ export default function OnboardingScreen() {
           </View>
 
           <View style={styles.footer}>
+            <Text style={[styles.legalNote, { color: palette.textMuted }]}>
+              By continuing you agree to our{" "}
+              <Text
+                style={[styles.legalLink, { color: accent }]}
+                onPress={() => router.push("/terms")}
+              >
+                Terms
+              </Text>
+              {" "}and{" "}
+              <Text
+                style={[styles.legalLink, { color: accent }]}
+                onPress={() => router.push("/privacy")}
+              >
+                Privacy Policy
+              </Text>
+              . Flux does not collect your budget data.
+            </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Get started"
@@ -167,6 +184,23 @@ export default function OnboardingScreen() {
           />
 
           <View style={styles.footer}>
+            <Text style={[styles.legalNote, { color: palette.textMuted }]}>
+              By continuing you agree to our{" "}
+              <Text
+                style={[styles.legalLink, { color: accent }]}
+                onPress={() => router.push("/terms")}
+              >
+                Terms
+              </Text>
+              {" "}and{" "}
+              <Text
+                style={[styles.legalLink, { color: accent }]}
+                onPress={() => router.push("/privacy")}
+              >
+                Privacy Policy
+              </Text>
+              .
+            </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Continue with ${selectedCurrency.code}`}
@@ -245,6 +279,17 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: "auto",
     paddingTop: spacing.xl,
+    gap: spacing.md,
+  },
+  legalNote: {
+    fontFamily: typeface.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  legalLink: {
+    fontFamily: typeface.semibold,
+    fontSize: 12,
   },
   cta: {
     borderRadius: 16,

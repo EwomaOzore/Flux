@@ -470,6 +470,28 @@ export default function SettingsScreen() {
 
           <Pressable
             accessibilityRole="button"
+            onPress={() => router.push("/terms")}
+            style={({ pressed }) => [
+              styles.row,
+              {
+                borderBottomWidth: 1,
+                borderBottomColor: rowDivider,
+                opacity: pressed ? 0.92 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.aboutLabel, { color: palette.text }]}>
+              Terms & Conditions
+            </Text>
+            <FontAwesome
+              name="chevron-right"
+              size={12}
+              color={palette.textMuted}
+            />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
             onPress={() => router.push("/modal")}
             style={({ pressed }) => [
               styles.row,
@@ -489,7 +511,7 @@ export default function SettingsScreen() {
       </SettingsGroup>
 
       <Text style={[styles.footerNote, { color: palette.textMuted }]}>
-        Your data stays on your device. Always.
+        Your budget stays on your device. We don&apos;t collect it.
       </Text>
 
       <FluxBottomSheet

@@ -146,6 +146,13 @@ function RootLayoutNav() {
                     headerBackButtonDisplayMode: "minimal",
                   }}
                 />
+                <Stack.Screen
+                  name="terms"
+                  options={{
+                    title: "Terms & Conditions",
+                    headerBackButtonDisplayMode: "minimal",
+                  }}
+                />
               </Stack>
               <View
                 pointerEvents="box-none"

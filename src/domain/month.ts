@@ -135,3 +135,14 @@ export function monthRangeInclusive(from: MonthId, to: MonthId): MonthId[] {
   }
   return out;
 }
+
+/** Inclusive month count from `from` through `to` (0 if `to` is before `from`). */
+export function monthsInclusiveCount(from: MonthId, to: MonthId): number {
+  return monthRangeInclusive(from, to).length;
+}
+
+/** End month for a span of `count` months starting at `start` (count ≥ 1). */
+export function endMonthForDuration(start: MonthId, count: number): MonthId {
+  const n = Math.max(1, Math.floor(count));
+  return addMonthsId(start, n - 1);
+}

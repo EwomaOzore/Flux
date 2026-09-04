@@ -1,5 +1,6 @@
 import { MoneyText } from "@/components/MoneyText";
 import { Text, View } from "@/components/Themed";
+import { TimelineMonthDetailSheet } from "@/components/TimelineMonthDetailSheet";
 import { FluxTextInput } from "@/components/ui";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
@@ -48,10 +49,19 @@ export default function TimelineScreen() {
     [budgetForRollup],
   );
   const [searchText, setSearchText] = useState("");
+  const [selectedMonthId, setSelectedMonthId] = useState<string | null>(null);
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const query = searchText.trim().toLowerCase();
 
   const borderColor = colorScheme === "dark" ? palette.cardBorder : CARD_BORDER;
+
+  const selectedMonth = useMemo(
+    () =>
+      selectedMonthId
+        ? (rollups.find((r) => r.month === selectedMonthId) ?? null)
+        : null,
+    [rollups, selectedMonthId],
+  );
 
   const filteredRollups = useMemo(() => {
     if (!query) return rollups;
@@ -112,13 +122,22 @@ export default function TimelineScreen() {
     const isLast = index === filteredRollups.length - 1;
 
     return (
-      <RNView
-        style={[
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Open details for ${formatMonthIdShort(item.month)}`}
+        onPress={() => {
+          if (Platform.OS !== "web") {
+            void Haptics.selectionAsync();
+          }
+          setSelectedMonthId(item.month);
+        }}
+        style={({ pressed }) => [
           styles.row,
           !isLast && {
             borderBottomWidth: 1,
             borderBottomColor: borderColor,
           },
+          { opacity: pressed ? 0.88 : 1 },
         ]}
       >
         <RNView style={[styles.accentBar, { backgroundColor: accent }]} />
@@ -157,7 +176,10 @@ export default function TimelineScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Clear outflows for ${formatMonthIdShort(item.month)}`}
-          onPress={() => onClearMonth(item)}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onClearMonth(item);
+          }}
           hitSlop={8}
           style={({ pressed }) => [
             styles.clearBtn,
@@ -170,7 +192,7 @@ export default function TimelineScreen() {
         >
           <FontAwesome name="times" size={11} color={palette.danger} />
         </Pressable>
-      </RNView>
+      </Pressable>
     );
   };
 
@@ -251,6 +273,11 @@ export default function TimelineScreen() {
           </RNView>
         }
         style={styles.listSurface}
+      />
+      <TimelineMonthDetailSheet
+        rollup={selectedMonth}
+        bills={budgetForRollup.billItems}
+        onClose={() => setSelectedMonthId(null)}
       />
     </View>
   );

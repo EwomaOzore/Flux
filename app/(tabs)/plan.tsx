@@ -27,9 +27,11 @@ import {
   compareMonthId,
   currentPaydayMonthId,
   formatMonthIdShort,
+  monthsInclusiveCount,
   type MonthId,
 } from "@/src/domain/month";
 import { useBudgetStore } from "@/src/state/budgetStore";
+import type { PaydayLine } from "@/src/domain/types";
 
 const CARD_BORDER = "#E0DAD3";
 const ADD_GREEN = "#48B872";
@@ -229,6 +231,7 @@ export default function PlanScreen() {
                 <PlanRow
                   key={line.id}
                   label={line.label.trim() || "Outflow"}
+                  subtitle={outflowSubtitle(line)}
                   amount={line.amount}
                   dotColor={palette.accentOutflow}
                   textColor={dark ? "#EDE8E0" : "#1C1814"}
@@ -294,6 +297,14 @@ export default function PlanScreen() {
   );
 }
 
+function outflowSubtitle(line: PaydayLine): string | undefined {
+  if (line.recurrence !== "monthly") return undefined;
+  const start = line.startMonth ?? line.month;
+  const end = line.endMonth ?? start;
+  const count = monthsInclusiveCount(start, end);
+  return `Monthly · ${count} mo · ${formatMonthIdShort(start)}–${formatMonthIdShort(end)}`;
+}
+
 function PlanSection({
   title,
   onAdd,
@@ -333,6 +344,7 @@ function PlanSection({
 
 function PlanRow({
   label,
+  subtitle,
   amount,
   dotColor,
   textColor,
@@ -345,6 +357,7 @@ function PlanRow({
   mutedIcon,
 }: Readonly<{
   label: string;
+  subtitle?: string;
   amount: number;
   dotColor: string;
   textColor: string;
@@ -359,9 +372,19 @@ function PlanRow({
   const body = (
     <>
       <RNView style={[styles.dot, { backgroundColor: dotColor }]} />
-      <Text style={[styles.itemLabel, { color: textColor }]} numberOfLines={1}>
-        {label}
-      </Text>
+      <RNView style={styles.itemTextCol}>
+        <Text style={[styles.itemLabel, { color: textColor }]} numberOfLines={1}>
+          {label}
+        </Text>
+        {subtitle ? (
+          <Text
+            style={[styles.itemSub, { color: mutedIcon }]}
+            numberOfLines={1}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
+      </RNView>
       <MoneyText amount={amount} style={{ color: amountColor, fontSize: 14 }} />
       <Pressable
         accessibilityRole="button"
@@ -487,15 +510,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
+  itemTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
   },
   itemLabel: {
-    flex: 1,
     fontFamily: typeface.regular,
     fontSize: 14,
+  },
+  itemSub: {
+    fontFamily: typeface.regular,
+    fontSize: 12,
   },
   scanRow: {
     flexDirection: "row",

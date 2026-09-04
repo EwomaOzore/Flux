@@ -1,17 +1,29 @@
-import { useCallback, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useState } from "react";
+import { Alert, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { FluxBottomSheet, FluxBottomSheetHeader } from '@/components/FluxBottomSheet';
-import { FluxTextInput, FormField, PrimaryButton, useFluxPalette } from '@/components/ui';
-import { radii, spacing } from '@/constants/theme';
-import { type MonthId, currentPaydayMonthId } from '@/src/domain/month';
-import { formatMoney, parseMoneyInput, sampleMoneyPlaceholder } from '@/src/lib/formatCurrency';
-import { useBudgetStore } from '@/src/state/budgetStore';
-import { MonthPickerField } from '@/components/MonthPickerField';
+import {
+  FluxBottomSheet,
+  FluxBottomSheetHeader,
+} from "@/components/FluxBottomSheet";
+import { MonthPickerField } from "@/components/MonthPickerField";
+import {
+  FluxTextInput,
+  FormField,
+  PrimaryButton,
+  useFluxPalette,
+} from "@/components/ui";
+import { radii, spacing } from "@/constants/theme";
+import { currentPaydayMonthId, type MonthId } from "@/src/domain/month";
+import {
+  formatMoney,
+  parseMoneyInput,
+  sampleMoneyPlaceholder,
+} from "@/src/lib/formatCurrency";
+import { useBudgetStore } from "@/src/state/budgetStore";
 
 function moneyDraftFromText(text: string): string {
-  if (!text.replaceAll(/\D/g, '')) return '';
+  if (!text.replaceAll(/\D/g, "")) return "";
   return formatMoney(parseMoneyInput(text));
 }
 
@@ -35,13 +47,13 @@ export function QuickAddLineSheet({
   const [month, setMonth] = useState<MonthId>(
     initialMonth ?? currentPaydayMonthId(),
   );
-  const [label, setLabel] = useState('');
-  const [amount, setAmount] = useState('');
+  const [label, setLabel] = useState("");
+  const [amount, setAmount] = useState("");
 
   const reset = useCallback(() => {
     setMonth(initialMonth ?? currentPaydayMonthId());
-    setLabel('');
-    setAmount('');
+    setLabel("");
+    setAmount("");
   }, [initialMonth]);
 
   const handleClose = useCallback(() => {
@@ -50,13 +62,17 @@ export function QuickAddLineSheet({
   }, [onClose, reset]);
 
   const onAdd = () => {
-    const n = parseMoneyInput(amount || '0');
+    const n = parseMoneyInput(amount || "0");
     if (n <= 0) {
-      Alert.alert('Amount needed', 'Enter a positive amount.');
+      Alert.alert("Amount needed", "Enter a positive amount.");
       return;
     }
     const savedMonth = month;
-    addLine({ month: savedMonth, label: label.trim() || 'Payday item', amount: n });
+    addLine({
+      month: savedMonth,
+      label: label.trim() || "Payday item",
+      amount: n,
+    });
     onAdded?.(savedMonth);
     handleClose();
   };
@@ -72,20 +88,31 @@ export function QuickAddLineSheet({
     <FluxBottomSheet
       visible={visible}
       onClose={handleClose}
-      enableDynamicSizing
-      variant="view"
+      snapPoints={["72%", "92%"]}
     >
       <View style={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
         <FluxBottomSheetHeader title="Quick add" onClose={handleClose} />
         <View style={styles.formWrap}>
           <FormField label="Month">
-            <MonthPickerField value={month} onChange={setMonth} palette={palette} triggerStyle={triggerStyle} />
+            <MonthPickerField
+              value={month}
+              onChange={setMonth}
+              palette={palette}
+              triggerStyle={triggerStyle}
+            />
           </FormField>
           <FormField label="Label">
-            <FluxTextInput value={label} onChangeText={setLabel} placeholder="e.g. Rent, school fees, groceries" />
+            <FluxTextInput
+              sheet
+              value={label}
+              onChangeText={setLabel}
+              placeholder="e.g. Rent, school fees, groceries"
+              returnKeyType="next"
+            />
           </FormField>
           <FormField label="Amount">
             <FluxTextInput
+              sheet
               value={amount}
               onChangeText={(t) => setAmount(moneyDraftFromText(t))}
               keyboardType="number-pad"
@@ -101,5 +128,9 @@ export function QuickAddLineSheet({
 }
 
 const styles = StyleSheet.create({
-  formWrap: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
+  formWrap: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
 });

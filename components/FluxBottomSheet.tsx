@@ -93,8 +93,9 @@ export function FluxBottomSheet({
     ) : (
       <BottomSheetScrollView
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
+        keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
+        bounces={false}
         style={{ backgroundColor: palette.background }}
         contentContainerStyle={[
           styles.scrollContent,
@@ -126,9 +127,10 @@ export function FluxBottomSheet({
         borderTopLeftRadius: radii.xl,
         borderTopRightRadius: radii.xl,
       }}
-      keyboardBehavior="interactive"
+      keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
+      enableBlurKeyboardOnGesture
     >
       {body}
     </BottomSheetModal>
@@ -178,7 +180,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   header: {
     flexDirection: "row",

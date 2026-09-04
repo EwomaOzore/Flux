@@ -70,6 +70,7 @@ export function IncomeStreamBottomSheet({ streamId, onClose }: Props) {
         <RNView style={[styles.scroll, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
           <FormField label="Label">
             <FluxTextInput
+              sheet
               value={stream.label}
               onChangeText={(t) => updateIncomeStream(stream.id, { label: t })}
               placeholder="e.g. Main job, loan repayment, freelance"
@@ -145,6 +146,7 @@ export function IncomeStreamBottomSheet({ streamId, onClose }: Props) {
           ) : null}
           <FormField label={`Amount (${getCurrencySymbol(currencyCode)})`}>
             <FluxTextInput
+              sheet
               value={stream.amountNgn > 0 ? formatMoney(stream.amountNgn, currencyCode) : ''}
               onChangeText={(t) => {
                 const n = parseMoneyInput(t);
@@ -157,6 +159,7 @@ export function IncomeStreamBottomSheet({ streamId, onClose }: Props) {
           </FormField>
           <FormField label="Note (optional)">
             <FluxTextInput
+              sheet
               value={stream.note ?? ''}
               onChangeText={(t) => updateIncomeStream(stream.id, { note: t || undefined })}
               placeholder='e.g. "$700 wired" — display only'

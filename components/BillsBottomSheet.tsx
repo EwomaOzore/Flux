@@ -126,6 +126,7 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
 
         <FormField label="What is it?">
           <FluxTextInput
+            sheet
             value={newLabel}
             onChangeText={setNewLabel}
             placeholder="e.g. Rent, electricity, subscriptions"
@@ -133,6 +134,7 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
         </FormField>
         <FormField label="Amount">
           <FluxTextInput
+            sheet
             value={newAmount}
             onChangeText={(t) => setNewAmount(moneyDraftFromText(t))}
             keyboardType="number-pad"

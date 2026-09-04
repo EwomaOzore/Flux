@@ -387,6 +387,7 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
 
         <FormField label="Label (editable)">
           <FluxTextInput
+            sheet
             value={labelDraft}
             onChangeText={setLabelDraft}
             placeholder="e.g. Shop name or description"
@@ -396,6 +397,7 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
         </FormField>
         <FormField label="Amount (editable)">
           <FluxTextInput
+            sheet
             value={amountDraft}
             onChangeText={(t) => setAmountDraft(moneyDraftFromText(t))}
             keyboardType="number-pad"

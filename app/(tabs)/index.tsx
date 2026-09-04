@@ -12,6 +12,7 @@ import {
   compareMonthId,
   currentPaydayMonthId,
   formatMonthIdDisplay,
+  type MonthId,
 } from "@/src/domain/month";
 import {
   incomeNgnForMonth,
@@ -44,7 +45,7 @@ type MonthFeedItem = {
 };
 
 function buildMonthFeed(
-  month: string,
+  month: MonthId,
   streams: IncomeStream[],
   bills: BillItem[],
   lines: PaydayLine[],

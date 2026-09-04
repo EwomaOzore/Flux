@@ -19,13 +19,22 @@ type Props = {
   readonly visible: boolean;
   readonly onClose: () => void;
   readonly initialMonth?: MonthId;
+  /** Called after a line is saved, with the month it was saved to. */
+  readonly onAdded?: (month: MonthId) => void;
 };
 
-export function QuickAddLineSheet({ visible, onClose, initialMonth }: Props) {
+export function QuickAddLineSheet({
+  visible,
+  onClose,
+  initialMonth,
+  onAdded,
+}: Props) {
   const insets = useSafeAreaInsets();
   const { palette } = useFluxPalette();
   const addLine = useBudgetStore((s) => s.addLine);
-  const [month, setMonth] = useState<MonthId>(initialMonth ?? currentPaydayMonthId());
+  const [month, setMonth] = useState<MonthId>(
+    initialMonth ?? currentPaydayMonthId(),
+  );
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('');
 
@@ -46,7 +55,9 @@ export function QuickAddLineSheet({ visible, onClose, initialMonth }: Props) {
       Alert.alert('Amount needed', 'Enter a positive amount.');
       return;
     }
-    addLine({ month, label: label.trim() || 'Payday item', amount: n });
+    const savedMonth = month;
+    addLine({ month: savedMonth, label: label.trim() || 'Payday item', amount: n });
+    onAdded?.(savedMonth);
     handleClose();
   };
 

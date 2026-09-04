@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BillsBottomSheet } from "@/components/BillsBottomSheet";
 import { IncomeStreamBottomSheet } from "@/components/IncomeStreamBottomSheet";
 import { MoneyText } from "@/components/MoneyText";
+import { MonthPickerField } from "@/components/MonthPickerField";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { ReceiptScanSheet } from "@/components/ReceiptScanSheet";
 import { Text } from "@/components/Themed";
@@ -20,9 +21,14 @@ import {
   ScreenScroll,
   useFluxPalette,
 } from "@/components/ui";
-import { spacing } from "@/constants/theme";
+import { radii, spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
-import { currentPaydayMonthId, type MonthId } from "@/src/domain/month";
+import {
+  compareMonthId,
+  currentPaydayMonthId,
+  formatMonthIdShort,
+  type MonthId,
+} from "@/src/domain/month";
 import { useBudgetStore } from "@/src/state/budgetStore";
 
 const CARD_BORDER = "#E0DAD3";
@@ -52,22 +58,24 @@ export default function PlanScreen() {
   const [incomeStreamSheetId, setIncomeStreamSheetId] = useState<string | null>(
     null,
   );
-  const [addMonth, setAddMonth] = useState<MonthId>(() =>
+  const [viewMonth, setViewMonth] = useState<MonthId>(() =>
     currentPaydayMonthId(),
   );
 
-  const paydayMonth = currentPaydayMonthId();
   const monthLines = useMemo(
     () =>
       lines.filter((line) => {
         if (line.recurrence === "monthly") {
           const start = line.startMonth ?? line.month;
-          const end = line.endMonth ?? line.month;
-          return paydayMonth >= start && paydayMonth <= end;
+          const end = line.endMonth ?? start;
+          return (
+            compareMonthId(viewMonth, start) >= 0 &&
+            compareMonthId(viewMonth, end) <= 0
+          );
         }
-        return line.month === paydayMonth;
+        return line.month === viewMonth;
       }),
-    [lines, paydayMonth],
+    [lines, viewMonth],
   );
 
   const onAddIncomeRow = () => {
@@ -191,6 +199,18 @@ export default function PlanScreen() {
           labelColor={palette.textMuted}
           dark={dark}
         >
+          <MonthPickerField
+            value={viewMonth}
+            onChange={setViewMonth}
+            palette={palette}
+            triggerStyle={[
+              styles.monthTrigger,
+              {
+                borderColor,
+                backgroundColor: palette.surface,
+              },
+            ]}
+          />
           <RNView
             style={[
               styles.card,
@@ -202,7 +222,7 @@ export default function PlanScreen() {
           >
             {monthLines.length === 0 ? (
               <Text style={[styles.empty, { color: palette.textMuted }]}>
-                No payday outflows this month.
+                No payday outflows for {formatMonthIdShort(viewMonth)}.
               </Text>
             ) : (
               monthLines.map((line, idx) => (
@@ -257,8 +277,8 @@ export default function PlanScreen() {
       <ReceiptScanSheet
         visible={receiptScanOpen}
         onClose={() => setReceiptScanOpen(false)}
-        month={addMonth}
-        onMonthChange={setAddMonth}
+        month={viewMonth}
+        onMonthChange={setViewMonth}
       />
       <IncomeStreamBottomSheet
         streamId={incomeStreamSheetId}
@@ -267,7 +287,8 @@ export default function PlanScreen() {
       <QuickAddLineSheet
         visible={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
-        initialMonth={paydayMonth}
+        initialMonth={viewMonth}
+        onAdded={setViewMonth}
       />
     </>
   );
@@ -418,6 +439,10 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
     gap: spacing.sm,
+  },
+  monthTrigger: {
+    borderWidth: 1,
+    borderRadius: radii.md,
   },
   sectionHead: {
     flexDirection: "row",

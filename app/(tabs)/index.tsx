@@ -9,6 +9,7 @@ import { typeface } from "@/constants/typography";
 import { buildRollupsFromStreams } from "@/src/domain/engine";
 import {
   addMonthsId,
+  compareMonthId,
   currentPaydayMonthId,
   formatMonthIdDisplay,
 } from "@/src/domain/month";
@@ -23,6 +24,7 @@ import { useBudgetStore } from "@/src/state/budgetStore";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useMemo, useState } from "react";
 import {
+  Alert,
   Image,
   Pressable,
   View as RNView,
@@ -75,10 +77,10 @@ function buildMonthFeed(
 
   for (const line of lines) {
     const start = line.startMonth ?? line.month;
-    const end = line.endMonth ?? line.month;
+    const end = line.endMonth ?? start;
     const inRange =
       line.recurrence === "monthly"
-        ? month >= start && month <= end
+        ? compareMonthId(month, start) >= 0 && compareMonthId(month, end) <= 0
         : line.month === month;
     if (!inRange || line.amount <= 0) continue;
     items.push({
@@ -397,6 +399,13 @@ export default function HomeScreen() {
         visible={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
         initialMonth={paydayMonth}
+        onAdded={(month) => {
+          if (month === paydayMonth) return;
+          Alert.alert(
+            "Saved",
+            `Added for ${formatMonthIdDisplay(month)}. Home shows this month only — open Plan or Timeline to see it.`,
+          );
+        }}
       />
     </RNView>
   );

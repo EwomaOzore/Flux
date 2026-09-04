@@ -224,7 +224,7 @@ export function ReceiptScanSheet(props: Readonly<Props>) {
       addLine({ month, label, amount });
       Alert.alert(
         "Added",
-        `"${label}" for ${formatMonthIdDisplay(month)} was added from your receipt. It will show on Home and Timeline.`,
+        `"${label}" for ${formatMonthIdDisplay(month)} was added from your receipt. Open Plan or Timeline for that month to see it.`,
       );
       if (keepOpen) {
         setImageUri(null);

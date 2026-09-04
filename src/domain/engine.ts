@@ -28,8 +28,9 @@ export function monthsForRollups(
     if (rec === "monthly") {
       const start = l.startMonth ?? l.month;
       const end = l.endMonth ?? start;
-      seen.add(start);
-      seen.add(end);
+      for (const m of monthRangeInclusive(start, end)) {
+        seen.add(m);
+      }
     } else {
       seen.add(l.month);
     }

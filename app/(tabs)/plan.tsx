@@ -15,6 +15,7 @@ import { MoneyText } from "@/components/MoneyText";
 import { MonthPickerField } from "@/components/MonthPickerField";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { ReceiptScanSheet } from "@/components/ReceiptScanSheet";
+import { StatementImportSheet } from "@/components/StatementImportSheet";
 import { Text } from "@/components/Themed";
 import {
   DangerOutlineButton,
@@ -30,8 +31,8 @@ import {
   monthsInclusiveCount,
   type MonthId,
 } from "@/src/domain/month";
-import { useBudgetStore } from "@/src/state/budgetStore";
 import type { PaydayLine } from "@/src/domain/types";
+import { useBudgetStore } from "@/src/state/budgetStore";
 
 const CARD_BORDER = "#E0DAD3";
 const ADD_GREEN = "#48B872";
@@ -56,6 +57,7 @@ export default function PlanScreen() {
 
   const [billsOpen, setBillsOpen] = useState(false);
   const [receiptScanOpen, setReceiptScanOpen] = useState(false);
+  const [statementImportOpen, setStatementImportOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [incomeStreamSheetId, setIncomeStreamSheetId] = useState<string | null>(
     null,
@@ -270,12 +272,44 @@ export default function PlanScreen() {
           />
         </Pressable>
 
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setStatementImportOpen(true)}
+          style={({ pressed }) => [
+            styles.scanRow,
+            {
+              backgroundColor: palette.surface,
+              borderColor,
+              opacity: pressed ? 0.92 : 1,
+            },
+          ]}
+        >
+          <FontAwesome name="file-text-o" size={16} color={ADD_GREEN} />
+          <RNView style={styles.scanTextCol}>
+            <Text style={[styles.scanText, { color: palette.text }]}>
+              Import bank statement
+            </Text>
+            <Text style={[styles.scanSub, { color: palette.textMuted }]}>
+              Auto-fill bills from a CSV — parsed on-device
+            </Text>
+          </RNView>
+          <FontAwesome
+            name="chevron-right"
+            size={14}
+            color={palette.textMuted}
+          />
+        </Pressable>
+
         <DangerOutlineButton label="Start over" onPress={onStartOver} />
       </ScreenScroll>
 
       <BillsBottomSheet
         visible={billsOpen}
         onClose={() => setBillsOpen(false)}
+      />
+      <StatementImportSheet
+        visible={statementImportOpen}
+        onClose={() => setStatementImportOpen(false)}
       />
       <ReceiptScanSheet
         visible={receiptScanOpen}
@@ -373,7 +407,10 @@ function PlanRow({
     <>
       <RNView style={[styles.dot, { backgroundColor: dotColor }]} />
       <RNView style={styles.itemTextCol}>
-        <Text style={[styles.itemLabel, { color: textColor }]} numberOfLines={1}>
+        <Text
+          style={[styles.itemLabel, { color: textColor }]}
+          numberOfLines={1}
+        >
           {label}
         </Text>
         {subtitle ? (
@@ -541,5 +578,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: typeface.medium,
     fontSize: 15,
+  },
+  scanTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  scanSub: {
+    fontFamily: typeface.regular,
+    fontSize: 12,
   },
 });

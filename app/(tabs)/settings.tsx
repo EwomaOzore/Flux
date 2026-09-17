@@ -12,20 +12,26 @@ import {
   loadBiometricLockEnabled,
   saveBiometricLockEnabled,
 } from "@/src/lib/biometricPrefs";
-import { currencyOption } from "@/src/lib/currencies";
+import {
+  currencyOption,
+  currencyOptionsPreferredFirst,
+} from "@/src/lib/currencies";
 import {
   applyReminderPrefs,
   defaultReminderPrefs,
   loadReminderPrefs,
   type ReminderPrefs,
 } from "@/src/lib/paydayReminders";
-import { useAppearanceStore } from "@/src/state/appearanceStore";
+import {
+  useAppearanceStore,
+  type AppearancePreference,
+} from "@/src/state/appearanceStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Constants from "expo-constants";
 import * as LocalAuthentication from "expo-local-authentication";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -39,6 +45,26 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const CARD_BORDER_LIGHT = "#E0DAD3";
 const brandLogo = require("../../assets/images/icon.png");
 
+const APPEARANCE_OPTIONS: readonly {
+  value: AppearancePreference;
+  label: string;
+}[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
+
+function appearanceSubtitle(preference: AppearancePreference): string {
+  switch (preference) {
+    case "system":
+      return "Matches your phone";
+    case "light":
+      return "Always light";
+    case "dark":
+      return "Always dark";
+  }
+}
+
 export default function SettingsScreen() {
   const { palette, colorScheme } = useFluxPalette();
   const dark = colorScheme === "dark";
@@ -50,9 +76,12 @@ export default function SettingsScreen() {
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const setCurrency = useCurrencyStore((s) => s.setCurrency);
   const currency = currencyOption(currencyCode);
+  const currencyOptions = useMemo(
+    () => currencyOptionsPreferredFirst(currencyCode),
+    [currencyCode],
+  );
   const appearance = useAppearanceStore((s) => s.preference);
   const setAppearance = useAppearanceStore((s) => s.setPreference);
-  const darkModeOn = appearance === "dark";
 
   const accent = dark ? "#48B872" : "#2B7A50";
   const cardBorder = dark ? palette.cardBorder : CARD_BORDER_LIGHT;
@@ -176,29 +205,60 @@ export default function SettingsScreen() {
             />
           </Pressable>
 
-          <RNView style={styles.row}>
-            <RNView style={[styles.iconWrap, { backgroundColor: iconBg }]}>
-              <FontAwesome
-                name="moon-o"
-                size={16}
-                color={palette.textSecondary}
-              />
+          <RNView style={styles.appearanceBlock}>
+            <RNView style={styles.row}>
+              <RNView style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+                <FontAwesome
+                  name="moon-o"
+                  size={16}
+                  color={palette.textSecondary}
+                />
+              </RNView>
+              <RNView style={styles.textCol}>
+                <Text style={[styles.rowTitle, { color: palette.text }]}>
+                  Appearance
+                </Text>
+                <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                  {appearanceSubtitle(appearance)}
+                </Text>
+              </RNView>
             </RNView>
-            <RNView style={styles.textCol}>
-              <Text style={[styles.rowTitle, { color: palette.text }]}>
-                Dark mode
-              </Text>
-              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-                {darkModeOn ? "On" : appearance === "system" ? "System" : "Off"}
-              </Text>
+            <RNView
+              style={[
+                styles.segmentTrack,
+                {
+                  backgroundColor: dark ? "#2A2520" : palette.surfaceMuted,
+                  borderColor: cardBorder,
+                },
+              ]}
+            >
+              {APPEARANCE_OPTIONS.map((opt) => {
+                const active = appearance === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={`${opt.label} appearance`}
+                    onPress={() => setAppearance(opt.value)}
+                    style={({ pressed }) => [
+                      styles.segmentBtn,
+                      active && { backgroundColor: accent },
+                      { opacity: pressed ? 0.9 : 1 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentLabel,
+                        { color: active ? "#FFFFFF" : palette.textSecondary },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </RNView>
-            <Switch
-              accessibilityLabel="Toggle dark mode"
-              value={darkModeOn}
-              onValueChange={(on) => setAppearance(on ? "dark" : "light")}
-              trackColor={{ false: palette.border, true: accent }}
-              thumbColor="#FFFFFF"
-            />
           </RNView>
         </RNView>
       </SettingsGroup>
@@ -522,10 +582,11 @@ export default function SettingsScreen() {
         <FluxBottomSheetHeader
           title="Currency"
           onClose={() => setCurrencySheetOpen(false)}
-          subtitle="All amounts in Flux will use the currency you pick."
+          subtitle="Amounts use the currency you pick. Your device region is suggested when available."
         />
         <CurrencyPickerList
           selected={currencyCode}
+          options={currencyOptions}
           onSelect={(code) => {
             setCurrency(code);
             setCurrencySheetOpen(false);
@@ -625,6 +686,29 @@ const styles = StyleSheet.create({
   rowSub: {
     fontFamily: typeface.regular,
     marginTop: 2,
+    fontSize: 13,
+  },
+  appearanceBlock: {
+    paddingBottom: spacing.sm,
+  },
+  segmentTrack: {
+    flexDirection: "row",
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    padding: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 3,
+  },
+  segmentBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  segmentLabel: {
+    fontFamily: typeface.semibold,
     fontSize: 13,
   },
   code: {

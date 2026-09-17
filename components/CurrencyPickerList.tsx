@@ -5,19 +5,26 @@ import { Text } from "@/components/Themed";
 import { useFluxPalette } from "@/components/ui";
 import { radii, spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
-import { CURRENCY_OPTIONS, type CurrencyCode } from "@/src/lib/currencies";
+import {
+  CURRENCY_OPTIONS,
+  type CurrencyCode,
+  type CurrencyOption,
+} from "@/src/lib/currencies";
 
 type Props = {
   readonly selected: CurrencyCode;
   readonly onSelect: (code: CurrencyCode) => void;
   /** `sheet` = compact list (settings). `cards` = onboarding pill rows. */
   readonly variant?: "sheet" | "cards";
+  /** Optional ordered list; defaults to {@link CURRENCY_OPTIONS}. */
+  readonly options?: readonly CurrencyOption[];
 };
 
 export function CurrencyPickerList({
   selected,
   onSelect,
   variant = "sheet",
+  options = CURRENCY_OPTIONS,
 }: Props) {
   const { palette, colorScheme } = useFluxPalette();
   const dark = colorScheme === "dark";
@@ -28,7 +35,7 @@ export function CurrencyPickerList({
   if (variant === "cards") {
     return (
       <View style={styles.cardList}>
-        {CURRENCY_OPTIONS.map((c) => {
+        {options.map((c) => {
           const active = c.code === selected;
           return (
             <Pressable
@@ -73,7 +80,7 @@ export function CurrencyPickerList({
 
   return (
     <View style={styles.list}>
-      {CURRENCY_OPTIONS.map((c, idx) => {
+      {options.map((c, idx) => {
         const active = c.code === selected;
         return (
           <Pressable
@@ -87,9 +94,7 @@ export function CurrencyPickerList({
               {
                 borderBottomColor: palette.border,
                 borderBottomWidth:
-                  idx < CURRENCY_OPTIONS.length - 1
-                    ? StyleSheet.hairlineWidth
-                    : 0,
+                  idx < options.length - 1 ? StyleSheet.hairlineWidth : 0,
                 backgroundColor: active ? palette.tintMuted : "transparent",
                 opacity: pressed ? 0.92 : 1,
               },

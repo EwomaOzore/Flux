@@ -1,6 +1,6 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,7 +11,8 @@ import { spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
 import {
   currencyOption,
-  DEFAULT_CURRENCY,
+  currencyOptionsPreferredFirst,
+  detectCurrencyFromDevice,
   type CurrencyCode,
 } from "@/src/lib/currencies";
 import { useCurrencyStore } from "@/src/state/currencyStore";
@@ -31,7 +32,12 @@ export default function OnboardingScreen() {
   const dark = colorScheme === "dark";
   const completeOnboarding = useCurrencyStore((s) => s.completeOnboarding);
   const [step, setStep] = useState<1 | 2>(1);
-  const [selected, setSelected] = useState<CurrencyCode>(DEFAULT_CURRENCY);
+  const suggestedCurrency = useMemo(() => detectCurrencyFromDevice(), []);
+  const [selected, setSelected] = useState<CurrencyCode>(suggestedCurrency);
+  const currencyOptions = useMemo(
+    () => currencyOptionsPreferredFirst(suggestedCurrency),
+    [suggestedCurrency],
+  );
 
   const accent = dark ? "#48B872" : "#2B7A50";
   const cardBorder = dark ? palette.cardBorder : "#E0DAD3";
@@ -117,8 +123,8 @@ export default function OnboardingScreen() {
                 onPress={() => router.push("/terms")}
               >
                 Terms
-              </Text>
-              {" "}and{" "}
+              </Text>{" "}
+              and{" "}
               <Text
                 style={[styles.legalLink, { color: accent }]}
                 onPress={() => router.push("/privacy")}
@@ -174,12 +180,13 @@ export default function OnboardingScreen() {
             Pick your currency
           </Text>
           <Text style={[styles.currencySub, { color: palette.textMuted }]}>
-            Change this anytime in settings.
+            Based on your device region — Change anytime in settings.
           </Text>
 
           <CurrencyPickerList
             selected={selected}
             onSelect={setSelected}
+            options={currencyOptions}
             variant="cards"
           />
 
@@ -191,8 +198,8 @@ export default function OnboardingScreen() {
                 onPress={() => router.push("/terms")}
               >
                 Terms
-              </Text>
-              {" "}and{" "}
+              </Text>{" "}
+              and{" "}
               <Text
                 style={[styles.legalLink, { color: accent }]}
                 onPress={() => router.push("/privacy")}

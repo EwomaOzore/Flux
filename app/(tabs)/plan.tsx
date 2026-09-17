@@ -290,7 +290,7 @@ export default function PlanScreen() {
               Import bank statement
             </Text>
             <Text style={[styles.scanSub, { color: palette.textMuted }]}>
-              Auto-fill bills from a CSV — parsed on-device
+              Auto-fill bills from a PDF or CSV — parsed on-device
             </Text>
           </RNView>
           <FontAwesome

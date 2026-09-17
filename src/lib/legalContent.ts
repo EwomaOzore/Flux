@@ -32,7 +32,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
   },
   {
     title: "Export and import",
-    body: "Export creates a file you control (share, save, or delete). Import — including bank statement CSV import — reads a file you choose and processes it on your device to suggest entries. Flux does not upload your statements or export files to us.",
+    body: "Export creates a file you control (share, save, or delete). Import — including bank statement import (PDF or CSV) — reads a file you choose and processes it entirely on your device to suggest entries. Flux does not upload your statements or export files to us.",
   },
   {
     title: "Technical diagnostics (Expo)",

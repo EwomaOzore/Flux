@@ -1,12 +1,14 @@
 import { formatMonthId, type MonthId } from "@/src/domain/month";
+import { extractPdfTextLines } from "@/src/lib/pdfText";
 
 /**
- * Bank statement CSV import — parsed entirely on-device.
+ * Bank statement import (CSV and PDF) — parsed entirely on-device.
  *
- * Handles the common Nigerian/international export shapes:
+ * Handles the common Nigerian/international shapes:
  * - Separate Debit / Credit columns (GTB, Access, Zenith, UBA style)
  * - Single signed Amount column (many fintech exports)
  * - Quoted fields, thousands separators, ₦/$ symbols, `(123)` negatives
+ * - PDF statements with a text layer (tabular Posted/Value date rows)
  */
 
 export type StatementTransaction = {
@@ -319,6 +321,137 @@ export function parseStatementCsv(text: string): StatementParseResult {
   return { transactions, firstMonth, lastMonth, skippedRows };
 }
 
+// ---------------------------------------------------------------------------
+// PDF (text-layer) statement parsing
+// ---------------------------------------------------------------------------
+
+/** "01-NOV-25", "01/11/2025", "14 Mar 2026"-as-one-token style date tokens. */
+function isDateToken(token: string): boolean {
+  return (
+    /^\d{1,2}[-/][A-Za-z]{3,}[-/]\d{2,4}$/.test(token) ||
+    /^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}$/.test(token)
+  );
+}
+
+/**
+ * Money cell in a statement table tail: "2,500.00", "-97.58" or the empty
+ * placeholder "-". Requires decimals so bare reference numbers in narrations
+ * (e.g. "229241973") never terminate a row early.
+ */
+function isMoneyOrDashToken(token: string): boolean {
+  return token === "-" || /^-?(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{1,2}$/.test(token);
+}
+
+function isMoneyToken(token: string): boolean {
+  return token !== "-" && isMoneyOrDashToken(token);
+}
+
+/** Page furniture that should never join a transaction row. */
+function isNoiseLine(line: string): boolean {
+  return (
+    /^-*\s*\d+\s+of\s+\d+\s*-*$/i.test(line) || // "-- 3 of 20 --"
+    /^Posted\s+Date\b/i.test(line) || // repeated table header
+    /^This is an automated/i.test(line)
+  );
+}
+
+/**
+ * Parse visual text lines (from a PDF text layer) shaped like:
+ *   PostedDate ValueDate Description... Debit Credit Balance
+ *
+ * Rows can wrap across several visual lines, and because table cells are
+ * vertically centered, wrapped description fragments may appear before or
+ * after the line carrying the dates and amounts. So: a line starting with a
+ * date opens a row, every line until the next date-anchored line belongs to
+ * it, and the Debit/Credit/Balance tail is located by scanning the row's
+ * tokens from the end.
+ */
+export function parseStatementTextLines(lines: string[]): StatementParseResult {
+  const transactions: StatementTransaction[] = [];
+  let skippedRows = 0;
+  let firstMonth: MonthId | null = null;
+  let lastMonth: MonthId | null = null;
+
+  const finalizeRow = (tokens: string[]) => {
+    const month = parseDateCellToMonth(tokens[0]);
+    if (!month) {
+      skippedRows++;
+      return;
+    }
+
+    // Locate the amounts tail: last [debit|-] [credit|-] [balance] triple.
+    let tailAt = -1;
+    for (let k = tokens.length - 1; k >= 4; k--) {
+      if (
+        isMoneyToken(tokens[k]) &&
+        isMoneyOrDashToken(tokens[k - 1]) &&
+        isMoneyOrDashToken(tokens[k - 2])
+      ) {
+        tailAt = k - 2;
+        break;
+      }
+    }
+    if (tailAt === -1) {
+      skippedRows++;
+      return;
+    }
+
+    const debitTok = tokens[tailAt];
+    const descStart = isDateToken(tokens[1] ?? "") ? 2 : 1;
+    const description = [
+      ...tokens.slice(descStart, tailAt),
+      ...tokens.slice(tailAt + 3),
+    ]
+      .join(" ")
+      .trim();
+
+    // Credits and reversals are inflows/refunds — not spending.
+    const debit = debitTok === "-" ? 0 : parseAmountCell(debitTok);
+    if (debit > 0 && description) {
+      transactions.push({ month, description, debit });
+      if (!firstMonth || month < firstMonth) firstMonth = month;
+      if (!lastMonth || month > lastMonth) lastMonth = month;
+    } else {
+      skippedRows++;
+    }
+  };
+
+  let pending: string[] | null = null;
+  for (const line of lines) {
+    if (isNoiseLine(line)) continue;
+    const tokens = line.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) continue;
+
+    if (isDateToken(tokens[0])) {
+      if (pending) finalizeRow(pending);
+      pending = tokens;
+    } else if (pending) {
+      if (pending.length < 80) pending = pending.concat(tokens);
+    }
+    // Lines before the first date row are header noise — ignored.
+  }
+  if (pending) finalizeRow(pending);
+
+  if (transactions.length === 0) {
+    throw new Error(
+      "No transaction rows found in this statement. If it's a scanned or image-only PDF, ask your bank app for a CSV export instead.",
+    );
+  }
+
+  return { transactions, firstMonth, lastMonth, skippedRows };
+}
+
+/** Parse a PDF bank statement (text layer) into debit transactions. */
+export function parseStatementPdf(bytes: Uint8Array): StatementParseResult {
+  const lines = extractPdfTextLines(bytes);
+  if (lines.length === 0) {
+    throw new Error(
+      "Couldn't read text from this PDF. It may be scanned or password-protected — try removing the password or exporting a CSV from your bank app.",
+    );
+  }
+  return parseStatementTextLines(lines);
+}
+
 const NOISE_WORDS = new Set([
   "ref",
   "trf",
@@ -335,6 +468,18 @@ const NOISE_WORDS = new Set([
   "trx",
   "txn",
   "transaction",
+  // Nigerian statement narration noise
+  "pymt",
+  "bills",
+  "mobile",
+  "pay",
+  "to",
+  "from",
+  "lang",
+  "pstk",
+  "ng",
+  "us",
+  "ie",
 ]);
 
 /** Normalize a narration into a grouping key: letters only, noise words removed, first 4 tokens. */
@@ -367,6 +512,12 @@ function median(sorted: number[]): number {
 }
 
 /**
+ * Bank fees (VAT, commission, stamp duty, SMS alerts) recur constantly but
+ * aren't bills the user plans around — filter suggestions below this amount.
+ */
+const MIN_SUGGESTION_AMOUNT = 1000;
+
+/**
  * Detect recurring debits: same normalized narration in ≥2 distinct months,
  * with at least 2 amounts within ±30% of the group median.
  */
@@ -393,10 +544,13 @@ export function suggestBillsFromTransactions(
     const stable = amounts.filter((a) => Math.abs(a - med) / med <= 0.3);
     if (stable.length < 2) continue;
 
+    const amount = median(stable.slice().sort((a, b) => a - b));
+    if (amount < MIN_SUGGESTION_AMOUNT) continue;
+
     suggestions.push({
       key,
       label: titleCase(key),
-      amount: median(stable.slice().sort((a, b) => a - b)),
+      amount,
       occurrences: txs.length,
       monthsSeen: months.size,
     });

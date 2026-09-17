@@ -1,5 +1,6 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,8 +16,10 @@ import { radii, spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
 import { formatMonthIdShort } from "@/src/domain/month";
 import { formatMoney, parseMoneyInput } from "@/src/lib/formatCurrency";
+import { base64ToBytes } from "@/src/lib/pdfText";
 import {
   parseStatementCsv,
+  parseStatementPdf,
   suggestBillsFromTransactions,
   type BillSuggestion,
   type StatementParseResult,
@@ -67,12 +70,30 @@ export function StatementImportSheet({ visible, onClose }: Props) {
     setBusy(true);
     try {
       const picked = await DocumentPicker.getDocumentAsync({
-        type: ["text/csv", "text/comma-separated-values", "text/plain"],
+        type: [
+          "application/pdf",
+          "text/csv",
+          "text/comma-separated-values",
+          "text/plain",
+        ],
         copyToCacheDirectory: true,
       });
       if (picked.canceled || !picked.assets[0]?.uri) return;
-      const text = await (await fetch(picked.assets[0].uri)).text();
-      const result = parseStatementCsv(text);
+      const asset = picked.assets[0];
+      const isPdf =
+        asset.mimeType === "application/pdf" ||
+        (asset.name ?? "").toLowerCase().endsWith(".pdf");
+
+      let result: StatementParseResult;
+      if (isPdf) {
+        const b64 = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        result = parseStatementPdf(base64ToBytes(b64));
+      } else {
+        const text = await (await fetch(asset.uri)).text();
+        result = parseStatementCsv(text);
+      }
       const suggestions = suggestBillsFromTransactions(result.transactions);
       if (suggestions.length === 0) {
         Alert.alert(
@@ -82,7 +103,7 @@ export function StatementImportSheet({ visible, onClose }: Props) {
         return;
       }
       setParsed(result);
-      setFileName(picked.assets[0].name ?? "Statement");
+      setFileName(asset.name ?? "Statement");
       setRows(
         suggestions.map((s) => {
           const duplicate = existingLabels.has(s.label.trim().toLowerCase());
@@ -164,7 +185,7 @@ export function StatementImportSheet({ visible, onClose }: Props) {
         <FluxBottomSheetHeader
           title="Import bank statement"
           onClose={onClose}
-          subtitle="Pick a CSV export from your bank app. It's read on this device only — nothing is uploaded."
+          subtitle="Pick a PDF or CSV statement from your bank app. It's read on this device only — nothing is uploaded."
         />
 
         <View style={styles.body}>
@@ -183,8 +204,9 @@ export function StatementImportSheet({ visible, onClose }: Props) {
                   How it works
                 </Text>
                 <Text style={[styles.helpBody, { color: palette.textMuted }]}>
-                  1. In your bank app, export your statement as CSV (3–6 months
-                  works best).{"\n"}
+                  1. Download a statement from your bank app — PDF or CSV, 3–6
+                  months works best. If the PDF has a password, remove it first.
+                  {"\n"}
                   2. Pick the file below. Flux finds debits that repeat monthly
                   with a stable amount.{"\n"}
                   3. Review the suggestions, adjust amounts, and add the ones
@@ -192,7 +214,7 @@ export function StatementImportSheet({ visible, onClose }: Props) {
                 </Text>
               </View>
               <PrimaryButton
-                label={busy ? "Reading…" : "Choose CSV file"}
+                label={busy ? "Reading…" : "Choose statement file"}
                 onPress={() => void onPickFile()}
               />
             </>

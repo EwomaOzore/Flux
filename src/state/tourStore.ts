@@ -19,6 +19,11 @@ type TourState = {
   baseline: TourBaseline;
   /** Set when user taps the Home cushion during the cushion step. */
   cushionTapped: boolean;
+  /**
+   * True while an income/bill/outflow sheet is open during a commit step.
+   * Hides the dim spotlight so the sheet stays usable.
+   */
+  sheetOpen: boolean;
 };
 
 type TourActions = {
@@ -28,6 +33,7 @@ type TourActions = {
   advanceStep: (nextBaseline: TourBaseline) => void;
   markCushionTapped: () => void;
   setBaseline: (baseline: TourBaseline) => void;
+  setTourSheetOpen: (open: boolean) => void;
 };
 
 const emptyBaseline: TourBaseline = {
@@ -45,12 +51,14 @@ export const useTourStore = create<TourState & TourActions>()(
       stepIndex: 0,
       baseline: emptyBaseline,
       cushionTapped: false,
+      sheetOpen: false,
       startTour: (baseline) =>
         set({
           active: true,
           stepIndex: 0,
           baseline,
           cushionTapped: false,
+          sheetOpen: false,
         }),
       completeTour: () =>
         set({
@@ -58,6 +66,7 @@ export const useTourStore = create<TourState & TourActions>()(
           active: false,
           stepIndex: 0,
           cushionTapped: false,
+          sheetOpen: false,
         }),
       skipTour: () =>
         set({
@@ -65,6 +74,7 @@ export const useTourStore = create<TourState & TourActions>()(
           active: false,
           stepIndex: 0,
           cushionTapped: false,
+          sheetOpen: false,
         }),
       advanceStep: (nextBaseline) => {
         const { stepIndex } = get();
@@ -75,6 +85,7 @@ export const useTourStore = create<TourState & TourActions>()(
             active: false,
             stepIndex: 0,
             cushionTapped: false,
+            sheetOpen: false,
           });
           return;
         }
@@ -82,10 +93,12 @@ export const useTourStore = create<TourState & TourActions>()(
           stepIndex: next,
           baseline: nextBaseline,
           cushionTapped: false,
+          sheetOpen: false,
         });
       },
       markCushionTapped: () => set({ cushionTapped: true }),
       setBaseline: (baseline) => set({ baseline }),
+      setTourSheetOpen: (sheetOpen) => set({ sheetOpen }),
     }),
     {
       name: "flux-tour-v1",

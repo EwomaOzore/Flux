@@ -1,5 +1,5 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -35,6 +35,7 @@ import {
 import type { PaydayLine } from "@/src/domain/types";
 import type { TourTargetId } from "@/src/lib/tourSteps";
 import { useBudgetStore } from "@/src/state/budgetStore";
+import { useTourStore } from "@/src/state/tourStore";
 
 const CARD_BORDER = "#E0DAD3";
 const ADD_GREEN = "#48B872";
@@ -67,6 +68,29 @@ export default function PlanScreen() {
   const [viewMonth, setViewMonth] = useState<MonthId>(() =>
     currentPaydayMonthId(),
   );
+
+  const setTourSheetOpen = useTourStore((s) => s.setTourSheetOpen);
+  const tourActive = useTourStore((s) => s.active);
+
+  useEffect(() => {
+    if (!tourActive) return;
+    const open =
+      billsOpen ||
+      quickAddOpen ||
+      incomeStreamSheetId !== null ||
+      receiptScanOpen ||
+      statementImportOpen;
+    setTourSheetOpen(open);
+    return () => setTourSheetOpen(false);
+  }, [
+    tourActive,
+    billsOpen,
+    quickAddOpen,
+    incomeStreamSheetId,
+    receiptScanOpen,
+    statementImportOpen,
+    setTourSheetOpen,
+  ]);
 
   const monthLines = useMemo(
     () =>

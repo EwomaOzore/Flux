@@ -34,6 +34,7 @@ export function AppTourOverlay({ pathname }: Props) {
 
   const active = useTourStore((s) => s.active);
   const stepIndex = useTourStore((s) => s.stepIndex);
+  const sheetOpen = useTourStore((s) => s.sheetOpen);
   const skipTour = useTourStore((s) => s.skipTour);
 
   const step = TOUR_STEPS[stepIndex];
@@ -50,16 +51,16 @@ export function AppTourOverlay({ pathname }: Props) {
   const [hole, setHole] = useState<TourRect | null>(null);
 
   const remMeasure = useCallback(async () => {
-    if (!spotlightId) {
+    if (!spotlightId || sheetOpen) {
       setHole(null);
       return;
     }
     const rect = await registry.measure(spotlightId);
     setHole(rect);
-  }, [registry, spotlightId]);
+  }, [registry, spotlightId, sheetOpen]);
 
   useEffect(() => {
-    if (!active) {
+    if (!active || sheetOpen) {
       setHole(null);
       return;
     }
@@ -68,9 +69,13 @@ export function AppTourOverlay({ pathname }: Props) {
       void remMeasure();
     }, 500);
     return () => clearInterval(id);
-  }, [active, remMeasure, stepIndex, pathname]);
+  }, [active, remMeasure, stepIndex, pathname, sheetOpen]);
 
   if (!active || !step) return null;
+
+  // Form sheets must stay fully interactive — hide the spotlight while open.
+  // Advancement still happens in AppTourHost when the user saves.
+  if (sheetOpen) return null;
 
   const title = onCorrectTab
     ? step.title
@@ -103,7 +108,6 @@ export function AppTourOverlay({ pathname }: Props) {
       pointerEvents="box-none"
       style={[StyleSheet.absoluteFill, styles.root]}
     >
-      {/* Dim panels leave a touch-through hole over the target */}
       {hasHole ? (
         <>
           <View

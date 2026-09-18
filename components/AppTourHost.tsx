@@ -35,6 +35,7 @@ export function AppTourHost() {
   const stepIndex = useTourStore((s) => s.stepIndex);
   const baseline = useTourStore((s) => s.baseline);
   const cushionTapped = useTourStore((s) => s.cushionTapped);
+  const sheetOpen = useTourStore((s) => s.sheetOpen);
   const startTour = useTourStore((s) => s.startTour);
   const advanceStep = useTourStore((s) => s.advanceStep);
 
@@ -92,15 +93,19 @@ export function AppTourHost() {
     if (req.kind === "route") {
       done = matchesTourRoute(pathname, req.route);
     } else if (req.kind === "income") {
+      // Wait until the sheet is closed so the next spotlight isn't hidden.
       done =
+        !sheetOpen &&
         matchesTourRoute(pathname, "plan") &&
         nextBaseline.incomesWithAmount > baseline.incomesWithAmount;
     } else if (req.kind === "bill") {
       done =
+        !sheetOpen &&
         matchesTourRoute(pathname, "plan") &&
         nextBaseline.billsWithAmount > baseline.billsWithAmount;
     } else if (req.kind === "line") {
       done =
+        !sheetOpen &&
         matchesTourRoute(pathname, "home") &&
         nextBaseline.linesCount > baseline.linesCount;
     } else if (req.kind === "cushionTap") {
@@ -116,6 +121,7 @@ export function AppTourHost() {
     pathname,
     baseline,
     cushionTapped,
+    sheetOpen,
     budget.incomeStreams,
     budget.billItems,
     budget.lines,

@@ -26,7 +26,7 @@ import { useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 import { useTourStore } from "@/src/state/tourStore";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -121,6 +121,14 @@ export default function HomeScreen() {
   const displayName = useCurrencyStore((s) => s.displayName);
   const hiName = greetingName(displayName);
   const markCushionTapped = useTourStore((s) => s.markCushionTapped);
+  const setTourSheetOpen = useTourStore((s) => s.setTourSheetOpen);
+  const tourActive = useTourStore((s) => s.active);
+
+  useEffect(() => {
+    if (!tourActive) return;
+    setTourSheetOpen(quickAddOpen || infoOpen);
+    return () => setTourSheetOpen(false);
+  }, [tourActive, quickAddOpen, infoOpen, setTourSheetOpen]);
 
   const billsTotal = useMemo(
     () => totalBillsAmount(budgetForRollup.billItems),

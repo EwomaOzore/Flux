@@ -1,4 +1,5 @@
 import { DiscretionaryInfoModal } from "@/components/DiscretionaryInfoModal";
+import { useFabOverlay } from "@/components/FabOverlay";
 import { MoneyText } from "@/components/MoneyText";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { Text } from "@/components/Themed";
@@ -29,8 +30,9 @@ import {
   TourScrollProvider,
   useTourScrollRegistration,
 } from "@/src/tour/TourTargetContext";
+import { useFocusEffect } from "expo-router";
 import { useBottomTabBarHeight } from "expo-router/tabs";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -127,12 +129,44 @@ export default function HomeScreen() {
   const markCushionTapped = useTourStore((s) => s.markCushionTapped);
   const setTourSheetOpen = useTourStore((s) => s.setTourSheetOpen);
   const tourActive = useTourStore((s) => s.active);
+  const { setFab } = useFabOverlay();
 
   useEffect(() => {
     if (!tourActive) return;
     setTourSheetOpen(quickAddOpen || infoOpen);
     return () => setTourSheetOpen(false);
   }, [tourActive, quickAddOpen, infoOpen, setTourSheetOpen]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setFab(
+        <TourTarget
+          id="home-fab"
+          style={[
+            styles.quickFabTour,
+            { bottom: Math.max(spacing.lg, tabBarHeight + spacing.xs) },
+          ]}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Quick add payday outflow"
+            onPress={() => setQuickAddOpen(true)}
+            style={({ pressed }) => [
+              styles.quickFab,
+              {
+                backgroundColor: "#48B872",
+                opacity: pressed ? 0.9 : 1,
+              },
+              cardElevation(colorScheme),
+            ]}
+          >
+            <Text style={styles.quickFabText}>+</Text>
+          </Pressable>
+        </TourTarget>,
+      );
+      return () => setFab(null);
+    }, [setFab, tabBarHeight, colorScheme]),
+  );
 
   const billsTotal = useMemo(
     () => totalBillsAmount(budgetForRollup.billItems),
@@ -432,30 +466,6 @@ export default function HomeScreen() {
           </TourScrollProvider>
         </ScrollView>
       </RNView>
-
-      <TourTarget
-        id="home-fab"
-        style={[
-          styles.quickFabTour,
-          { bottom: Math.max(spacing.lg, tabBarHeight + spacing.xs) },
-        ]}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Quick add payday outflow"
-          onPress={() => setQuickAddOpen(true)}
-          style={({ pressed }) => [
-            styles.quickFab,
-            {
-              backgroundColor: "#48B872",
-              opacity: pressed ? 0.9 : 1,
-            },
-            cardElevation(colorScheme),
-          ]}
-        >
-          <Text style={styles.quickFabText}>+</Text>
-        </Pressable>
-      </TourTarget>
 
       <DiscretionaryInfoModal
         visible={infoOpen}

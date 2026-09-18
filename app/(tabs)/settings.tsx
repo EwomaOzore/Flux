@@ -1,3 +1,4 @@
+import { startGuidedTourFromSettings } from "@/components/AppTourHost";
 import { CurrencyPickerList } from "@/components/CurrencyPickerList";
 import {
   FluxBottomSheet,
@@ -27,7 +28,6 @@ import {
   type AppearancePreference,
 } from "@/src/state/appearanceStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
-import { startGuidedTourFromSettings } from "@/components/AppTourHost";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Constants from "expo-constants";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -147,7 +147,7 @@ export default function SettingsScreen() {
   };
 
   const onReminderDayChange = async (nextDay: number) => {
-    const day = Math.max(1, Math.min(28, nextDay));
+    const day = Math.max(1, Math.min(31, nextDay));
     const next = { ...reminderPrefs, dayOfMonth: day };
     setReminderPrefs(next);
     await applyReminderPrefs(next);

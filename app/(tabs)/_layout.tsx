@@ -1,13 +1,17 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Tabs } from "expo-router";
-import React from "react";
+import TopTabs, { type MaterialTopTabBarProps } from "expo-router/js-top-tabs";
+import {
+  BottomTabBarHeightCallbackContext,
+  BottomTabBarHeightContext,
+} from "expo-router/tabs";
+import React, { useCallback, useState } from "react";
 import type { ColorValue } from "react-native";
 
+import { FabOverlayProvider } from "@/components/FabOverlay";
 import { GlassTabBar } from "@/components/GlassTabBar";
-import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
-import { typeface } from "@/constants/typography";
+import { useTourStore } from "@/src/state/tourStore";
 
 function TabBarIcon(
   props: Readonly<{
@@ -28,81 +32,86 @@ function TabBarIcon(
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? "light"];
+  const tourActive = useTourStore((s) => s.active);
+  const [tabBarHeight, setTabBarHeight] = useState(0);
+  const onTabBarHeight = useCallback((height: number) => {
+    setTabBarHeight(height);
+  }, []);
 
   return (
-    <Tabs
-      tabBar={(props) => <GlassTabBar {...props} />}
-      screenOptions={{
-        tabBarActiveTintColor: palette.tint,
-        tabBarInactiveTintColor: palette.tabIconDefault,
-        tabBarStyle: {
-          backgroundColor: "transparent",
-          borderTopWidth: 0,
-          elevation: 0,
-        },
-        tabBarShowLabel: false,
-        headerShown: useClientOnlyValue(false, true),
-        headerStyle: {
-          backgroundColor: palette.headerBackground,
-        },
-        headerTitleStyle: {
-          fontFamily: typeface.bold,
-          fontSize: 18,
-          letterSpacing: -0.3,
-          color: palette.text,
-        },
-        headerShadowVisible: false,
-        headerTintColor: palette.tint,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          headerShown: false,
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="timeline"
-        options={{
-          title: "Timeline",
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="bars" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="plan"
-        options={{
-          title: "Plan",
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="plus-square-o" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="next"
-        options={{
-          title: "Next",
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="calendar-o" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="sun-o" color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+    <BottomTabBarHeightCallbackContext.Provider value={onTabBarHeight}>
+      <BottomTabBarHeightContext.Provider value={tabBarHeight}>
+        <FabOverlayProvider>
+          <TopTabs
+            tabBarPosition="bottom"
+            tabBar={(props: MaterialTopTabBarProps) => (
+              <GlassTabBar {...props} />
+            )}
+            screenOptions={{
+              // Keep tour steps on-rails; otherwise swipe works Instagram-style.
+              swipeEnabled: !tourActive,
+              animationEnabled: true,
+              lazy: true,
+              lazyPreloadDistance: 1,
+              tabBarShowIcon: true,
+              tabBarShowLabel: true,
+              tabBarActiveTintColor: palette.tint,
+              tabBarInactiveTintColor: palette.tabIconDefault,
+              tabBarStyle: {
+                backgroundColor: "transparent",
+                elevation: 0,
+                shadowOpacity: 0,
+              },
+            }}
+          >
+            <TopTabs.Screen
+              name="index"
+              options={{
+                title: "Home",
+                tabBarIcon: ({ color }: { color: ColorValue }) => (
+                  <TabBarIcon name="home" color={color} />
+                ),
+              }}
+            />
+            <TopTabs.Screen
+              name="timeline"
+              options={{
+                title: "Timeline",
+                tabBarIcon: ({ color }: { color: ColorValue }) => (
+                  <TabBarIcon name="bars" color={color} />
+                ),
+              }}
+            />
+            <TopTabs.Screen
+              name="plan"
+              options={{
+                title: "Plan",
+                tabBarIcon: ({ color }: { color: ColorValue }) => (
+                  <TabBarIcon name="plus-square-o" color={color} />
+                ),
+              }}
+            />
+            <TopTabs.Screen
+              name="next"
+              options={{
+                title: "Next",
+                tabBarIcon: ({ color }: { color: ColorValue }) => (
+                  <TabBarIcon name="calendar-o" color={color} />
+                ),
+              }}
+            />
+            <TopTabs.Screen
+              name="settings"
+              options={{
+                title: "Settings",
+                tabBarIcon: ({ color }: { color: ColorValue }) => (
+                  <TabBarIcon name="sun-o" color={color} />
+                ),
+              }}
+            />
+          </TopTabs>
+        </FabOverlayProvider>
+      </BottomTabBarHeightContext.Provider>
+    </BottomTabBarHeightCallbackContext.Provider>
   );
 }

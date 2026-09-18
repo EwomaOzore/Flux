@@ -1,4 +1,4 @@
-import { useHeaderHeight } from "expo-router/react-navigation";
+import { HeaderHeightContext } from "expo-router/react-navigation";
 import { BottomTabBarHeightContext } from "expo-router/tabs";
 import { useContext, useRef, type ReactNode } from "react";
 import {
@@ -29,13 +29,13 @@ type Props = {
 export function ScreenScroll({ children, onScroll, ...scrollProps }: Props) {
   const { palette } = useFluxPalette();
   const tabBarHeightContext = useContext(BottomTabBarHeightContext);
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
   const insets = useSafeAreaInsets();
   /** Tab screens get measured bar height; stack-only screens (e.g. /backup) have no tab context. */
   const bottomPad =
     tabBarHeightContext !== undefined
       ? tabBarHeightContext
       : Math.max(insets.bottom, spacing.md);
-  const headerHeight = useHeaderHeight();
 
   const scrollRef = useRef<ScrollView>(null);
   const viewportRef = useRef<View>(null);

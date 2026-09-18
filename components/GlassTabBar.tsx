@@ -1,10 +1,9 @@
-import {
-  BottomTabBarHeightCallbackContext,
-  type BottomTabBarProps,
-} from "expo-router/tabs";
 import { BlurView } from "expo-blur";
+import type { MaterialTopTabBarProps } from "expo-router/js-top-tabs";
+import { BottomTabBarHeightCallbackContext } from "expo-router/tabs";
 import { useContext, useLayoutEffect } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TourTarget } from "@/components/TourTarget";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -32,8 +31,15 @@ function glassBorderColor(dark: boolean) {
   return dark ? "rgba(255,255,255,0.1)" : "rgba(208,202,194,0.9)";
 }
 
-export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
-  const { state, descriptors, navigation, insets } = props;
+type TabBarProps = {
+  state: MaterialTopTabBarProps["state"];
+  descriptors: MaterialTopTabBarProps["descriptors"];
+  navigation: MaterialTopTabBarProps["navigation"];
+};
+
+export function GlassTabBar(props: Readonly<TabBarProps>) {
+  const { state, descriptors, navigation } = props;
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const dark = colorScheme === "dark";
   const palette = Colors[colorScheme ?? "light"];
@@ -121,10 +127,7 @@ export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
   );
 }
 
-type RowProps = Pick<
-  BottomTabBarProps,
-  "state" | "descriptors" | "navigation"
-> & {
+type RowProps = TabBarProps & {
   activeColor: string;
   inactiveColor: string;
 };
@@ -138,68 +141,70 @@ function TabRow({
 }: RowProps) {
   return (
     <View style={styles.row}>
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const focused = state.index === index;
-        const color = focused ? activeColor : inactiveColor;
+      {state.routes.map(
+        (route: (typeof state.routes)[number], index: number) => {
+          const { options } = descriptors[route.key];
+          const focused = state.index === index;
+          const color = focused ? activeColor : inactiveColor;
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: "tabPress",
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
-          }
-        };
-
-        const onLongPress = () => {
-          navigation.emit({
-            type: "tabLongPress",
-            target: route.key,
-          });
-        };
-
-        const rawLabel = options.tabBarLabel ?? options.title ?? route.name;
-        const label = typeof rawLabel === "string" ? rawLabel : route.name;
-        const tourId = tabTourId(route.name);
-
-        const tabButton = (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ selected: focused }}
-            accessibilityLabel={
-              options.tabBarAccessibilityLabel ?? String(label)
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(route.name, route.params);
             }
-            onPress={onPress}
-            onLongPress={onLongPress}
-            style={({ pressed }) => [
-              styles.tab,
-              { opacity: pressed ? 0.75 : 1 },
-            ]}
-          >
-            {options.tabBarIcon?.({ focused, color, size: 20 }) ?? null}
-            <Text style={[styles.label, { color }]} numberOfLines={1}>
-              {label}
-            </Text>
-          </Pressable>
-        );
+          };
 
-        if (!tourId) {
-          return (
-            <View key={route.key} style={styles.tabTarget}>
-              {tabButton}
-            </View>
+          const onLongPress = () => {
+            navigation.emit({
+              type: "tabLongPress",
+              target: route.key,
+            });
+          };
+
+          const rawLabel = options.tabBarLabel ?? options.title ?? route.name;
+          const label = typeof rawLabel === "string" ? rawLabel : route.name;
+          const tourId = tabTourId(route.name);
+
+          const tabButton = (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={
+                options.tabBarAccessibilityLabel ?? String(label)
+              }
+              onPress={onPress}
+              onLongPress={onLongPress}
+              style={({ pressed }) => [
+                styles.tab,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              {options.tabBarIcon?.({ focused, color }) ?? null}
+              <Text style={[styles.label, { color }]} numberOfLines={1}>
+                {label}
+              </Text>
+            </Pressable>
           );
-        }
 
-        return (
-          <TourTarget key={route.key} id={tourId} style={styles.tabTarget}>
-            {tabButton}
-          </TourTarget>
-        );
-      })}
+          if (!tourId) {
+            return (
+              <View key={route.key} style={styles.tabTarget}>
+                {tabButton}
+              </View>
+            );
+          }
+
+          return (
+            <TourTarget key={route.key} id={tourId} style={styles.tabTarget}>
+              {tabButton}
+            </TourTarget>
+          );
+        },
+      )}
     </View>
   );
 }

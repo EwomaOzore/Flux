@@ -1,7 +1,14 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
+import {
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CurrencyPickerList } from "@/components/CurrencyPickerList";
@@ -63,131 +70,19 @@ export default function OnboardingScreen() {
     router.replace("/(tabs)");
   };
 
-  return (
-    <ScreenScroll>
-      {step === 1 ? (
-        <View
-          style={[
-            styles.stepFill,
-            {
-              paddingTop: Math.max(insets.top - spacing.md, 0),
-              paddingBottom: Math.max(insets.bottom, spacing.sm),
-            },
-          ]}
-        >
-          <View
-            style={[
-              styles.brandSoft,
-              {
-                backgroundColor: dark
-                  ? "rgba(72,184,114,0.18)"
-                  : palette.tintMuted,
-              },
-            ]}
-          >
-            <Image source={brandLogo} style={styles.brandLogo} />
-          </View>
-
-          <Text style={[styles.welcomeTitle, { color: palette.text }]}>
-            Welcome{"\n"}to Flux.
-          </Text>
-          <Text style={[styles.welcomeSub, { color: palette.textMuted }]}>
-            See exactly what you have left after every bill is paid. Calm
-            arithmetic — nothing more.
-          </Text>
-
-          <Text style={[styles.nameLabel, { color: palette.text }]}>
-            What should we call you?
-          </Text>
-          <FluxTextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Your first name"
-            autoCapitalize="words"
-            autoCorrect={false}
-            autoComplete="given-name"
-            textContentType="givenName"
-            returnKeyType="next"
-            onSubmitEditing={onGetStarted}
-            maxLength={40}
-            accessibilityLabel="Your first name"
-            style={styles.nameInput}
-          />
-
-          <View style={styles.featureList}>
-            {FEATURES.map((feature) => (
-              <View
-                key={feature.label}
-                style={[
-                  styles.featureCard,
-                  {
-                    backgroundColor: cardBg,
-                    borderColor: cardBorder,
-                  },
-                ]}
-              >
-                <FontAwesome
-                  name={feature.icon}
-                  size={16}
-                  color={
-                    feature.icon === "lock"
-                      ? palette.accentBills
-                      : feature.icon === "briefcase"
-                        ? palette.textSecondary
-                        : palette.text
-                  }
-                  style={styles.featureIcon}
-                />
-                <Text
-                  style={[styles.featureText, { color: palette.textSecondary }]}
-                >
-                  {feature.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={[styles.legalNote, { color: palette.textMuted }]}>
-              By continuing you agree to our{" "}
-              <Text
-                style={[styles.legalLink, { color: accent }]}
-                onPress={() => router.push("/terms")}
-              >
-                Terms
-              </Text>{" "}
-              and{" "}
-              <Text
-                style={[styles.legalLink, { color: accent }]}
-                onPress={() => router.push("/privacy")}
-              >
-                Privacy Policy
-              </Text>
-              . Flux does not collect your budget data.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Get started"
-              onPress={onGetStarted}
-              style={({ pressed }) => [
-                styles.cta,
-                { backgroundColor: accent, opacity: pressed ? 0.92 : 1 },
-              ]}
-            >
-              <Text style={styles.ctaLabel}>Get started →</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : (
-        <View
-          style={[
-            styles.stepFill,
-            {
-              paddingTop: Math.max(insets.top - spacing.md, 0),
-              paddingBottom: Math.max(insets.bottom, spacing.sm),
-            },
-          ]}
-        >
+  if (step === 2) {
+    return (
+      <View
+        style={[
+          styles.currencyScreen,
+          {
+            backgroundColor: palette.background,
+            paddingTop: Math.max(insets.top - spacing.md, 0),
+            paddingBottom: Math.max(insets.bottom, spacing.sm),
+          },
+        ]}
+      >
+        <View style={styles.currencyHeader}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Back"
@@ -214,49 +109,172 @@ export default function OnboardingScreen() {
           <Text style={[styles.currencySub, { color: palette.textMuted }]}>
             Based on your device region — Change anytime in settings.
           </Text>
+        </View>
 
+        <ScrollView
+          style={styles.currencyListScroll}
+          contentContainerStyle={styles.currencyListContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <CurrencyPickerList
             selected={selected}
             onSelect={setSelected}
             options={currencyOptions}
             variant="cards"
           />
+        </ScrollView>
 
-          <View style={styles.footer}>
-            <Text style={[styles.legalNote, { color: palette.textMuted }]}>
-              By continuing you agree to our{" "}
-              <Text
-                style={[styles.legalLink, { color: accent }]}
-                onPress={() => router.push("/terms")}
-              >
-                Terms
-              </Text>{" "}
-              and{" "}
-              <Text
-                style={[styles.legalLink, { color: accent }]}
-                onPress={() => router.push("/privacy")}
-              >
-                Privacy Policy
-              </Text>
-              .
+        <View style={styles.currencyFooter}>
+          <Text style={[styles.legalNote, { color: palette.textMuted }]}>
+            By continuing you agree to our{" "}
+            <Text
+              style={[styles.legalLink, { color: accent }]}
+              onPress={() => router.push("/terms")}
+            >
+              Terms
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={[styles.legalLink, { color: accent }]}
+              onPress={() => router.push("/privacy")}
+            >
+              Privacy Policy
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Continue with ${selectedCurrency.code}`}
-              onPress={onContinue}
-              style={({ pressed }) => [
-                styles.cta,
-                { backgroundColor: accent, opacity: pressed ? 0.92 : 1 },
+            .
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Continue with ${selectedCurrency.code}`}
+            onPress={onContinue}
+            style={({ pressed }) => [
+              styles.cta,
+              { backgroundColor: accent, opacity: pressed ? 0.92 : 1 },
+            ]}
+          >
+            <Text style={styles.ctaLabel}>
+              Continue with {selectedCurrency.code} ({selectedCurrency.symbol})
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <ScreenScroll>
+      <View
+        style={[
+          styles.stepFill,
+          {
+            paddingTop: Math.max(insets.top - spacing.md, 0),
+            paddingBottom: Math.max(insets.bottom, spacing.sm),
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.brandSoft,
+            {
+              backgroundColor: dark
+                ? "rgba(72,184,114,0.18)"
+                : palette.tintMuted,
+            },
+          ]}
+        >
+          <Image source={brandLogo} style={styles.brandLogo} />
+        </View>
+
+        <Text style={[styles.welcomeTitle, { color: palette.text }]}>
+          Welcome{"\n"}to Flux.
+        </Text>
+        <Text style={[styles.welcomeSub, { color: palette.textMuted }]}>
+          See exactly what you have left after every bill is paid. Calm
+          arithmetic — nothing more.
+        </Text>
+
+        <Text style={[styles.nameLabel, { color: palette.text }]}>
+          What should we call you?
+        </Text>
+        <FluxTextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="Your first name"
+          autoCapitalize="words"
+          autoCorrect={false}
+          autoComplete="given-name"
+          textContentType="givenName"
+          returnKeyType="next"
+          onSubmitEditing={onGetStarted}
+          maxLength={40}
+          accessibilityLabel="Your first name"
+          style={styles.nameInput}
+        />
+
+        <View style={styles.featureList}>
+          {FEATURES.map((feature) => (
+            <View
+              key={feature.label}
+              style={[
+                styles.featureCard,
+                {
+                  backgroundColor: cardBg,
+                  borderColor: cardBorder,
+                },
               ]}
             >
-              <Text style={styles.ctaLabel}>
-                Continue with {selectedCurrency.code} ({selectedCurrency.symbol}
-                )
+              <FontAwesome
+                name={feature.icon}
+                size={16}
+                color={
+                  feature.icon === "lock"
+                    ? palette.accentBills
+                    : feature.icon === "briefcase"
+                      ? palette.textSecondary
+                      : palette.text
+                }
+                style={styles.featureIcon}
+              />
+              <Text
+                style={[styles.featureText, { color: palette.textSecondary }]}
+              >
+                {feature.label}
               </Text>
-            </Pressable>
-          </View>
+            </View>
+          ))}
         </View>
-      )}
+
+        <View style={styles.footer}>
+          <Text style={[styles.legalNote, { color: palette.textMuted }]}>
+            By continuing you agree to our{" "}
+            <Text
+              style={[styles.legalLink, { color: accent }]}
+              onPress={() => router.push("/terms")}
+            >
+              Terms
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={[styles.legalLink, { color: accent }]}
+              onPress={() => router.push("/privacy")}
+            >
+              Privacy Policy
+            </Text>
+            . Flux does not collect your budget data.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Get started"
+            onPress={onGetStarted}
+            style={({ pressed }) => [
+              styles.cta,
+              { backgroundColor: accent, opacity: pressed ? 0.92 : 1 },
+            ]}
+          >
+            <Text style={styles.ctaLabel}>Get started →</Text>
+          </Pressable>
+        </View>
+      </View>
     </ScreenScroll>
   );
 }
@@ -328,6 +346,28 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     gap: spacing.md,
   },
+  currencyScreen: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    maxWidth: 560,
+    width: "100%",
+    alignSelf: "center",
+  },
+  currencyHeader: {
+    paddingBottom: spacing.sm,
+  },
+  currencyListScroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  currencyListContent: {
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  currencyFooter: {
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
   legalNote: {
     fontFamily: typeface.regular,
     fontSize: 12,
@@ -375,6 +415,6 @@ const styles = StyleSheet.create({
   currencySub: {
     fontFamily: typeface.regular,
     fontSize: 15,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
 });

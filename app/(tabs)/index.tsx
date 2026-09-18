@@ -25,7 +25,7 @@ import {
 import { useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 import { useTourStore } from "@/src/state/tourStore";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useBottomTabBarHeight } from "expo-router/tabs";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,

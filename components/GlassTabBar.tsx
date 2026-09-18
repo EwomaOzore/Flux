@@ -1,7 +1,7 @@
 import {
   BottomTabBarHeightCallbackContext,
   type BottomTabBarProps,
-} from "@react-navigation/bottom-tabs";
+} from "expo-router/tabs";
 import { BlurView } from "expo-blur";
 import { useContext, useLayoutEffect } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";

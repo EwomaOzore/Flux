@@ -14,7 +14,7 @@ import {
 } from "@/src/domain/month";
 import { totalBillsAmount } from "@/src/domain/types";
 import { useBudgetStore } from "@/src/state/budgetStore";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useBottomTabBarHeight } from "expo-router/tabs";
 import { useMemo } from "react";
 import { Image, View as RNView, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

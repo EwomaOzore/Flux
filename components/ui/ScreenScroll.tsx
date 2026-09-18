@@ -1,5 +1,5 @@
-import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
-import { useHeaderHeight } from '@react-navigation/elements';
+import { useHeaderHeight } from 'expo-router/react-navigation';
+import { BottomTabBarHeightContext } from 'expo-router/tabs';
 import { type ReactNode, useContext } from 'react';
 import {
   KeyboardAvoidingView,

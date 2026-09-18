@@ -12,7 +12,7 @@ import { formatMoney } from "@/src/lib/formatCurrency";
 import { computeRollups, useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useBottomTabBarHeight } from "expo-router/tabs";
 import * as Haptics from "expo-haptics";
 import { useMemo, useState } from "react";
 import {

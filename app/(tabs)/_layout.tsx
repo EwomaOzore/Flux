@@ -1,6 +1,7 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Tabs } from "expo-router";
 import React from "react";
+import type { ColorValue } from "react-native";
 
 import { GlassTabBar } from "@/components/GlassTabBar";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
@@ -11,10 +12,17 @@ import { typeface } from "@/constants/typography";
 function TabBarIcon(
   props: Readonly<{
     name: React.ComponentProps<typeof FontAwesome>["name"];
-    color: string;
+    color: ColorValue;
   }>,
 ) {
-  return <FontAwesome size={20} style={{ marginBottom: -1 }} {...props} />;
+  return (
+    <FontAwesome
+      size={20}
+      style={{ marginBottom: -1 }}
+      name={props.name}
+      color={typeof props.color === "string" ? props.color : undefined}
+    />
+  );
 }
 
 export default function TabLayout() {

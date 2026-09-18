@@ -3,6 +3,7 @@ export type TourTargetId =
   | "tab-home"
   | "plan-add-income"
   | "plan-add-bill"
+  | "plan-add-outflow"
   | "home-cushion"
   | "home-fab";
 
@@ -30,7 +31,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     tab: "plan",
     require: { kind: "route", route: "plan" },
     title: "Open Plan",
-    body: "Tap Plan in the tab bar to set up income and bills.",
+    body: "Tap Plan in the tab bar to set up income, bills, and outflows.",
   },
   {
     id: "add-income",
@@ -49,6 +50,14 @@ export const TOUR_STEPS: readonly TourStep[] = [
     body: "Tap + Add under Recurring bills, then save at least one bill.",
   },
   {
+    id: "add-outflow",
+    targetId: "plan-add-outflow",
+    tab: "plan",
+    require: { kind: "line" },
+    title: "Add a payday outflow",
+    body: "Tap + Add under Payday outflows, enter an amount, and save.",
+  },
+  {
     id: "open-home",
     targetId: "tab-home",
     tab: "home",
@@ -62,15 +71,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     tab: "home",
     require: { kind: "cushionTap" },
     title: "Your cushion",
-    body: "Tap the cushion card to see how it’s calculated.",
-  },
-  {
-    id: "quick-add",
-    targetId: "home-fab",
-    tab: "home",
-    require: { kind: "line" },
-    title: "Log an outflow",
-    body: "Tap +, enter an amount, and save a payday outflow.",
+    body: "Tap the cushion card to see how it’s calculated, then close the sheet to finish.",
   },
 ];
 

@@ -93,7 +93,6 @@ export const useTourStore = create<TourState & TourActions>()(
           stepIndex: next,
           baseline: nextBaseline,
           cushionTapped: false,
-          sheetOpen: false,
         });
       },
       markCushionTapped: () => set({ cushionTapped: true }),

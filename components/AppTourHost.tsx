@@ -106,10 +106,12 @@ export function AppTourHost() {
     } else if (req.kind === "line") {
       done =
         !sheetOpen &&
-        matchesTourRoute(pathname, "home") &&
+        (matchesTourRoute(pathname, "plan") ||
+          matchesTourRoute(pathname, "home")) &&
         nextBaseline.linesCount > baseline.linesCount;
     } else if (req.kind === "cushionTap") {
-      done = matchesTourRoute(pathname, "home") && cushionTapped;
+      // Wait until the breakdown sheet is dismissed so it doesn’t block the next step.
+      done = matchesTourRoute(pathname, "home") && cushionTapped && !sheetOpen;
     }
 
     if (done) {

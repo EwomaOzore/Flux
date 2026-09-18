@@ -230,6 +230,7 @@ export default function PlanScreen() {
           onAdd={() => setQuickAddOpen(true)}
           labelColor={palette.textMuted}
           dark={dark}
+          addTourId="plan-add-outflow"
         >
           <MonthPickerField
             value={viewMonth}

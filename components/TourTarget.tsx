@@ -2,7 +2,10 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 
 import type { TourTargetId } from "@/src/lib/tourSteps";
-import { useOptionalTourTargetRegistry } from "@/src/tour/TourTargetContext";
+import {
+  useOptionalTourTargetRegistry,
+  useTourScrollApi,
+} from "@/src/tour/TourTargetContext";
 
 type Props = {
   readonly id: TourTargetId;
@@ -13,12 +16,19 @@ type Props = {
 /** Registers a measurable hotspot for the interactive guided tour. */
 export function TourTarget({ id, children, style }: Props) {
   const registry = useOptionalTourTargetRegistry();
+  const scrollApi = useTourScrollApi();
   const ref = useRef<View>(null);
 
   useEffect(() => {
     if (!registry) return;
-    return registry.register(id, () => {
-      return new Promise((resolve) => {
+
+    const measure = () =>
+      new Promise<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      } | null>((resolve) => {
         const node = ref.current;
         if (!node) {
           resolve(null);
@@ -32,8 +42,16 @@ export function TourTarget({ id, children, style }: Props) {
           resolve({ x, y, width, height });
         });
       });
-    });
-  }, [id, registry]);
+
+    const ensureVisible = async () => {
+      if (!scrollApi) return false;
+      const rect = await measure();
+      if (!rect) return false;
+      return scrollApi.ensureRectVisible(rect);
+    };
+
+    return registry.register(id, measure, ensureVisible);
+  }, [id, registry, scrollApi]);
 
   return (
     <View ref={ref} collapsable={false} style={style}>

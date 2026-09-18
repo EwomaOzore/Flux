@@ -25,8 +25,12 @@ import {
 import { useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 import { useTourStore } from "@/src/state/tourStore";
+import {
+  TourScrollProvider,
+  useTourScrollRegistration,
+} from "@/src/tour/TourTargetContext";
 import { useBottomTabBarHeight } from "expo-router/tabs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -178,230 +182,256 @@ export default function HomeScreen() {
     [budgetForRollup.incomeStreams, paydayMonth],
   );
 
+  const scrollRef = useRef<ScrollView>(null);
+  const viewportRef = useRef<RNView>(null);
+  const { scrollApi, onScroll, scrollEventThrottle } =
+    useTourScrollRegistration(scrollRef, viewportRef);
+
   return (
     <RNView style={[styles.screen, { backgroundColor: palette.background }]}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          {
-            paddingTop: insets.top + spacing.md,
-            paddingBottom: Math.max(spacing.xl + 72, tabBarHeight + spacing.md),
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <RNView style={styles.container}>
-          <RNView style={styles.headerRow}>
-            <RNView style={styles.brandLockup}>
-              <Image source={brandLogo} style={styles.brandLogo} />
-              <Text style={[styles.brandName, { color: palette.text }]}>
-                flux
-              </Text>
-            </RNView>
-            <Text style={[styles.monthChip, { color: palette.textMuted }]}>
-              {formatMonthIdDisplay(paydayMonth).replace(",", "")}
-            </Text>
-          </RNView>
-
-          {hiName ? (
-            <Text
-              style={[styles.greeting, { color: palette.text }]}
-              accessibilityRole="header"
-            >
-              Hi {hiName}
-            </Text>
-          ) : null}
-
-          <TourTarget id="home-cushion">
-            <Pressable
-              accessibilityRole="button"
-              accessibilityHint="Shows how cushion is calculated"
-              onPress={() => {
-                markCushionTapped();
-                setInfoOpen(true);
-              }}
-              style={({ pressed }) => [
-                styles.hero,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.cardBorder,
-                  opacity: pressed ? 0.97 : 1,
-                },
-              ]}
-            >
-              <Text style={[styles.heroLabel, { color: palette.textMuted }]}>
-                CUSHION AFTER BILLS
-              </Text>
-              <MoneyText
-                amount={cushion}
-                variant="hero"
-                style={{ color: positive ? palette.tint : palette.danger }}
-              />
-              <RNView style={styles.heroMeta}>
-                <RNView
-                  style={[
-                    styles.statusPill,
-                    {
-                      backgroundColor: positive
-                        ? palette.successMuted
-                        : palette.dangerMuted,
-                    },
-                  ]}
-                >
-                  <RNView
-                    style={[
-                      styles.statusDot,
-                      {
-                        backgroundColor: positive
-                          ? palette.success
-                          : palette.danger,
-                      },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: positive ? palette.success : palette.danger },
-                    ]}
-                  >
-                    {positive ? "Healthy cushion" : "Below bills"}
+      <RNView ref={viewportRef} style={styles.viewport} collapsable={false}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[
+            styles.scroll,
+            {
+              paddingTop: insets.top + spacing.md,
+              paddingBottom: Math.max(
+                spacing.xl + 72,
+                tabBarHeight + spacing.md,
+              ),
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
+        >
+          <TourScrollProvider api={scrollApi}>
+            <RNView style={styles.container}>
+              <RNView style={styles.headerRow}>
+                <RNView style={styles.brandLockup}>
+                  <Image source={brandLogo} style={styles.brandLogo} />
+                  <Text style={[styles.brandName, { color: palette.text }]}>
+                    flux
                   </Text>
                 </RNView>
-                <RNView style={styles.vsLastRow}>
-                  <MoneyText
-                    amount={vsLast}
-                    variant="compact"
-                    signed
-                    style={[styles.vsLast, { color: palette.textMuted }]}
-                  />
-                  <Text style={[styles.vsLast, { color: palette.textMuted }]}>
-                    {" "}
-                    vs last
-                  </Text>
-                </RNView>
+                <Text style={[styles.monthChip, { color: palette.textMuted }]}>
+                  {formatMonthIdDisplay(paydayMonth).replace(",", "")}
+                </Text>
               </RNView>
-            </Pressable>
-          </TourTarget>
 
-          <RNView style={styles.statRow}>
-            <StatCard
-              label="INCOME"
-              amount={incomeForMonth}
-              background={palette.accentIncomeMuted}
-              valueColor={palette.accentIncome}
-              borderColor={palette.cardBorder}
-              labelColor={palette.textMuted}
-            />
-            <StatCard
-              label="BILLS"
-              amount={roll?.billsTotal ?? 0}
-              background={palette.accentBillsMuted}
-              valueColor={palette.accentBills}
-              borderColor={palette.cardBorder}
-              labelColor={palette.textMuted}
-            />
-            <StatCard
-              label="OUTFLOWS"
-              amount={roll?.totalPaydayOutflow ?? 0}
-              background={palette.accentOutflowMuted}
-              valueColor={palette.accentOutflow}
-              borderColor={palette.cardBorder}
-              labelColor={palette.textMuted}
-            />
-          </RNView>
+              {hiName ? (
+                <Text
+                  style={[styles.greeting, { color: palette.text }]}
+                  accessibilityRole="header"
+                >
+                  Hi {hiName}
+                </Text>
+              ) : null}
 
-          <RNView style={styles.sectionDivider}>
-            <RNView
-              style={[
-                styles.dividerLine,
-                { backgroundColor: palette.cardBorder },
-              ]}
-            />
-            <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
-              THIS MONTH
-            </Text>
-            <RNView
-              style={[
-                styles.dividerLine,
-                { backgroundColor: palette.cardBorder },
-              ]}
-            />
-          </RNView>
-
-          {feed.length === 0 ? (
-            <RNView
-              style={[
-                styles.emptyCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.cardBorder,
-                },
-              ]}
-            >
-              <Text style={[styles.empty, { color: palette.textMuted }]}>
-                Nothing planned yet. Add income, bills, or a payday outflow in
-                Plan — or tap + below.
-              </Text>
-            </RNView>
-          ) : (
-            <RNView
-              style={[
-                styles.listCard,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: palette.cardBorder,
-                },
-              ]}
-            >
-              {feed.map((item, i) => (
-                <RNView
-                  key={item.id}
-                  style={[
-                    styles.feedRow,
-                    i < feed.length - 1 && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: palette.cardBorder,
+              <TourTarget id="home-cushion">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityHint="Shows how cushion is calculated"
+                  onPress={() => {
+                    markCushionTapped();
+                    setInfoOpen(true);
+                  }}
+                  style={({ pressed }) => [
+                    styles.hero,
+                    {
+                      backgroundColor: palette.surface,
+                      borderColor: palette.cardBorder,
+                      opacity: pressed ? 0.97 : 1,
                     },
                   ]}
                 >
-                  <RNView
-                    style={[
-                      styles.feedDot,
-                      {
-                        backgroundColor:
-                          item.kind === "income"
-                            ? palette.accentIncome
-                            : item.kind === "bill"
-                              ? palette.accentBills
-                              : palette.accentOutflow,
-                      },
-                    ]}
-                  />
                   <Text
-                    style={[styles.feedLabel, { color: palette.textSecondary }]}
-                    numberOfLines={1}
+                    style={[styles.heroLabel, { color: palette.textMuted }]}
                   >
-                    {item.label}
+                    CUSHION AFTER BILLS
                   </Text>
                   <MoneyText
-                    amount={item.amount}
-                    signed
-                    style={[
-                      styles.feedAmount,
-                      {
-                        color:
-                          item.amount >= 0
-                            ? palette.accentIncome
-                            : palette.text,
-                      },
-                    ]}
+                    amount={cushion}
+                    variant="hero"
+                    style={{ color: positive ? palette.tint : palette.danger }}
                   />
+                  <RNView style={styles.heroMeta}>
+                    <RNView
+                      style={[
+                        styles.statusPill,
+                        {
+                          backgroundColor: positive
+                            ? palette.successMuted
+                            : palette.dangerMuted,
+                        },
+                      ]}
+                    >
+                      <RNView
+                        style={[
+                          styles.statusDot,
+                          {
+                            backgroundColor: positive
+                              ? palette.success
+                              : palette.danger,
+                          },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.statusText,
+                          {
+                            color: positive ? palette.success : palette.danger,
+                          },
+                        ]}
+                      >
+                        {positive ? "Healthy cushion" : "Below bills"}
+                      </Text>
+                    </RNView>
+                    <RNView style={styles.vsLastRow}>
+                      <MoneyText
+                        amount={vsLast}
+                        variant="compact"
+                        signed
+                        style={[styles.vsLast, { color: palette.textMuted }]}
+                      />
+                      <Text
+                        style={[styles.vsLast, { color: palette.textMuted }]}
+                      >
+                        {" "}
+                        vs last
+                      </Text>
+                    </RNView>
+                  </RNView>
+                </Pressable>
+              </TourTarget>
+
+              <RNView style={styles.statRow}>
+                <StatCard
+                  label="INCOME"
+                  amount={incomeForMonth}
+                  background={palette.accentIncomeMuted}
+                  valueColor={palette.accentIncome}
+                  borderColor={palette.cardBorder}
+                  labelColor={palette.textMuted}
+                />
+                <StatCard
+                  label="BILLS"
+                  amount={roll?.billsTotal ?? 0}
+                  background={palette.accentBillsMuted}
+                  valueColor={palette.accentBills}
+                  borderColor={palette.cardBorder}
+                  labelColor={palette.textMuted}
+                />
+                <StatCard
+                  label="OUTFLOWS"
+                  amount={roll?.totalPaydayOutflow ?? 0}
+                  background={palette.accentOutflowMuted}
+                  valueColor={palette.accentOutflow}
+                  borderColor={palette.cardBorder}
+                  labelColor={palette.textMuted}
+                />
+              </RNView>
+
+              <RNView style={styles.sectionDivider}>
+                <RNView
+                  style={[
+                    styles.dividerLine,
+                    { backgroundColor: palette.cardBorder },
+                  ]}
+                />
+                <Text
+                  style={[styles.sectionLabel, { color: palette.textMuted }]}
+                >
+                  THIS MONTH
+                </Text>
+                <RNView
+                  style={[
+                    styles.dividerLine,
+                    { backgroundColor: palette.cardBorder },
+                  ]}
+                />
+              </RNView>
+
+              {feed.length === 0 ? (
+                <RNView
+                  style={[
+                    styles.emptyCard,
+                    {
+                      backgroundColor: palette.surface,
+                      borderColor: palette.cardBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.empty, { color: palette.textMuted }]}>
+                    Nothing planned yet. Add income, bills, or a payday outflow
+                    in Plan — or tap + below.
+                  </Text>
                 </RNView>
-              ))}
+              ) : (
+                <RNView
+                  style={[
+                    styles.listCard,
+                    {
+                      backgroundColor: palette.surface,
+                      borderColor: palette.cardBorder,
+                    },
+                  ]}
+                >
+                  {feed.map((item, i) => (
+                    <RNView
+                      key={item.id}
+                      style={[
+                        styles.feedRow,
+                        i < feed.length - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: palette.cardBorder,
+                        },
+                      ]}
+                    >
+                      <RNView
+                        style={[
+                          styles.feedDot,
+                          {
+                            backgroundColor:
+                              item.kind === "income"
+                                ? palette.accentIncome
+                                : item.kind === "bill"
+                                  ? palette.accentBills
+                                  : palette.accentOutflow,
+                          },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.feedLabel,
+                          { color: palette.textSecondary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
+                      <MoneyText
+                        amount={item.amount}
+                        signed
+                        style={[
+                          styles.feedAmount,
+                          {
+                            color:
+                              item.amount >= 0
+                                ? palette.accentIncome
+                                : palette.text,
+                          },
+                        ]}
+                      />
+                    </RNView>
+                  ))}
+                </RNView>
+              )}
             </RNView>
-          )}
-        </RNView>
-      </ScrollView>
+          </TourScrollProvider>
+        </ScrollView>
+      </RNView>
 
       <TourTarget
         id="home-fab"
@@ -484,6 +514,9 @@ function StatCard({
 
 const styles = StyleSheet.create({
   screen: {
+    flex: 1,
+  },
+  viewport: {
     flex: 1,
   },
   scroll: {

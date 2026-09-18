@@ -64,12 +64,52 @@ export function AppTourOverlay({ pathname }: Props) {
       setHole(null);
       return;
     }
-    void remMeasure();
-    const id = setInterval(() => {
-      void remMeasure();
-    }, 500);
-    return () => clearInterval(id);
-  }, [active, remMeasure, stepIndex, pathname, sheetOpen]);
+
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+
+    const run = async () => {
+      // Target may mount a frame after tab/step change — retry briefly.
+      for (let attempt = 0; attempt < 12 && !cancelled; attempt++) {
+        const scrolled = spotlightId
+          ? await registry.ensureVisible(spotlightId)
+          : false;
+        if (cancelled) return;
+        if (scrolled) {
+          await new Promise((r) => setTimeout(r, 320));
+          if (cancelled) return;
+        }
+        const rect = spotlightId ? await registry.measure(spotlightId) : null;
+        if (rect) {
+          setHole(rect);
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      if (cancelled) return;
+      intervalId = setInterval(() => {
+        void remMeasure();
+      }, 500);
+      if (cancelled) {
+        clearInterval(intervalId);
+        intervalId = undefined;
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+      if (intervalId !== undefined) clearInterval(intervalId);
+    };
+  }, [
+    active,
+    remMeasure,
+    stepIndex,
+    pathname,
+    sheetOpen,
+    registry,
+    spotlightId,
+  ]);
 
   if (!active || !step) return null;
 

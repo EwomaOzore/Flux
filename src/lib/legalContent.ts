@@ -16,7 +16,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
   },
   {
     title: "Data stored only on your device",
-    body: "The following stays on your phone or tablet unless you export or share it yourself: income streams, bills, timeline/line items, currency preference, appearance settings, biometric lock preference, payday reminder settings, and any receipt text you extract for expense entry. Uninstalling the app or clearing app data permanently deletes this on-device information. Because it never leaves your device through Flux, we cannot recover it for you.",
+    body: "The following stays on your phone or tablet unless you export or share it yourself: your display name, income streams, bills, timeline/line items, currency preference, appearance settings, guided tour completion, biometric lock preference, payday reminder settings, and any receipt text you extract for expense entry. Uninstalling the app or clearing app data permanently deletes this on-device information. Because it never leaves your device through Flux, we cannot recover it for you.",
   },
   {
     title: "Camera and photos",

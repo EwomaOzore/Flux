@@ -4,8 +4,8 @@ import { persist } from "zustand/middleware";
 
 import {
   DEFAULT_CURRENCY,
-  type CurrencyCode,
   isCurrencyCode,
+  type CurrencyCode,
 } from "@/src/lib/currencies";
 import { createSSRSafeJSONStorage } from "@/src/lib/ssrSafeStorage";
 
@@ -13,6 +13,8 @@ const BUDGET_STORAGE_KEY = "flux-budget-v6";
 
 type CurrencyState = {
   currencyCode: CurrencyCode;
+  /** First name from onboarding — shown on Home. */
+  displayName: string;
   /** False until the user picks a currency on first launch (or we detect an existing budget). */
   hasChosenCurrency: boolean;
   hydrated: boolean;
@@ -20,7 +22,8 @@ type CurrencyState = {
 
 type CurrencyActions = {
   setCurrency: (code: CurrencyCode) => void;
-  completeOnboarding: (code: CurrencyCode) => void;
+  setDisplayName: (name: string) => void;
+  completeOnboarding: (code: CurrencyCode, displayName: string) => void;
 };
 
 async function finishCurrencyHydration(state: CurrencyState | undefined) {
@@ -42,17 +45,25 @@ export const useCurrencyStore = create<CurrencyState & CurrencyActions>()(
   persist(
     (set) => ({
       currencyCode: DEFAULT_CURRENCY,
+      displayName: "",
       hasChosenCurrency: false,
       hydrated: false,
-      setCurrency: (currencyCode) => set({ currencyCode, hasChosenCurrency: true }),
-      completeOnboarding: (currencyCode) =>
+      setCurrency: (currencyCode) =>
         set({ currencyCode, hasChosenCurrency: true }),
+      setDisplayName: (displayName) => set({ displayName: displayName.trim() }),
+      completeOnboarding: (currencyCode, displayName) =>
+        set({
+          currencyCode,
+          displayName: displayName.trim(),
+          hasChosenCurrency: true,
+        }),
     }),
     {
       name: "flux-currency-v1",
       storage: createSSRSafeJSONStorage(),
       partialize: (s) => ({
         currencyCode: s.currencyCode,
+        displayName: s.displayName,
         hasChosenCurrency: s.hasChosenCurrency,
       }),
     },

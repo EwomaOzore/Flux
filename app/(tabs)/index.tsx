@@ -22,6 +22,7 @@ import {
   type PaydayLine,
 } from "@/src/domain/types";
 import { useBudgetStore } from "@/src/state/budgetStore";
+import { useCurrencyStore } from "@/src/state/currencyStore";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useMemo, useState } from "react";
 import {
@@ -43,6 +44,11 @@ type MonthFeedItem = {
   amount: number;
   kind: "income" | "bill" | "outflow";
 };
+
+function greetingName(raw: string): string {
+  const first = raw.trim().split(/\s+/)[0] ?? "";
+  return first;
+}
 
 function buildMonthFeed(
   month: MonthId,
@@ -110,6 +116,8 @@ export default function HomeScreen() {
   );
   const [infoOpen, setInfoOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const displayName = useCurrencyStore((s) => s.displayName);
+  const hiName = greetingName(displayName);
 
   const billsTotal = useMemo(
     () => totalBillsAmount(budgetForRollup.billItems),
@@ -183,6 +191,15 @@ export default function HomeScreen() {
               {formatMonthIdDisplay(paydayMonth).replace(",", "")}
             </Text>
           </RNView>
+
+          {hiName ? (
+            <Text
+              style={[styles.greeting, { color: palette.text }]}
+              accessibilityRole="header"
+            >
+              Hi {hiName}
+            </Text>
+          ) : null}
 
           <Pressable
             accessibilityRole="button"
@@ -461,6 +478,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: spacing.xs,
+  },
+  greeting: {
+    fontFamily: typeface.displayRegular,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.6,
     marginBottom: spacing.xs,
   },
   brandLockup: {

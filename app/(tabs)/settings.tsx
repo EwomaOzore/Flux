@@ -27,6 +27,7 @@ import {
   type AppearancePreference,
 } from "@/src/state/appearanceStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
+import { useTourStore } from "@/src/state/tourStore";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Constants from "expo-constants";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -82,6 +83,7 @@ export default function SettingsScreen() {
   );
   const appearance = useAppearanceStore((s) => s.preference);
   const setAppearance = useAppearanceStore((s) => s.setPreference);
+  const requestTour = useTourStore((s) => s.requestTour);
 
   const accent = dark ? "#48B872" : "#2B7A50";
   const cardBorder = dark ? palette.cardBorder : CARD_BORDER_LIGHT;
@@ -479,6 +481,45 @@ export default function SettingsScreen() {
               </Text>
             </Pressable>
           </RNView>
+        </RNView>
+      </SettingsGroup>
+
+      <SettingsGroup title="HELP" palette={palette}>
+        <RNView
+          style={[
+            styles.card,
+            { backgroundColor: cardBg, borderColor: cardBorder },
+          ]}
+        >
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => requestTour()}
+            style={({ pressed }) => [
+              styles.row,
+              { opacity: pressed ? 0.92 : 1 },
+            ]}
+          >
+            <RNView style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+              <FontAwesome
+                name="compass"
+                size={16}
+                color={palette.textSecondary}
+              />
+            </RNView>
+            <RNView style={styles.textCol}>
+              <Text style={[styles.rowTitle, { color: palette.text }]}>
+                Take a tour
+              </Text>
+              <Text style={[styles.rowSub, { color: palette.textMuted }]}>
+                Quick guide to Home, Plan, and more
+              </Text>
+            </RNView>
+            <FontAwesome
+              name="chevron-right"
+              size={12}
+              color={palette.textMuted}
+            />
+          </Pressable>
         </RNView>
       </SettingsGroup>
 

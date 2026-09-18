@@ -33,6 +33,7 @@ import "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BiometricGate } from "@/components/BiometricGate";
+import { AppTourHost } from "@/components/AppTourHost";
 import { CurrencyOnboardingRedirect } from "@/components/CurrencyOnboardingRedirect";
 import { UndoBanner } from "@/components/UndoBanner";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -154,6 +155,7 @@ function RootLayoutNav() {
                   }}
                 />
               </Stack>
+              <AppTourHost />
               <View
                 pointerEvents="box-none"
                 style={{

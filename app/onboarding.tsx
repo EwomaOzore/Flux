@@ -1,12 +1,12 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CurrencyPickerList } from "@/components/CurrencyPickerList";
 import { Text } from "@/components/Themed";
-import { ScreenScroll, useFluxPalette } from "@/components/ui";
+import { FluxTextInput, ScreenScroll, useFluxPalette } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
 import {
@@ -32,6 +32,7 @@ export default function OnboardingScreen() {
   const dark = colorScheme === "dark";
   const completeOnboarding = useCurrencyStore((s) => s.completeOnboarding);
   const [step, setStep] = useState<1 | 2>(1);
+  const [name, setName] = useState("");
   const suggestedCurrency = useMemo(() => detectCurrencyFromDevice(), []);
   const [selected, setSelected] = useState<CurrencyCode>(suggestedCurrency);
   const currencyOptions = useMemo(
@@ -43,9 +44,22 @@ export default function OnboardingScreen() {
   const cardBorder = dark ? palette.cardBorder : "#E0DAD3";
   const cardBg = dark ? palette.inputBackground : "#FFFFFF";
   const selectedCurrency = currencyOption(selected);
+  const trimmedName = name.trim();
+
+  const onGetStarted = () => {
+    if (!trimmedName) {
+      Alert.alert("Name needed", "Enter your first name to continue.");
+      return;
+    }
+    setStep(2);
+  };
 
   const onContinue = () => {
-    completeOnboarding(selected);
+    if (!trimmedName) {
+      Alert.alert("Name needed", "Go back and enter your first name.");
+      return;
+    }
+    completeOnboarding(selected, trimmedName);
     router.replace("/(tabs)");
   };
 
@@ -81,6 +95,24 @@ export default function OnboardingScreen() {
             See exactly what you have left after every bill is paid. Calm
             arithmetic — nothing more.
           </Text>
+
+          <Text style={[styles.nameLabel, { color: palette.text }]}>
+            What should we call you?
+          </Text>
+          <FluxTextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Your first name"
+            autoCapitalize="words"
+            autoCorrect={false}
+            autoComplete="given-name"
+            textContentType="givenName"
+            returnKeyType="next"
+            onSubmitEditing={onGetStarted}
+            maxLength={40}
+            accessibilityLabel="Your first name"
+            style={styles.nameInput}
+          />
 
           <View style={styles.featureList}>
             {FEATURES.map((feature) => (
@@ -136,7 +168,7 @@ export default function OnboardingScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Get started"
-              onPress={() => setStep(2)}
+              onPress={onGetStarted}
               style={({ pressed }) => [
                 styles.cta,
                 { backgroundColor: accent, opacity: pressed ? 0.92 : 1 },
@@ -258,8 +290,16 @@ const styles = StyleSheet.create({
     fontFamily: typeface.regular,
     fontSize: 16,
     lineHeight: 24,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     maxWidth: 340,
+  },
+  nameLabel: {
+    fontFamily: typeface.semibold,
+    fontSize: 15,
+    marginBottom: spacing.sm,
+  },
+  nameInput: {
+    marginBottom: spacing.xl,
   },
   featureList: {
     gap: spacing.sm,

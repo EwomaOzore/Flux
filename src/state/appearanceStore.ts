@@ -1,9 +1,9 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-import { createSSRSafeJSONStorage } from '@/src/lib/ssrSafeStorage';
+import { createSSRSafeJSONStorage } from "@/src/lib/ssrSafeStorage";
 
-export type AppearancePreference = 'system' | 'light' | 'dark';
+export type AppearancePreference = "system" | "light" | "dark";
 
 type AppearanceState = {
   preference: AppearancePreference;
@@ -13,11 +13,11 @@ type AppearanceState = {
 export const useAppearanceStore = create<AppearanceState>()(
   persist(
     (set) => ({
-      preference: 'system',
+      preference: "light",
       setPreference: (preference) => set({ preference }),
     }),
     {
-      name: 'flux-appearance-v1',
+      name: "flux-appearance-v1",
       storage: createSSRSafeJSONStorage(),
     },
   ),

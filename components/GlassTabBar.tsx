@@ -1,34 +1,42 @@
 import {
   BottomTabBarHeightCallbackContext,
   type BottomTabBarProps,
-} from '@react-navigation/bottom-tabs';
-import { BlurView } from 'expo-blur';
-import { useContext, useLayoutEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+} from "@react-navigation/bottom-tabs";
+import { BlurView } from "expo-blur";
+import { useContext, useLayoutEffect } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
-import { radii, spacing } from '@/constants/theme';
-import { typeface } from '@/constants/typography';
+import { TourTarget } from "@/components/TourTarget";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
+import { radii, spacing } from "@/constants/theme";
+import { typeface } from "@/constants/typography";
+import type { TourTargetId } from "@/src/lib/tourSteps";
 
 const BAR_HEIGHT = 58;
 const SIDE_INSET = 14;
 const FLOAT_ABOVE_HOME = 8;
 const CLEAR_ABOVE_PILL = 12;
 
+function tabTourId(routeName: string): TourTargetId | null {
+  if (routeName === "index") return "tab-home";
+  if (routeName === "plan") return "tab-plan";
+  return null;
+}
+
 function webFallbackBackground(dark: boolean) {
-  return dark ? 'rgba(42,36,32,0.88)' : 'rgba(255,255,255,0.88)';
+  return dark ? "rgba(42,36,32,0.88)" : "rgba(255,255,255,0.88)";
 }
 
 function glassBorderColor(dark: boolean) {
-  return dark ? 'rgba(255,255,255,0.1)' : 'rgba(208,202,194,0.9)';
+  return dark ? "rgba(255,255,255,0.1)" : "rgba(208,202,194,0.9)";
 }
 
 export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
   const { state, descriptors, navigation, insets } = props;
   const colorScheme = useColorScheme();
-  const dark = colorScheme === 'dark';
-  const palette = Colors[colorScheme ?? 'light'];
+  const dark = colorScheme === "dark";
+  const palette = Colors[colorScheme ?? "light"];
   const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
 
   const bottom = Math.max(insets.bottom, spacing.sm) + FLOAT_ABOVE_HOME;
@@ -42,12 +50,12 @@ export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
     <View
       pointerEvents="box-none"
       style={{
-        position: 'absolute',
+        position: "absolute",
         left: 0,
         right: 0,
         bottom: 0,
         height: reservedHeight,
-        backgroundColor: 'transparent',
+        backgroundColor: "transparent",
       }}
     >
       <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
@@ -60,12 +68,17 @@ export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
               bottom,
               height: BAR_HEIGHT,
               borderColor: glassBorderColor(dark),
-              backgroundColor: dark ? palette.tabBarBackground : '#FFFFFF',
+              backgroundColor: dark ? palette.tabBarBackground : "#FFFFFF",
             },
           ]}
         >
-          {Platform.OS === 'web' ? (
-            <View style={[styles.webFill, { backgroundColor: webFallbackBackground(dark) }]}>
+          {Platform.OS === "web" ? (
+            <View
+              style={[
+                styles.webFill,
+                { backgroundColor: webFallbackBackground(dark) },
+              ]}
+            >
               <TabRow
                 state={state}
                 descriptors={descriptors}
@@ -75,14 +88,20 @@ export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
               />
             </View>
           ) : (
-            <BlurView tint={dark ? 'dark' : 'light'} intensity={dark ? 40 : 64} style={styles.blurFill}>
+            <BlurView
+              tint={dark ? "dark" : "light"}
+              intensity={dark ? 40 : 64}
+              style={styles.blurFill}
+            >
               <View style={styles.blurStack}>
                 <View
                   pointerEvents="none"
                   style={[
                     StyleSheet.absoluteFill,
                     {
-                      backgroundColor: dark ? 'rgba(28,24,20,0.35)' : 'rgba(255,255,255,0.45)',
+                      backgroundColor: dark
+                        ? "rgba(28,24,20,0.35)"
+                        : "rgba(255,255,255,0.45)",
                     },
                   ]}
                 />
@@ -102,12 +121,21 @@ export function GlassTabBar(props: Readonly<BottomTabBarProps>) {
   );
 }
 
-type RowProps = Pick<BottomTabBarProps, 'state' | 'descriptors' | 'navigation'> & {
+type RowProps = Pick<
+  BottomTabBarProps,
+  "state" | "descriptors" | "navigation"
+> & {
   activeColor: string;
   inactiveColor: string;
 };
 
-function TabRow({ state, descriptors, navigation, activeColor, inactiveColor }: RowProps) {
+function TabRow({
+  state,
+  descriptors,
+  navigation,
+  activeColor,
+  inactiveColor,
+}: RowProps) {
   return (
     <View style={styles.row}>
       {state.routes.map((route, index) => {
@@ -117,7 +145,7 @@ function TabRow({ state, descriptors, navigation, activeColor, inactiveColor }: 
 
         const onPress = () => {
           const event = navigation.emit({
-            type: 'tabPress',
+            type: "tabPress",
             target: route.key,
             canPreventDefault: true,
           });
@@ -128,29 +156,48 @@ function TabRow({ state, descriptors, navigation, activeColor, inactiveColor }: 
 
         const onLongPress = () => {
           navigation.emit({
-            type: 'tabLongPress',
+            type: "tabLongPress",
             target: route.key,
           });
         };
 
         const rawLabel = options.tabBarLabel ?? options.title ?? route.name;
-        const label = typeof rawLabel === 'string' ? rawLabel : route.name;
+        const label = typeof rawLabel === "string" ? rawLabel : route.name;
+        const tourId = tabTourId(route.name);
 
-        return (
+        const tabButton = (
           <Pressable
-            key={route.key}
             accessibilityRole="button"
             accessibilityState={{ selected: focused }}
-            accessibilityLabel={options.tabBarAccessibilityLabel ?? String(label)}
+            accessibilityLabel={
+              options.tabBarAccessibilityLabel ?? String(label)
+            }
             onPress={onPress}
             onLongPress={onLongPress}
-            style={({ pressed }) => [styles.tab, { opacity: pressed ? 0.75 : 1 }]}
+            style={({ pressed }) => [
+              styles.tab,
+              { opacity: pressed ? 0.75 : 1 },
+            ]}
           >
             {options.tabBarIcon?.({ focused, color, size: 20 }) ?? null}
             <Text style={[styles.label, { color }]} numberOfLines={1}>
               {label}
             </Text>
           </Pressable>
+        );
+
+        if (!tourId) {
+          return (
+            <View key={route.key} style={styles.tabTarget}>
+              {tabButton}
+            </View>
+          );
+        }
+
+        return (
+          <TourTarget key={route.key} id={tourId} style={styles.tabTarget}>
+            {tabButton}
+          </TourTarget>
         );
       })}
     </View>
@@ -159,13 +206,13 @@ function TabRow({ state, descriptors, navigation, activeColor, inactiveColor }: 
 
 const styles = StyleSheet.create({
   pillShadow: {
-    position: 'absolute',
+    position: "absolute",
     borderRadius: radii.full,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
     ...Platform.select({
       ios: {
-        shadowColor: '#000000',
+        shadowColor: "#000000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.08,
         shadowRadius: 16,
@@ -185,21 +232,24 @@ const styles = StyleSheet.create({
   webFill: {
     flex: 1,
     borderRadius: radii.full,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   row: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
     paddingHorizontal: 4,
   },
   tab: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: spacing.xs,
     gap: 2,
+  },
+  tabTarget: {
+    flex: 1,
   },
   label: {
     fontFamily: typeface.medium,

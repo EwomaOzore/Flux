@@ -32,14 +32,15 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BiometricGate } from "@/components/BiometricGate";
 import { AppTourHost } from "@/components/AppTourHost";
+import { BiometricGate } from "@/components/BiometricGate";
 import { CurrencyOnboardingRedirect } from "@/components/CurrencyOnboardingRedirect";
 import { UndoBanner } from "@/components/UndoBanner";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { navigationFonts } from "@/constants/typography";
 import { syncReminderFromStorage } from "@/src/lib/paydayReminders";
+import { TourTargetProvider } from "@/src/tour/TourTargetContext";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -121,55 +122,60 @@ function RootLayoutNav() {
           <ReminderBootstrap />
           <EASUpdateSync />
           <CurrencyOnboardingRedirect />
-          <BiometricGate>
-            <View style={{ flex: 1 }}>
-              <Stack>
-                <Stack.Screen
-                  name="onboarding"
-                  options={{ headerShown: false, gestureEnabled: false }}
-                />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="backup"
-                  options={{
-                    title: "Backup & import",
-                    headerBackButtonDisplayMode: "minimal",
+          <TourTargetProvider>
+            <BiometricGate>
+              <View style={{ flex: 1 }}>
+                <Stack>
+                  <Stack.Screen
+                    name="onboarding"
+                    options={{ headerShown: false, gestureEnabled: false }}
+                  />
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="backup"
+                    options={{
+                      title: "Backup & import",
+                      headerBackButtonDisplayMode: "minimal",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="modal"
+                    options={{ presentation: "modal", title: "About" }}
+                  />
+                  <Stack.Screen
+                    name="privacy"
+                    options={{
+                      title: "Privacy policy",
+                      headerBackButtonDisplayMode: "minimal",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="terms"
+                    options={{
+                      title: "Terms & Conditions",
+                      headerBackButtonDisplayMode: "minimal",
+                    }}
+                  />
+                </Stack>
+                <AppTourHost />
+                <View
+                  pointerEvents="box-none"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: insets.bottom + 72,
+                    zIndex: 50,
                   }}
-                />
-                <Stack.Screen
-                  name="modal"
-                  options={{ presentation: "modal", title: "About" }}
-                />
-                <Stack.Screen
-                  name="privacy"
-                  options={{
-                    title: "Privacy policy",
-                    headerBackButtonDisplayMode: "minimal",
-                  }}
-                />
-                <Stack.Screen
-                  name="terms"
-                  options={{
-                    title: "Terms & Conditions",
-                    headerBackButtonDisplayMode: "minimal",
-                  }}
-                />
-              </Stack>
-              <AppTourHost />
-              <View
-                pointerEvents="box-none"
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  bottom: insets.bottom + 72,
-                  zIndex: 50,
-                }}
-              >
-                <UndoBanner />
+                >
+                  <UndoBanner />
+                </View>
               </View>
-            </View>
-          </BiometricGate>
+            </BiometricGate>
+          </TourTargetProvider>
         </BottomSheetModalProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

@@ -2,6 +2,7 @@ import { DiscretionaryInfoModal } from "@/components/DiscretionaryInfoModal";
 import { MoneyText } from "@/components/MoneyText";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { Text } from "@/components/Themed";
+import { TourTarget } from "@/components/TourTarget";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { cardElevation, radii, spacing } from "@/constants/theme";
@@ -23,6 +24,7 @@ import {
 } from "@/src/domain/types";
 import { useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
+import { useTourStore } from "@/src/state/tourStore";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useMemo, useState } from "react";
 import {
@@ -118,6 +120,7 @@ export default function HomeScreen() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const displayName = useCurrencyStore((s) => s.displayName);
   const hiName = greetingName(displayName);
+  const markCushionTapped = useTourStore((s) => s.markCushionTapped);
 
   const billsTotal = useMemo(
     () => totalBillsAmount(budgetForRollup.billItems),
@@ -201,71 +204,76 @@ export default function HomeScreen() {
             </Text>
           ) : null}
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityHint="Shows how cushion is calculated"
-            onPress={() => setInfoOpen(true)}
-            style={({ pressed }) => [
-              styles.hero,
-              {
-                backgroundColor: palette.surface,
-                borderColor: palette.cardBorder,
-                opacity: pressed ? 0.97 : 1,
-              },
-            ]}
-          >
-            <Text style={[styles.heroLabel, { color: palette.textMuted }]}>
-              CUSHION AFTER BILLS
-            </Text>
-            <MoneyText
-              amount={cushion}
-              variant="hero"
-              style={{ color: positive ? palette.tint : palette.danger }}
-            />
-            <RNView style={styles.heroMeta}>
-              <RNView
-                style={[
-                  styles.statusPill,
-                  {
-                    backgroundColor: positive
-                      ? palette.successMuted
-                      : palette.dangerMuted,
-                  },
-                ]}
-              >
+          <TourTarget id="home-cushion">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityHint="Shows how cushion is calculated"
+              onPress={() => {
+                markCushionTapped();
+                setInfoOpen(true);
+              }}
+              style={({ pressed }) => [
+                styles.hero,
+                {
+                  backgroundColor: palette.surface,
+                  borderColor: palette.cardBorder,
+                  opacity: pressed ? 0.97 : 1,
+                },
+              ]}
+            >
+              <Text style={[styles.heroLabel, { color: palette.textMuted }]}>
+                CUSHION AFTER BILLS
+              </Text>
+              <MoneyText
+                amount={cushion}
+                variant="hero"
+                style={{ color: positive ? palette.tint : palette.danger }}
+              />
+              <RNView style={styles.heroMeta}>
                 <RNView
                   style={[
-                    styles.statusDot,
+                    styles.statusPill,
                     {
                       backgroundColor: positive
-                        ? palette.success
-                        : palette.danger,
+                        ? palette.successMuted
+                        : palette.dangerMuted,
                     },
                   ]}
-                />
-                <Text
-                  style={[
-                    styles.statusText,
-                    { color: positive ? palette.success : palette.danger },
-                  ]}
                 >
-                  {positive ? "Healthy cushion" : "Below bills"}
-                </Text>
+                  <RNView
+                    style={[
+                      styles.statusDot,
+                      {
+                        backgroundColor: positive
+                          ? palette.success
+                          : palette.danger,
+                      },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: positive ? palette.success : palette.danger },
+                    ]}
+                  >
+                    {positive ? "Healthy cushion" : "Below bills"}
+                  </Text>
+                </RNView>
+                <RNView style={styles.vsLastRow}>
+                  <MoneyText
+                    amount={vsLast}
+                    variant="compact"
+                    signed
+                    style={[styles.vsLast, { color: palette.textMuted }]}
+                  />
+                  <Text style={[styles.vsLast, { color: palette.textMuted }]}>
+                    {" "}
+                    vs last
+                  </Text>
+                </RNView>
               </RNView>
-              <RNView style={styles.vsLastRow}>
-                <MoneyText
-                  amount={vsLast}
-                  variant="compact"
-                  signed
-                  style={[styles.vsLast, { color: palette.textMuted }]}
-                />
-                <Text style={[styles.vsLast, { color: palette.textMuted }]}>
-                  {" "}
-                  vs last
-                </Text>
-              </RNView>
-            </RNView>
-          </Pressable>
+            </Pressable>
+          </TourTarget>
 
           <RNView style={styles.statRow}>
             <StatCard
@@ -387,22 +395,29 @@ export default function HomeScreen() {
         </RNView>
       </ScrollView>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Quick add payday outflow"
-        onPress={() => setQuickAddOpen(true)}
-        style={({ pressed }) => [
-          styles.quickFab,
-          {
-            backgroundColor: "#48B872",
-            bottom: Math.max(spacing.lg, tabBarHeight + spacing.xs),
-            opacity: pressed ? 0.9 : 1,
-          },
-          cardElevation(colorScheme),
+      <TourTarget
+        id="home-fab"
+        style={[
+          styles.quickFabTour,
+          { bottom: Math.max(spacing.lg, tabBarHeight + spacing.xs) },
         ]}
       >
-        <Text style={styles.quickFabText}>+</Text>
-      </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Quick add payday outflow"
+          onPress={() => setQuickAddOpen(true)}
+          style={({ pressed }) => [
+            styles.quickFab,
+            {
+              backgroundColor: "#48B872",
+              opacity: pressed ? 0.9 : 1,
+            },
+            cardElevation(colorScheme),
+          ]}
+        >
+          <Text style={styles.quickFabText}>+</Text>
+        </Pressable>
+      </TourTarget>
 
       <DiscretionaryInfoModal
         visible={infoOpen}
@@ -619,9 +634,12 @@ const styles = StyleSheet.create({
   feedAmount: {
     fontSize: 15,
   },
-  quickFab: {
+  quickFabTour: {
     position: "absolute",
     right: spacing.lg,
+    zIndex: 20,
+  },
+  quickFab: {
     width: 52,
     height: 52,
     borderRadius: 28,

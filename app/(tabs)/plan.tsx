@@ -17,6 +17,7 @@ import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { ReceiptScanSheet } from "@/components/ReceiptScanSheet";
 import { StatementImportSheet } from "@/components/StatementImportSheet";
 import { Text } from "@/components/Themed";
+import { TourTarget } from "@/components/TourTarget";
 import {
   DangerOutlineButton,
   ScreenScroll,
@@ -32,6 +33,7 @@ import {
   type MonthId,
 } from "@/src/domain/month";
 import type { PaydayLine } from "@/src/domain/types";
+import type { TourTargetId } from "@/src/lib/tourSteps";
 import { useBudgetStore } from "@/src/state/budgetStore";
 
 const CARD_BORDER = "#E0DAD3";
@@ -122,6 +124,7 @@ export default function PlanScreen() {
           onAdd={onAddIncomeRow}
           labelColor={palette.textMuted}
           dark={dark}
+          addTourId="plan-add-income"
         >
           <RNView
             style={[
@@ -162,6 +165,7 @@ export default function PlanScreen() {
           onAdd={() => setBillsOpen(true)}
           labelColor={palette.textMuted}
           dark={dark}
+          addTourId="plan-add-bill"
         >
           <RNView
             style={[
@@ -345,31 +349,41 @@ function PlanSection({
   children,
   labelColor,
   dark,
+  addTourId,
 }: Readonly<{
   title: string;
   onAdd: () => void;
   children: React.ReactNode;
   labelColor: string;
   dark: boolean;
+  addTourId?: TourTargetId;
 }>) {
+  const addButton = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Add to ${title}`}
+      onPress={onAdd}
+      style={({ pressed }) => [
+        styles.addBtn,
+        dark && styles.addBtnDark,
+        { opacity: pressed ? 0.75 : 1 },
+      ]}
+    >
+      <Text style={styles.addBtnText}>+ Add</Text>
+    </Pressable>
+  );
+
   return (
     <RNView style={styles.section}>
       <RNView style={styles.sectionHead}>
         <Text style={[styles.sectionTitle, { color: labelColor }]}>
           {title}
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Add to ${title}`}
-          onPress={onAdd}
-          style={({ pressed }) => [
-            styles.addBtn,
-            dark && styles.addBtnDark,
-            { opacity: pressed ? 0.75 : 1 },
-          ]}
-        >
-          <Text style={styles.addBtnText}>+ Add</Text>
-        </Pressable>
+        {addTourId ? (
+          <TourTarget id={addTourId}>{addButton}</TourTarget>
+        ) : (
+          addButton
+        )}
       </RNView>
       {children}
     </RNView>

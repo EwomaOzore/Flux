@@ -1,64 +1,137 @@
 import { usePathname } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
-import { AppTourModal } from "@/components/AppTourModal";
+import { AppTourOverlay } from "@/components/AppTourOverlay";
+import { matchesTourRoute, TOUR_STEPS } from "@/src/lib/tourSteps";
+import { useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
-import { useTourStore } from "@/src/state/tourStore";
+import { useTourStore, type TourBaseline } from "@/src/state/tourStore";
+import { useShallow } from "zustand/react/shallow";
+
+function snapshotBaseline(
+  incomes: { amountNgn: number }[],
+  bills: { amount: number }[],
+  lines: unknown[],
+): TourBaseline {
+  return {
+    incomesWithAmount: incomes.filter((s) => s.amountNgn > 0).length,
+    billsWithAmount: bills.filter((b) => b.amount > 0).length,
+    linesCount: lines.length,
+  };
+}
 
 /**
- * Presents the guided tour after onboarding (first launch), or when
- * the user taps “Take a tour” in Settings.
+ * Starts the interactive overlay tour after onboarding (or from Settings),
+ * and advances steps when the user navigates / commits the required action.
  */
 export function AppTourHost() {
   const pathname = usePathname();
   const currencyHydrated = useCurrencyStore((s) => s.hydrated);
   const hasChosenCurrency = useCurrencyStore((s) => s.hasChosenCurrency);
+
   const tourHydrated = useTourStore((s) => s.hydrated);
   const hasCompletedTour = useTourStore((s) => s.hasCompletedTour);
-  const tourRequested = useTourStore((s) => s.tourRequested);
-  const completeTour = useTourStore((s) => s.completeTour);
-  const clearTourRequest = useTourStore((s) => s.clearTourRequest);
+  const active = useTourStore((s) => s.active);
+  const stepIndex = useTourStore((s) => s.stepIndex);
+  const baseline = useTourStore((s) => s.baseline);
+  const cushionTapped = useTourStore((s) => s.cushionTapped);
+  const startTour = useTourStore((s) => s.startTour);
+  const advanceStep = useTourStore((s) => s.advanceStep);
 
-  const [visible, setVisible] = useState(false);
+  const budget = useBudgetStore(
+    useShallow((s) => ({
+      incomeStreams: s.incomeStreams,
+      billItems: s.billItems,
+      lines: s.lines,
+    })),
+  );
 
+  const startedRef = useRef(false);
+
+  // Auto-start after onboarding for first-time users.
   useEffect(() => {
     if (!currencyHydrated || !tourHydrated) return;
-    if (!hasChosenCurrency) {
-      setVisible(false);
-      return;
-    }
-
-    const onOnboarding = pathname.includes("onboarding");
-    if (onOnboarding) {
-      setVisible(false);
-      return;
-    }
-
-    if (tourRequested) {
-      setVisible(true);
-      return;
-    }
-
-    if (!hasCompletedTour) {
-      const t = setTimeout(() => setVisible(true), 450);
-      return () => clearTimeout(t);
-    }
-
-    setVisible(false);
+    if (!hasChosenCurrency) return;
+    if (hasCompletedTour || active) return;
+    if (pathname.includes("onboarding")) return;
+    if (startedRef.current) return;
+    startedRef.current = true;
+    const t = setTimeout(() => {
+      startTour(
+        snapshotBaseline(budget.incomeStreams, budget.billItems, budget.lines),
+      );
+    }, 500);
+    return () => clearTimeout(t);
   }, [
     currencyHydrated,
     tourHydrated,
     hasChosenCurrency,
     hasCompletedTour,
-    tourRequested,
+    active,
     pathname,
+    startTour,
+    budget.incomeStreams,
+    budget.billItems,
+    budget.lines,
   ]);
 
-  const onFinish = () => {
-    setVisible(false);
-    completeTour();
-    clearTourRequest();
-  };
+  // Advance when route / committed data / cushion tap satisfies the step.
+  useEffect(() => {
+    if (!active) return;
+    const step = TOUR_STEPS[stepIndex];
+    if (!step) return;
 
-  return <AppTourModal visible={visible} onFinish={onFinish} />;
+    const nextBaseline = snapshotBaseline(
+      budget.incomeStreams,
+      budget.billItems,
+      budget.lines,
+    );
+
+    const req = step.require;
+    let done = false;
+    if (req.kind === "route") {
+      done = matchesTourRoute(pathname, req.route);
+    } else if (req.kind === "income") {
+      done =
+        matchesTourRoute(pathname, "plan") &&
+        nextBaseline.incomesWithAmount > baseline.incomesWithAmount;
+    } else if (req.kind === "bill") {
+      done =
+        matchesTourRoute(pathname, "plan") &&
+        nextBaseline.billsWithAmount > baseline.billsWithAmount;
+    } else if (req.kind === "line") {
+      done =
+        matchesTourRoute(pathname, "home") &&
+        nextBaseline.linesCount > baseline.linesCount;
+    } else if (req.kind === "cushionTap") {
+      done = matchesTourRoute(pathname, "home") && cushionTapped;
+    }
+
+    if (done) {
+      advanceStep(nextBaseline);
+    }
+  }, [
+    active,
+    stepIndex,
+    pathname,
+    baseline,
+    cushionTapped,
+    budget.incomeStreams,
+    budget.billItems,
+    budget.lines,
+    advanceStep,
+  ]);
+
+  if (!active) return null;
+  return <AppTourOverlay pathname={pathname} />;
+}
+
+/** Called from Settings → Take a tour. */
+export function startGuidedTourFromSettings() {
+  const budget = useBudgetStore.getState();
+  useTourStore
+    .getState()
+    .startTour(
+      snapshotBaseline(budget.incomeStreams, budget.billItems, budget.lines),
+    );
 }

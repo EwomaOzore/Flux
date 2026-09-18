@@ -27,7 +27,7 @@ import {
   type AppearancePreference,
 } from "@/src/state/appearanceStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
-import { useTourStore } from "@/src/state/tourStore";
+import { startGuidedTourFromSettings } from "@/components/AppTourHost";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Constants from "expo-constants";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -83,7 +83,6 @@ export default function SettingsScreen() {
   );
   const appearance = useAppearanceStore((s) => s.preference);
   const setAppearance = useAppearanceStore((s) => s.setPreference);
-  const requestTour = useTourStore((s) => s.requestTour);
 
   const accent = dark ? "#48B872" : "#2B7A50";
   const cardBorder = dark ? palette.cardBorder : CARD_BORDER_LIGHT;
@@ -493,7 +492,7 @@ export default function SettingsScreen() {
         >
           <Pressable
             accessibilityRole="button"
-            onPress={() => requestTour()}
+            onPress={() => startGuidedTourFromSettings()}
             style={({ pressed }) => [
               styles.row,
               { opacity: pressed ? 0.92 : 1 },
@@ -511,7 +510,7 @@ export default function SettingsScreen() {
                 Take a tour
               </Text>
               <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-                Quick guide to Home, Plan, and more
+                Hands-on walkthrough of Plan and Home
               </Text>
             </RNView>
             <FontAwesome

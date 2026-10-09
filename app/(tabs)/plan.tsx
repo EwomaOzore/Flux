@@ -13,6 +13,7 @@ import { BillsBottomSheet } from "@/components/BillsBottomSheet";
 import { IncomeStreamBottomSheet } from "@/components/IncomeStreamBottomSheet";
 import { MoneyText } from "@/components/MoneyText";
 import { MonthPickerField } from "@/components/MonthPickerField";
+import { PaidCheck } from "@/components/PaidCheck";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { ReceiptScanSheet } from "@/components/ReceiptScanSheet";
 import { StatementImportSheet } from "@/components/StatementImportSheet";
@@ -32,7 +33,8 @@ import {
   monthsInclusiveCount,
   type MonthId,
 } from "@/src/domain/month";
-import type { PaydayLine } from "@/src/domain/types";
+import type { BillItem, PaydayLine } from "@/src/domain/types";
+import { isPaidInMonth } from "@/src/domain/types";
 import type { TourTargetId } from "@/src/lib/tourSteps";
 import { useBudgetStore } from "@/src/state/budgetStore";
 import { useTourStore } from "@/src/state/tourStore";
@@ -56,6 +58,8 @@ export default function PlanScreen() {
   const removeIncomeStream = useBudgetStore((s) => s.removeIncomeStream);
   const deleteBill = useBudgetStore((s) => s.deleteBill);
   const deleteLine = useBudgetStore((s) => s.deleteLine);
+  const updateBill = useBudgetStore((s) => s.updateBill);
+  const updateLine = useBudgetStore((s) => s.updateLine);
   const resetBudget = useBudgetStore((s) => s.resetBudget);
 
   const [billsOpen, setBillsOpen] = useState(false);
@@ -68,6 +72,7 @@ export default function PlanScreen() {
   const [viewMonth, setViewMonth] = useState<MonthId>(() =>
     currentPaydayMonthId(),
   );
+  const cycleMonth = currentPaydayMonthId();
 
   const setTourSheetOpen = useTourStore((s) => s.setTourSheetOpen);
   const tourActive = useTourStore((s) => s.active);
@@ -209,12 +214,21 @@ export default function PlanScreen() {
                 <PlanRow
                   key={bill.id}
                   label={bill.label.trim() || "Bill"}
+                  subtitle={billDueLabel(bill)}
                   amount={bill.amount}
                   dotColor={palette.accentBills}
                   textColor={dark ? "#EDE8E0" : "#1C1814"}
                   amountColor={dark ? "#B0A89E" : "#5A5349"}
                   borderColor={borderColor}
                   showDivider={idx < billItems.length - 1}
+                  paid={isPaidInMonth(bill.paidMonth, cycleMonth)}
+                  onTogglePaid={() =>
+                    updateBill(bill.id, {
+                      paidMonth: isPaidInMonth(bill.paidMonth, cycleMonth)
+                        ? undefined
+                        : cycleMonth,
+                    })
+                  }
                   onPress={() => setBillsOpen(true)}
                   onRemove={() => deleteBill(bill.id)}
                   removeLabel={`Remove ${bill.label || "bill"}`}
@@ -269,6 +283,20 @@ export default function PlanScreen() {
                   amountColor={dark ? "#B0A89E" : "#5A5349"}
                   borderColor={borderColor}
                   showDivider={idx < monthLines.length - 1}
+                  paid={
+                    viewMonth === cycleMonth &&
+                    isPaidInMonth(line.paidMonth, cycleMonth)
+                  }
+                  onTogglePaid={
+                    viewMonth === cycleMonth
+                      ? () =>
+                          updateLine(line.id, {
+                            paidMonth: isPaidInMonth(line.paidMonth, cycleMonth)
+                              ? undefined
+                              : cycleMonth,
+                          })
+                      : undefined
+                  }
                   onRemove={() => deleteLine(line.id)}
                   removeLabel={`Remove ${line.label || "outflow"}`}
                   mutedIcon={palette.textMuted}
@@ -360,6 +388,20 @@ export default function PlanScreen() {
   );
 }
 
+function ordinal(n: number): string {
+  const j = n % 10;
+  const k = n % 100;
+  if (j === 1 && k !== 11) return "st";
+  if (j === 2 && k !== 12) return "nd";
+  if (j === 3 && k !== 13) return "rd";
+  return "th";
+}
+
+function billDueLabel(bill: BillItem): string | undefined {
+  if (bill.dueDay == null) return undefined;
+  return `Due the ${bill.dueDay}${ordinal(bill.dueDay)}`;
+}
+
 function outflowSubtitle(line: PaydayLine): string | undefined {
   if (line.recurrence !== "monthly") return undefined;
   const start = line.startMonth ?? line.month;
@@ -428,6 +470,8 @@ function PlanRow({
   onRemove,
   removeLabel,
   mutedIcon,
+  paid,
+  onTogglePaid,
 }: Readonly<{
   label: string;
   subtitle?: string;
@@ -441,9 +485,21 @@ function PlanRow({
   onRemove: () => void;
   removeLabel: string;
   mutedIcon: string;
+  paid?: boolean;
+  onTogglePaid?: () => void;
 }>) {
   const body = (
     <>
+      {onTogglePaid ? (
+        <PaidCheck
+          paid={paid === true}
+          label={label}
+          color="#FFFFFF"
+          borderColor={borderColor}
+          fillColor={dotColor}
+          onToggle={onTogglePaid}
+        />
+      ) : null}
       <RNView style={[styles.dot, { backgroundColor: dotColor }]} />
       <RNView style={styles.itemTextCol}>
         <Text

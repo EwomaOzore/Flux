@@ -12,6 +12,12 @@ function asString(v: unknown): string | null {
   return typeof v === "string" ? v : null;
 }
 
+function asMonth(v: unknown): MonthId | undefined {
+  const s = asString(v);
+  if (!s || !/^\d{4}-\d{2}$/.test(s)) return undefined;
+  return s as MonthId;
+}
+
 function asNumber(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
@@ -42,7 +48,19 @@ function parseBill(input: unknown): BillItem | null {
   const label = asString(input.label) ?? "";
   const amount = asNumber(input.amount) ?? 0;
   if (!id) return null;
-  return { id, label, amount: Math.max(0, Math.round(amount)) };
+  const dueRaw = asNumber(input.dueDay);
+  const dueDay =
+    dueRaw != null && dueRaw >= 1 && dueRaw <= 31
+      ? Math.round(dueRaw)
+      : undefined;
+  const paidMonth = asMonth(input.paidMonth);
+  return {
+    id,
+    label,
+    amount: Math.max(0, Math.round(amount)),
+    ...(dueDay != null ? { dueDay } : {}),
+    ...(paidMonth ? { paidMonth } : {}),
+  };
 }
 
 function parseLine(input: unknown): PaydayLine | null {
@@ -68,6 +86,9 @@ function parseLine(input: unknown): PaydayLine | null {
             (asString(input.startMonth) as MonthId | null) ??
             monthId,
         }
+      : {}),
+    ...(asMonth(input.paidMonth)
+      ? { paidMonth: asMonth(input.paidMonth) }
       : {}),
   };
 }
@@ -142,6 +163,13 @@ function parseAmountCell(raw: string): number {
   return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
 }
 
+function parseDueDayCell(raw: string): number | undefined {
+  if (!raw.trim()) return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1 || n > 31) return undefined;
+  return Math.round(n);
+}
+
 /**
  * Accepts Flux backup CSV from `buildExportCsv` and returns normalized budget state.
  */
@@ -175,6 +203,8 @@ export function parseBudgetImportCsv(raw: string): BudgetState {
   const lineRecurrenceI = idx("line_recurrence");
   const lineStartI = idx("line_start_month");
   const lineEndI = idx("line_end_month");
+  const dueDayI = idx("due_day");
+  const paidMonthI = idx("paid_month");
 
   const cell = (cols: string[], i: number) =>
     i >= 0 && i < cols.length ? (cols[i] ?? "").trim() : "";
@@ -210,7 +240,15 @@ export function parseBudgetImportCsv(raw: string): BudgetState {
     }
 
     if (type === "bill") {
-      billItems.push({ id, label, amount });
+      const due = parseDueDayCell(cell(cols, dueDayI));
+      const paid = asMonth(cell(cols, paidMonthI));
+      billItems.push({
+        id,
+        label,
+        amount,
+        ...(due != null ? { dueDay: due } : {}),
+        ...(paid ? { paidMonth: paid } : {}),
+      });
       continue;
     }
 
@@ -221,6 +259,7 @@ export function parseBudgetImportCsv(raw: string): BudgetState {
         cell(cols, lineRecurrenceI) === "monthly" ? "monthly" : "one_time";
       const startMonth = cell(cols, lineStartI) || month;
       const endMonth = cell(cols, lineEndI) || startMonth;
+      const paid = asMonth(cell(cols, paidMonthI));
       paydayLines.push({
         id,
         month: month as MonthId,
@@ -233,6 +272,7 @@ export function parseBudgetImportCsv(raw: string): BudgetState {
               endMonth: endMonth as MonthId,
             }
           : {}),
+        ...(paid ? { paidMonth: paid } : {}),
       });
     }
   }

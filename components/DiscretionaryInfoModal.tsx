@@ -40,13 +40,13 @@ export function DiscretionaryInfoModal({
         <View style={styles.body}>
           <Text style={[styles.lede, { color: palette.textSecondary }]}>
             For <Text style={[styles.ledeStrong, { color: palette.text }]}>{monthLabel}</Text>, cushion is what&apos;s
-            left after your monthly bills and this month&apos;s planned payday outflows. That remainder covers day-to-day
+            left after bills and payday outflows you have not marked paid. That remainder covers day-to-day
             spending and anything you haven&apos;t listed yet — we call that discretionary in plain language.
           </Text>
           <View style={styles.rows}>
             <Row palette={palette} label="Take-home (all income streams)" amount={income} />
-            <Row palette={palette} label="Monthly bills (from Plan)" amount={-billsTotal} signed />
-            <Row palette={palette} label="This month's payday line items" amount={-paydayOutflow} signed />
+            <Row palette={palette} label="Bills still unpaid" amount={-billsTotal} signed />
+            <Row palette={palette} label="Payday outflows still unpaid" amount={-paydayOutflow} signed />
             <View style={[styles.rule, { backgroundColor: palette.border }]} />
             <Row palette={palette} label="Cushion after bills" amount={cushion} emphasis />
           </View>

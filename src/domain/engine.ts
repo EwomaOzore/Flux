@@ -2,6 +2,9 @@ import type { MonthId } from "./month";
 import { compareMonthId, monthRangeInclusive } from "./month";
 import {
   incomeNgnForMonth,
+  isPaidInMonth,
+  outstandingBillsAmount,
+  type BillItem,
   type IncomeStream,
   type MonthRollup,
   type PaydayLine,
@@ -46,7 +49,7 @@ export function monthsForRollups(
 export function buildRollupsForMonths(
   months: MonthId[],
   incomeForMonth: (month: MonthId) => number,
-  billsTotal: number,
+  billsForMonth: (month: MonthId) => number,
   lines: PaydayLine[],
 ): MonthRollup[] {
   if (months.length === 0) return [];
@@ -69,8 +72,12 @@ export function buildRollupsForMonths(
       })
       .slice()
       .sort((a, b) => a.label.localeCompare(b.label));
-    const totalPaydayOutflow = monthLines.reduce((s, l) => s + l.amount, 0);
+    const totalPaydayOutflow = monthLines.reduce((s, l) => {
+      if (isPaidInMonth(l.paidMonth, month)) return s;
+      return s + l.amount;
+    }, 0);
     const income = incomeForMonth(month);
+    const billsTotal = billsForMonth(month);
     const remainderBeforeBills = income - totalPaydayOutflow;
     const cushionAfterBills = remainderBeforeBills - billsTotal;
 
@@ -91,13 +98,13 @@ export function buildRollupsForMonths(
 export function buildRollupsFromStreams(
   months: MonthId[],
   incomeStreams: IncomeStream[],
-  billsTotal: number,
+  billItems: BillItem[],
   lines: PaydayLine[],
 ): MonthRollup[] {
   return buildRollupsForMonths(
     months,
     (m) => incomeNgnForMonth(incomeStreams, m),
-    billsTotal,
+    (m) => outstandingBillsAmount(billItems, m),
     lines,
   );
 }

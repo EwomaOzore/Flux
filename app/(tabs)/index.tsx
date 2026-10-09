@@ -1,6 +1,7 @@
 import { DiscretionaryInfoModal } from "@/components/DiscretionaryInfoModal";
 import { useFabOverlay } from "@/components/FabOverlay";
 import { MoneyText } from "@/components/MoneyText";
+import { PaidCheck } from "@/components/PaidCheck";
 import { QuickAddLineSheet } from "@/components/QuickAddLineSheet";
 import { Text } from "@/components/Themed";
 import { TourTarget } from "@/components/TourTarget";
@@ -8,6 +9,7 @@ import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { cardElevation, radii, spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
+import { dailySpendUntilPayday } from "@/src/domain/dailySpend";
 import { buildRollupsFromStreams } from "@/src/domain/engine";
 import {
   addMonthsId,
@@ -18,11 +20,15 @@ import {
 } from "@/src/domain/month";
 import {
   incomeNgnForMonth,
-  totalBillsAmount,
+  isPaidInMonth,
   type BillItem,
   type IncomeStream,
   type PaydayLine,
 } from "@/src/domain/types";
+import {
+  defaultReminderPrefs,
+  loadReminderPrefs,
+} from "@/src/lib/paydayReminders";
 import { useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 import { useTourStore } from "@/src/state/tourStore";
@@ -48,10 +54,21 @@ const brandLogo = require("../../assets/images/FluxLogo.png");
 
 type MonthFeedItem = {
   id: string;
+  sourceId: string;
   label: string;
   amount: number;
   kind: "income" | "bill" | "outflow";
+  paid: boolean;
 };
+
+function ordinal(n: number): string {
+  const j = n % 10;
+  const k = n % 100;
+  if (j === 1 && k !== 11) return "st";
+  if (j === 2 && k !== 12) return "nd";
+  if (j === 3 && k !== 13) return "rd";
+  return "th";
+}
 
 function greetingName(raw: string): string {
   const first = raw.trim().split(/\s+/)[0] ?? "";
@@ -74,9 +91,11 @@ function buildMonthFeed(
     if (!include || stream.amountNgn <= 0) continue;
     items.push({
       id: `income-${stream.id}`,
+      sourceId: stream.id,
       label: stream.label.trim() || "Income",
       amount: stream.amountNgn,
       kind: "income",
+      paid: false,
     });
   }
 
@@ -84,9 +103,11 @@ function buildMonthFeed(
     if (bill.amount <= 0) continue;
     items.push({
       id: `bill-${bill.id}`,
+      sourceId: bill.id,
       label: bill.label.trim() || "Bill",
       amount: -bill.amount,
       kind: "bill",
+      paid: isPaidInMonth(bill.paidMonth, month),
     });
   }
 
@@ -100,9 +121,11 @@ function buildMonthFeed(
     if (!inRange || line.amount <= 0) continue;
     items.push({
       id: `line-${line.id}`,
+      sourceId: line.id,
       label: line.label.trim() || "Outflow",
       amount: -line.amount,
       kind: "outflow",
+      paid: isPaidInMonth(line.paidMonth, month),
     });
   }
 
@@ -129,13 +152,28 @@ export default function HomeScreen() {
   const markCushionTapped = useTourStore((s) => s.markCushionTapped);
   const setTourSheetOpen = useTourStore((s) => s.setTourSheetOpen);
   const tourActive = useTourStore((s) => s.active);
+  const updateBill = useBudgetStore((s) => s.updateBill);
+  const updateLine = useBudgetStore((s) => s.updateLine);
   const { setFab } = useFabOverlay();
+  const [paydayDay, setPaydayDay] = useState(defaultReminderPrefs().dayOfMonth);
 
   useEffect(() => {
     if (!tourActive) return;
     setTourSheetOpen(quickAddOpen || infoOpen);
     return () => setTourSheetOpen(false);
   }, [tourActive, quickAddOpen, infoOpen, setTourSheetOpen]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void loadReminderPrefs().then((prefs) => {
+        if (!cancelled) setPaydayDay(prefs.dayOfMonth);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -168,20 +206,15 @@ export default function HomeScreen() {
     }, [setFab, tabBarHeight, colorScheme]),
   );
 
-  const billsTotal = useMemo(
-    () => totalBillsAmount(budgetForRollup.billItems),
-    [budgetForRollup.billItems],
-  );
-
   const roll = useMemo(
     () =>
       buildRollupsFromStreams(
         [paydayMonth],
         budgetForRollup.incomeStreams,
-        billsTotal,
+        budgetForRollup.billItems,
         budgetForRollup.lines,
       )[0],
-    [budgetForRollup, paydayMonth, billsTotal],
+    [budgetForRollup, paydayMonth],
   );
 
   const prevMonth = useMemo(() => addMonthsId(paydayMonth, -1), [paydayMonth]);
@@ -190,14 +223,18 @@ export default function HomeScreen() {
       buildRollupsFromStreams(
         [prevMonth],
         budgetForRollup.incomeStreams,
-        billsTotal,
+        budgetForRollup.billItems,
         budgetForRollup.lines,
       )[0],
-    [budgetForRollup, prevMonth, billsTotal],
+    [budgetForRollup, prevMonth],
   );
 
   const cushion = roll?.cushionAfterBills ?? 0;
   const positive = cushion >= 0;
+  const daily = useMemo(
+    () => dailySpendUntilPayday(cushion, paydayDay),
+    [cushion, paydayDay],
+  );
   const vsLast = cushion - (prevRoll?.cushionAfterBills ?? 0);
 
   const feed = useMemo(
@@ -337,6 +374,29 @@ export default function HomeScreen() {
                       </Text>
                     </RNView>
                   </RNView>
+                  <Text
+                    style={[styles.dailyLine, { color: palette.textMuted }]}
+                    accessibilityLabel={
+                      daily.perDay == null
+                        ? "Payday is today"
+                        : `${daily.perDay} a day until the ${daily.paydayDay}${ordinal(daily.paydayDay)}`
+                    }
+                  >
+                    {daily.perDay == null ? (
+                      "Payday is today"
+                    ) : (
+                      <>
+                        <MoneyText
+                          amount={daily.perDay}
+                          style={{
+                            color:
+                              daily.perDay >= 0 ? palette.tint : palette.danger,
+                          }}
+                        />
+                        {` a day until the ${daily.paydayDay}${ordinal(daily.paydayDay)}`}
+                      </>
+                    )}
+                  </Text>
                 </Pressable>
               </TourTarget>
 
@@ -423,6 +483,25 @@ export default function HomeScreen() {
                         },
                       ]}
                     >
+                      {item.kind === "income" ? (
+                        <RNView style={styles.feedCheckSpacer} />
+                      ) : (
+                        <PaidCheck
+                          paid={item.paid}
+                          label={item.label}
+                          color="#FFFFFF"
+                          borderColor={palette.cardBorder}
+                          fillColor={palette.tint}
+                          onToggle={() => {
+                            const paidMonth = item.paid ? undefined : paydayMonth;
+                            if (item.kind === "bill") {
+                              updateBill(item.sourceId, { paidMonth });
+                            } else {
+                              updateLine(item.sourceId, { paidMonth });
+                            }
+                          }}
+                        />
+                      )}
                       <RNView
                         style={[
                           styles.feedDot,
@@ -439,7 +518,14 @@ export default function HomeScreen() {
                       <Text
                         style={[
                           styles.feedLabel,
-                          { color: palette.textSecondary },
+                          {
+                            color: item.paid
+                              ? palette.textMuted
+                              : palette.textSecondary,
+                            textDecorationLine: item.paid
+                              ? "line-through"
+                              : "none",
+                          },
                         ]}
                         numberOfLines={1}
                       >
@@ -592,6 +678,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.xs,
   },
+  dailyLine: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: spacing.xs,
+  },
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -671,6 +762,9 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+  },
+  feedCheckSpacer: {
+    width: 22,
   },
   feedDot: {
     width: 6,

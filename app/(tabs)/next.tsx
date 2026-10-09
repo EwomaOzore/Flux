@@ -1,4 +1,5 @@
 import { MoneyText } from "@/components/MoneyText";
+import { PaidCheck } from "@/components/PaidCheck";
 import { Text } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
@@ -11,11 +12,17 @@ import {
   daysUntilPayday,
   formatMonthIdDisplay,
   formatPaydayDate,
+  type MonthId,
 } from "@/src/domain/month";
-import { totalBillsAmount } from "@/src/domain/types";
+import { isPaidInMonth, type BillItem } from "@/src/domain/types";
+import {
+  defaultReminderPrefs,
+  loadReminderPrefs,
+} from "@/src/lib/paydayReminders";
 import { useBudgetStore } from "@/src/state/budgetStore";
+import { useFocusEffect } from "expo-router";
 import { useBottomTabBarHeight } from "expo-router/tabs";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Image, View as RNView, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useShallow } from "zustand/react/shallow";
@@ -30,6 +37,8 @@ export default function NextScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
   const paydayMonth = currentPaydayMonthId();
+  const [paydayDay, setPaydayDay] = useState(defaultReminderPrefs().dayOfMonth);
+  const updateBill = useBudgetStore((s) => s.updateBill);
   const budget = useBudgetStore(
     useShallow((s) => ({
       incomeStreams: s.incomeStreams,
@@ -43,6 +52,18 @@ export default function NextScreen() {
   const secondaryCardBg = dark ? palette.inputBackground : "#FFFFFF";
   const billsCardBg = secondaryCardBg;
 
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void loadReminderPrefs().then((prefs) => {
+        if (!cancelled) setPaydayDay(prefs.dayOfMonth);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
   const upcoming = useMemo(() => {
     const months = [
       paydayMonth,
@@ -52,12 +73,25 @@ export default function NextScreen() {
     return buildRollupsFromStreams(
       months,
       budget.incomeStreams,
-      totalBillsAmount(budget.billItems),
+      budget.billItems,
       budget.lines,
     );
   }, [budget, paydayMonth]);
 
-  const billsThisMonth = budget.billItems.filter((b) => b.amount > 0);
+  const billGroups = useMemo(() => {
+    const before: BillItem[] = [];
+    const after: BillItem[] = [];
+    for (const bill of budget.billItems) {
+      if (bill.amount <= 0) continue;
+      if (bill.dueDay != null && bill.dueDay > paydayDay) after.push(bill);
+      else before.push(bill);
+    }
+    const byDue = (a: BillItem, b: BillItem) =>
+      (a.dueDay ?? 32) - (b.dueDay ?? 32);
+    before.sort(byDue);
+    after.sort(byDue);
+    return { before, after };
+  }, [budget.billItems, paydayDay]);
 
   return (
     <ScrollView
@@ -200,52 +234,144 @@ export default function NextScreen() {
         );
       })}
 
+      <BillGroup
+        title="DUE BEFORE PAYDAY"
+        bills={billGroups.before}
+        emptyLabel="Nothing due before payday. Bills without a due day stay in this list."
+        paydayMonth={paydayMonth}
+        palette={palette}
+        cardBorder={cardBorder}
+        billsCardBg={billsCardBg}
+        onTogglePaid={(bill) =>
+          updateBill(bill.id, {
+            paidMonth: isPaidInMonth(bill.paidMonth, paydayMonth)
+              ? undefined
+              : paydayMonth,
+          })
+        }
+      />
+      {billGroups.after.length > 0 ? (
+        <BillGroup
+          title="AFTER PAYDAY"
+          bills={billGroups.after}
+          paydayMonth={paydayMonth}
+          palette={palette}
+          cardBorder={cardBorder}
+          billsCardBg={billsCardBg}
+          onTogglePaid={(bill) =>
+            updateBill(bill.id, {
+              paidMonth: isPaidInMonth(bill.paidMonth, paydayMonth)
+                ? undefined
+                : paydayMonth,
+            })
+          }
+        />
+      ) : null}
+    </ScrollView>
+  );
+}
+
+function BillGroup({
+  title,
+  bills,
+  emptyLabel,
+  paydayMonth,
+  palette,
+  cardBorder,
+  billsCardBg,
+  onTogglePaid,
+}: {
+  title: string;
+  bills: BillItem[];
+  emptyLabel?: string;
+  paydayMonth: MonthId;
+  palette: (typeof Colors)["light"];
+  cardBorder: string;
+  billsCardBg: string;
+  onTogglePaid: (bill: BillItem) => void;
+}) {
+  return (
+    <>
       <RNView style={styles.sectionDivider}>
         <RNView style={[styles.dividerLine, { backgroundColor: cardBorder }]} />
         <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>
-          BILLS DUE THIS MONTH
+          {title}
         </Text>
         <RNView style={[styles.dividerLine, { backgroundColor: cardBorder }]} />
       </RNView>
-
       <RNView
         style={[
           styles.billsCard,
-          {
-            backgroundColor: billsCardBg,
-            borderColor: cardBorder,
-          },
+          { backgroundColor: billsCardBg, borderColor: cardBorder },
         ]}
       >
-        {billsThisMonth.length === 0 ? (
+        {bills.length === 0 ? (
           <Text style={[styles.empty, { color: palette.textMuted }]}>
-            No recurring bills yet. Add them in Plan.
+            {emptyLabel ?? "Nothing here."}
           </Text>
         ) : (
-          billsThisMonth.map((bill, i) => (
-            <RNView
-              key={bill.id}
-              style={[
-                styles.billRow,
-                i < billsThisMonth.length - 1 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: cardBorder,
-                },
-              ]}
-            >
-              <Text style={[styles.billLabel, { color: palette.text }]}>
-                {bill.label.trim() || "Bill"}
-              </Text>
-              <MoneyText
-                amount={bill.amount}
-                style={{ color: palette.accentBills }}
-              />
-            </RNView>
-          ))
+          bills.map((bill, i) => {
+            const paid = isPaidInMonth(bill.paidMonth, paydayMonth);
+            const name = bill.label.trim() || "Bill";
+            return (
+              <RNView
+                key={bill.id}
+                style={[
+                  styles.billRow,
+                  i < bills.length - 1 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: cardBorder,
+                  },
+                ]}
+              >
+                <PaidCheck
+                  paid={paid}
+                  label={name}
+                  color="#FFFFFF"
+                  borderColor={cardBorder}
+                  fillColor={palette.tint}
+                  onToggle={() => onTogglePaid(bill)}
+                />
+                <RNView style={styles.billText}>
+                  <Text
+                    style={[
+                      styles.billLabel,
+                      {
+                        color: paid ? palette.textMuted : palette.text,
+                        textDecorationLine: paid ? "line-through" : "none",
+                      },
+                    ]}
+                  >
+                    {name}
+                  </Text>
+                  <Text style={[styles.billDue, { color: palette.textMuted }]}>
+                    {bill.dueDay != null
+                      ? `Due the ${bill.dueDay}${ordinal(bill.dueDay)}`
+                      : "No due day"}
+                  </Text>
+                </RNView>
+                <MoneyText
+                  amount={bill.amount}
+                  style={{
+                    color: paid ? palette.textMuted : palette.accentBills,
+                  }}
+                />
+              </RNView>
+            );
+          })
         )}
       </RNView>
-    </ScrollView>
+    </>
   );
+}
+
+function ordinal(n: number): string {
+  const j = n % 10;
+  const k = n % 100;
+  if (j === 1 && k !== 11) return "st";
+  if (j === 2 && k !== 12) return "nd";
+  if (j === 3 && k !== 13) return "rd";
+  return "th";
 }
 
 const styles = StyleSheet.create({
@@ -371,8 +497,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   billLabel: {
-    flex: 1,
     fontFamily: typeface.medium,
     fontSize: 15,
+  },
+  billText: {
+    flex: 1,
+    gap: 2,
+  },
+  billDue: {
+    fontFamily: typeface.regular,
+    fontSize: 12,
   },
 });

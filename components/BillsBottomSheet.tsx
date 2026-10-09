@@ -10,8 +10,15 @@ import { FluxTextInput, FormField, PrimaryButton, useFluxPalette } from '@/compo
 import { radii, spacing } from '@/constants/theme';
 import { formatMoney, parseMoneyInput, sampleMoneyPlaceholder } from '@/src/lib/formatCurrency';
 import { useCurrencyStore } from '@/src/state/currencyStore';
-import { totalBillsAmount } from '@/src/domain/types';
+import { totalBillsAmount, clampDueDay } from '@/src/domain/types';
 import { useBudgetStore } from '@/src/state/budgetStore';
+
+function parseDueDayDraft(raw: string): number | undefined {
+  if (!raw.trim()) return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return undefined;
+  return clampDueDay(n);
+}
 
 function moneyDraftFromText(text: string): string {
   if (!text.replace(/\D/g, '')) return '';
@@ -29,10 +36,12 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
 
   const billItems = useBudgetStore((s) => s.billItems);
   const addBill = useBudgetStore((s) => s.addBill);
+  const updateBill = useBudgetStore((s) => s.updateBill);
   const deleteBill = useBudgetStore((s) => s.deleteBill);
 
   const [newLabel, setNewLabel] = useState('');
   const [newAmount, setNewAmount] = useState('');
+  const [newDueDay, setNewDueDay] = useState('');
 
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const sum = useMemo(() => totalBillsAmount(billItems), [billItems]);
@@ -41,6 +50,7 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
     if (visible) {
       setNewLabel('');
       setNewAmount('');
+      setNewDueDay('');
     }
   }, [visible]);
 
@@ -50,10 +60,12 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
       Alert.alert('Amount needed', 'Enter a positive amount.');
       return;
     }
-    addBill({ label: newLabel.trim() || 'Bill', amount });
+    const dueDay = parseDueDayDraft(newDueDay);
+    addBill({ label: newLabel.trim() || 'Bill', amount, dueDay });
     setNewLabel('');
     setNewAmount('');
-  }, [addBill, newAmount, newLabel]);
+    setNewDueDay('');
+  }, [addBill, newAmount, newDueDay, newLabel]);
 
   const onDelete = useCallback(
     (id: string, label: string) => {
@@ -101,6 +113,25 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
                   {item.label}
                 </Text>
                 <View style={styles.rowRight}>
+                  <FluxTextInput
+                    sheet
+                    value={item.dueDay != null ? String(item.dueDay) : ''}
+                    onChangeText={(t) => {
+                      const digits = t.replace(/\D/g, '').slice(0, 2);
+                      if (!digits) {
+                        updateBill(item.id, { dueDay: undefined });
+                        return;
+                      }
+                      const n = Number(digits);
+                      if (n >= 1 && n <= 31) {
+                        updateBill(item.id, { dueDay: n });
+                      }
+                    }}
+                    keyboardType="number-pad"
+                    placeholder="Day"
+                    accessibilityLabel={`Due day for ${item.label}`}
+                    style={styles.dayInput}
+                  />
                   <MoneyText
                     amount={item.amount}
                     style={{ color: palette.textSecondary, fontWeight: '700' }}
@@ -130,6 +161,15 @@ export function BillsBottomSheet({ visible, onClose }: Props) {
             value={newLabel}
             onChangeText={setNewLabel}
             placeholder="e.g. Rent, electricity, subscriptions"
+          />
+        </FormField>
+        <FormField label="Due day (optional)">
+          <FluxTextInput
+            sheet
+            value={newDueDay}
+            onChangeText={(t) => setNewDueDay(t.replace(/\D/g, '').slice(0, 2))}
+            keyboardType="number-pad"
+            placeholder="e.g. 1 for rent, 20 for a subscription"
           />
         </FormField>
         <FormField label="Amount">
@@ -177,6 +217,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
+  },
+  dayInput: {
+    width: 52,
+    textAlign: 'center',
+    paddingHorizontal: 6,
   },
   rowRight: {
     flexDirection: 'row',

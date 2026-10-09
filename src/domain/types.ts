@@ -5,10 +5,36 @@ export interface BillItem {
   id: string;
   label: string;
   amount: number;
+  /** Day of month this bill is due, 1–31. Omitted when the user has not set one. */
+  dueDay?: number;
+  /** Payday month this bill was checked off. A new month makes it outstanding again. */
+  paidMonth?: MonthId;
 }
 
 export function totalBillsAmount(items: BillItem[]): number {
   return items.reduce((sum, i) => sum + i.amount, 0);
+}
+
+export function isPaidInMonth(
+  paidMonth: MonthId | undefined,
+  month: MonthId,
+): boolean {
+  return paidMonth === month;
+}
+
+/** Bills that are still unpaid in `month`. Paid marks for other months do not apply. */
+export function outstandingBillsAmount(
+  items: BillItem[],
+  month: MonthId,
+): number {
+  return items.reduce((sum, item) => {
+    if (item.amount <= 0 || isPaidInMonth(item.paidMonth, month)) return sum;
+    return sum + item.amount;
+  }, 0);
+}
+
+export function clampDueDay(day: number): number {
+  return Math.min(31, Math.max(1, Math.round(day)));
 }
 
 /** Every payday = counts toward take-home in each month. One-time = only in `oneTimeMonth`. */
@@ -67,6 +93,8 @@ export interface PaydayLine {
   startMonth?: MonthId;
   /** End month for monthly recurrence (inclusive); defaults to `startMonth` / `month` when omitted. */
   endMonth?: MonthId;
+  /** Payday month this outflow was checked off. A later month counts it again. */
+  paidMonth?: MonthId;
 }
 
 export interface MonthRollup {

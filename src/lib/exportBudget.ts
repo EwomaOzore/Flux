@@ -1,8 +1,8 @@
-import type { BudgetState } from '@/src/state/budgetStore';
+import type { BudgetState } from "@/src/state/budgetStore";
 
 export type FluxExportV1 = {
   exportedAt: string;
-  format: 'flux-backup';
+  format: "flux-backup";
   formatVersion: 1;
   data: BudgetState;
 };
@@ -10,7 +10,7 @@ export type FluxExportV1 = {
 export function buildExportJson(state: BudgetState): string {
   const payload: FluxExportV1 = {
     exportedAt: new Date().toISOString(),
-    format: 'flux-backup',
+    format: "flux-backup",
     formatVersion: 1,
     data: state,
   };
@@ -18,7 +18,7 @@ export function buildExportJson(state: BudgetState): string {
 }
 
 function escapeCsvField(s: string): string {
-  const flat = s.replaceAll(/\r?\n/g, ' ').trim();
+  const flat = s.replaceAll(/\r?\n/g, " ").trim();
   if (/[",]/.test(flat)) {
     return `"${flat.replaceAll(/"/g, '""')}"`;
   }
@@ -27,42 +27,70 @@ function escapeCsvField(s: string): string {
 
 /** Flat CSV of income streams, bills, and payday lines — easy to open in Sheets or Excel. */
 export function buildExportCsv(state: BudgetState): string {
-  const rows: string[] = ['type,id,label,amount,month,note,recurrence,one_time_month,line_recurrence,line_start_month,line_end_month'];
+  const rows: string[] = [
+    "type,id,label,amount,month,note,recurrence,one_time_month,line_recurrence,line_start_month,line_end_month,due_day,paid_month",
+  ];
   for (const s of state.incomeStreams) {
-    const rec = s.recurrence ?? 'recurring';
-    const oneMo = s.recurrence === 'one_time' && s.oneTimeMonth ? s.oneTimeMonth : '';
+    const rec = s.recurrence ?? "recurring";
+    const oneMo =
+      s.recurrence === "one_time" && s.oneTimeMonth ? s.oneTimeMonth : "";
     rows.push(
       [
-        'income',
+        "income",
         s.id,
         escapeCsvField(s.label),
         String(s.amountNgn),
-        '',
-        escapeCsvField(s.note ?? ''),
+        "",
+        escapeCsvField(s.note ?? ""),
         rec,
         oneMo,
-      ].join(','),
+        "",
+        "",
+        "",
+        "",
+        "",
+      ].join(","),
     );
   }
   for (const b of state.billItems) {
-    rows.push(['bill', b.id, escapeCsvField(b.label), String(b.amount), '', ''].join(','));
+    rows.push(
+      [
+        "bill",
+        b.id,
+        escapeCsvField(b.label),
+        String(b.amount),
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        b.dueDay != null ? String(b.dueDay) : "",
+        b.paidMonth ?? "",
+      ].join(","),
+    );
   }
   for (const l of state.lines) {
     rows.push(
       [
-        'line',
+        "line",
         l.id,
         escapeCsvField(l.label),
         String(l.amount),
         l.month,
-        '',
-        '',
-        '',
-        l.recurrence ?? 'one_time',
-        l.recurrence === 'monthly' ? l.startMonth ?? l.month : '',
-        l.recurrence === 'monthly' ? l.endMonth ?? l.startMonth ?? l.month : '',
-      ].join(','),
+        "",
+        "",
+        "",
+        l.recurrence ?? "one_time",
+        l.recurrence === "monthly" ? (l.startMonth ?? l.month) : "",
+        l.recurrence === "monthly"
+          ? (l.endMonth ?? l.startMonth ?? l.month)
+          : "",
+        "",
+        l.paidMonth ?? "",
+      ].join(","),
     );
   }
-  return rows.join('\n');
+  return rows.join("\n");
 }

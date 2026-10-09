@@ -4,7 +4,6 @@ import { persist } from 'zustand/middleware';
 import { buildRollupsFromStreams, monthsForRollups } from '@/src/domain/engine';
 import { compareMonthId, currentPaydayMonthId, monthRangeInclusive, type MonthId } from '@/src/domain/month';
 import type { BillItem, IncomeStream, PaydayLine } from '@/src/domain/types';
-import { totalBillsAmount } from '@/src/domain/types';
 import { createSSRSafeJSONStorage } from '@/src/lib/ssrSafeStorage';
 
 const STORAGE_KEY = 'flux-budget-v6';
@@ -81,6 +80,7 @@ export const useBudgetStore = create<BudgetState & BudgetActions>()(
             id,
             label: item.label,
             amount: item.amount,
+            ...(item.dueDay != null ? { dueDay: item.dueDay } : {}),
           };
           return { billItems: [...s.billItems, next] };
         }),
@@ -200,8 +200,12 @@ export type BudgetRollupDeps = Pick<BudgetState, 'incomeStreams' | 'billItems' |
 
 export function computeRollups(state: BudgetRollupDeps) {
   const months = monthsForRollups(state.lines, state.incomeStreams);
-  const billsTotal = totalBillsAmount(state.billItems);
-  return buildRollupsFromStreams(months, state.incomeStreams, billsTotal, state.lines);
+  return buildRollupsFromStreams(
+    months,
+    state.incomeStreams,
+    state.billItems,
+    state.lines,
+  );
 }
 
 export function rollupsThroughMonth(s: BudgetRollupDeps, throughMonth: MonthId) {
@@ -210,8 +214,7 @@ export function rollupsThroughMonth(s: BudgetRollupDeps, throughMonth: MonthId) 
   );
   const start = relevant.length > 0 ? relevant[0] : throughMonth;
   const months = monthRangeInclusive(start, throughMonth);
-  const billsTotal = totalBillsAmount(s.billItems);
-  return buildRollupsFromStreams(months, s.incomeStreams, billsTotal, s.lines);
+  return buildRollupsFromStreams(months, s.incomeStreams, s.billItems, s.lines);
 }
 
 export function rollupForCurrentPayday(s: BudgetRollupDeps) {

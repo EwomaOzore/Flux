@@ -28,7 +28,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
   },
   {
     title: "Notifications",
-    body: "If you enable payday reminders, Flux schedules local notifications on your device. Reminder content is not sent to us.",
+    body: "Payday reminders and bill due-day reminders are local notifications on your device. They are scheduled when you turn payday reminders on, or when a bill has a due day. Reminder content is not sent to us.",
   },
   {
     title: "Export and import",

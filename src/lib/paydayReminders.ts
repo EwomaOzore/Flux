@@ -137,3 +137,93 @@ export async function syncReminderFromStorage(): Promise<void> {
   const prefs = await loadReminderPrefs();
   await applyReminderPrefs(prefs);
 }
+
+const BILL_DUE_PREFIX = "flux-bill-due-";
+
+type DueBill = {
+  readonly id: string;
+  readonly label: string;
+  readonly amount: number;
+  readonly dueDay?: number;
+};
+
+let billReminderQueue: Promise<void> = Promise.resolve();
+
+/**
+ * Each bill with a due day gets a monthly local reminder on that day.
+ * Clearing the day or deleting the bill cancels it.
+ */
+export function syncBillDueReminders(
+  bills: readonly DueBill[],
+): Promise<"none" | "scheduled" | "denied"> {
+  const snapshot = bills.map((bill) => ({
+    id: bill.id,
+    label: bill.label.trim() || "Bill",
+    amount: bill.amount,
+    dueDay: bill.dueDay,
+  }));
+  let result: "none" | "scheduled" | "denied" = "none";
+  billReminderQueue = billReminderQueue
+    .then(async () => {
+      result = await applyBillDueReminders(snapshot);
+    })
+    .catch(() => {
+      result = "none";
+    });
+  return billReminderQueue.then(() => result);
+}
+
+async function applyBillDueReminders(
+  bills: readonly DueBill[],
+): Promise<"none" | "scheduled" | "denied"> {
+  const scheduled =
+    await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  await Promise.all(
+    scheduled
+      .filter((item) => item.identifier.startsWith(BILL_DUE_PREFIX))
+      .map((item) =>
+        Notifications.cancelScheduledNotificationAsync(item.identifier).catch(
+          () => {},
+        ),
+      ),
+  );
+
+  const dated = bills.filter(
+    (bill): bill is DueBill & { dueDay: number } =>
+      bill.amount > 0 &&
+      bill.dueDay != null &&
+      bill.dueDay >= 1 &&
+      bill.dueDay <= 31,
+  );
+  if (dated.length === 0) return "none";
+
+  const existing = await Notifications.getPermissionsAsync();
+  let status = existing.status;
+  if (status !== "granted") {
+    const requested = await Notifications.requestPermissionsAsync();
+    status = requested.status;
+  }
+  if (status !== "granted") return "denied";
+
+  await ensureAndroidChannel();
+  const prefs = await loadReminderPrefs();
+
+  for (const bill of dated) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${BILL_DUE_PREFIX}${bill.id}`,
+      content: {
+        title: "Flux — payment due",
+        body: `${bill.label} is due today.`,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+        day: bill.dueDay,
+        hour: prefs.hour,
+        minute: prefs.minute,
+        channelId: Platform.OS === "android" ? "flux-default" : undefined,
+      },
+    });
+  }
+
+  return "scheduled";
+}

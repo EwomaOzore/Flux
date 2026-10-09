@@ -18,16 +18,11 @@ import {
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
-import {
-  DarkTheme,
-  DefaultTheme,
-  Stack,
-  ThemeProvider,
-} from "expo-router";
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Updates from "expo-updates";
-import { useEffect, useMemo } from "react";
-import { View } from "react-native";
+import { useEffect, useMemo, useRef } from "react";
+import { Alert, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -39,7 +34,11 @@ import { UndoBanner } from "@/components/UndoBanner";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { navigationFonts } from "@/constants/typography";
-import { syncReminderFromStorage } from "@/src/lib/paydayReminders";
+import {
+  syncBillDueReminders,
+  syncReminderFromStorage,
+} from "@/src/lib/paydayReminders";
+import { useBudgetStore } from "@/src/state/budgetStore";
 import { TourTargetProvider } from "@/src/tour/TourTargetContext";
 
 export { ErrorBoundary } from "expo-router";
@@ -88,9 +87,27 @@ export default function RootLayout() {
 }
 
 function ReminderBootstrap() {
+  const billItems = useBudgetStore((s) => s.billItems);
+  const deniedNoticeShown = useRef(false);
+
   useEffect(() => {
     void syncReminderFromStorage();
   }, []);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      void syncBillDueReminders(billItems).then((result) => {
+        if (result !== "denied" || deniedNoticeShown.current) return;
+        deniedNoticeShown.current = true;
+        Alert.alert(
+          "Notifications off",
+          "Allow notifications for Flux so you get a reminder on each bill's due day.",
+        );
+      });
+    }, 500);
+    return () => clearTimeout(id);
+  }, [billItems]);
+
   return null;
 }
 

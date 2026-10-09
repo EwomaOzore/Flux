@@ -308,7 +308,7 @@ export default function SettingsScreen() {
           <RNView
             style={[
               styles.row,
-              reminderPrefs.enabled && {
+              {
                 borderBottomWidth: 1,
                 borderBottomColor: rowDivider,
               },
@@ -326,7 +326,8 @@ export default function SettingsScreen() {
                 Payday reminders
               </Text>
               <Text style={[styles.rowSub, { color: palette.textMuted }]}>
-                Notify on the {reminderPrefs.dayOfMonth}
+                {reminderPrefs.enabled ? "Notify on the " : "Payday on the "}
+                {reminderPrefs.dayOfMonth}
                 {ordinal(reminderPrefs.dayOfMonth)}
               </Text>
             </RNView>
@@ -338,66 +339,64 @@ export default function SettingsScreen() {
               thumbColor="#FFFFFF"
             />
           </RNView>
-          {reminderPrefs.enabled ? (
-            <RNView style={styles.row}>
-              <RNView style={styles.textCol}>
-                <Text style={[styles.rowTitle, { color: palette.text }]}>
-                  Day of month
-                </Text>
-              </RNView>
-              <RNView style={styles.stepper}>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() =>
-                    void onReminderDayChange(reminderPrefs.dayOfMonth - 1)
-                  }
-                  style={[
-                    styles.stepperBtn,
-                    {
-                      borderColor: cardBorder,
-                      backgroundColor: iconBg,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      color: palette.text,
-                      fontFamily: typeface.bold,
-                      fontSize: 16,
-                    }}
-                  >
-                    −
-                  </Text>
-                </Pressable>
-                <Text style={[styles.stepperValue, { color: palette.text }]}>
-                  {reminderPrefs.dayOfMonth}
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() =>
-                    void onReminderDayChange(reminderPrefs.dayOfMonth + 1)
-                  }
-                  style={[
-                    styles.stepperBtn,
-                    {
-                      borderColor: cardBorder,
-                      backgroundColor: iconBg,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      color: palette.text,
-                      fontFamily: typeface.bold,
-                      fontSize: 16,
-                    }}
-                  >
-                    +
-                  </Text>
-                </Pressable>
-              </RNView>
+          <RNView style={styles.row}>
+            <RNView style={styles.textCol}>
+              <Text style={[styles.rowTitle, { color: palette.text }]}>
+                Payday day
+              </Text>
             </RNView>
-          ) : null}
+            <RNView style={styles.stepper}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  void onReminderDayChange(reminderPrefs.dayOfMonth - 1)
+                }
+                style={[
+                  styles.stepperBtn,
+                  {
+                    borderColor: cardBorder,
+                    backgroundColor: iconBg,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: palette.text,
+                    fontFamily: typeface.bold,
+                    fontSize: 16,
+                  }}
+                >
+                  −
+                </Text>
+              </Pressable>
+              <Text style={[styles.stepperValue, { color: palette.text }]}>
+                {reminderPrefs.dayOfMonth}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  void onReminderDayChange(reminderPrefs.dayOfMonth + 1)
+                }
+                style={[
+                  styles.stepperBtn,
+                  {
+                    borderColor: cardBorder,
+                    backgroundColor: iconBg,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: palette.text,
+                    fontFamily: typeface.bold,
+                    fontSize: 16,
+                  }}
+                >
+                  +
+                </Text>
+              </Pressable>
+            </RNView>
+          </RNView>
         </RNView>
       </SettingsGroup>
 

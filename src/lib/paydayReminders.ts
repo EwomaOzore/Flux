@@ -1,6 +1,22 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
+import { AndroidImportance } from "expo-notifications/build/NotificationChannelManager.types";
+import {
+  getPermissionsAsync,
+  requestPermissionsAsync,
+} from "expo-notifications/build/NotificationPermissions";
+import { SchedulableTriggerInputTypes } from "expo-notifications/build/Notifications.types";
+import { setNotificationHandler } from "expo-notifications/build/NotificationsHandler";
+import { cancelScheduledNotificationAsync } from "expo-notifications/build/cancelScheduledNotificationAsync";
+import { getAllScheduledNotificationsAsync } from "expo-notifications/build/getAllScheduledNotificationsAsync";
+import { scheduleNotificationAsync } from "expo-notifications/build/scheduleNotificationAsync";
+import { setNotificationChannelAsync } from "expo-notifications/build/setNotificationChannelAsync";
 import { Platform } from "react-native";
+
+/**
+ * Import the local-notification files directly. The package entry also
+ * registers a remote push-token listener, and that throws inside Android
+ * Expo Go before any screen can load.
+ */
 
 const PREFS_KEY = "flux-payday-reminder-prefs";
 const NOTIFICATION_ID = "flux-monthly-payday-reminder";
@@ -52,7 +68,7 @@ export async function saveReminderPrefs(prefs: ReminderPrefs): Promise<void> {
   await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
 }
 
-Notifications.setNotificationHandler({
+setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: false,
@@ -64,9 +80,9 @@ Notifications.setNotificationHandler({
 
 async function ensureAndroidChannel() {
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("flux-default", {
+    await setNotificationChannelAsync("flux-default", {
       name: "Reminders",
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: AndroidImportance.DEFAULT,
     });
   }
 }
@@ -76,18 +92,14 @@ export async function applyReminderPrefs(
   prefs: ReminderPrefs,
 ): Promise<boolean> {
   await saveReminderPrefs(prefs);
-  await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_ID).catch(
-    () => {},
-  );
-  await Notifications.cancelScheduledNotificationAsync(
-    NOTIFICATION_ID_EVE,
-  ).catch(() => {});
+  await cancelScheduledNotificationAsync(NOTIFICATION_ID).catch(() => {});
+  await cancelScheduledNotificationAsync(NOTIFICATION_ID_EVE).catch(() => {});
 
   if (!prefs.enabled) {
     return true;
   }
 
-  const { status } = await Notifications.requestPermissionsAsync();
+  const { status } = await requestPermissionsAsync();
   if (status !== "granted") {
     return false;
   }
@@ -98,14 +110,14 @@ export async function applyReminderPrefs(
     prefs.alsoRemindEve && prefs.dayOfMonth > 1 ? prefs.dayOfMonth - 1 : null;
 
   if (eveDay != null) {
-    await Notifications.scheduleNotificationAsync({
+    await scheduleNotificationAsync({
       identifier: NOTIFICATION_ID_EVE,
       content: {
         title: "Flux",
         body: "Review Flux before money lands.",
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+        type: SchedulableTriggerInputTypes.MONTHLY,
         day: eveDay,
         hour: prefs.hour,
         minute: prefs.minute,
@@ -114,14 +126,14 @@ export async function applyReminderPrefs(
     });
   }
 
-  await Notifications.scheduleNotificationAsync({
+  await scheduleNotificationAsync({
     identifier: NOTIFICATION_ID,
     content: {
       title: "Flux — payday check-in",
       body: "Open Flux and confirm income, bills, and line items for this payday run.",
     },
     trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+      type: SchedulableTriggerInputTypes.MONTHLY,
       day: prefs.dayOfMonth,
       hour: prefs.hour,
       minute: prefs.minute,
@@ -176,15 +188,12 @@ export function syncBillDueReminders(
 async function applyBillDueReminders(
   bills: readonly DueBill[],
 ): Promise<"none" | "scheduled" | "denied"> {
-  const scheduled =
-    await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  const scheduled = await getAllScheduledNotificationsAsync().catch(() => []);
   await Promise.all(
     scheduled
       .filter((item) => item.identifier.startsWith(BILL_DUE_PREFIX))
       .map((item) =>
-        Notifications.cancelScheduledNotificationAsync(item.identifier).catch(
-          () => {},
-        ),
+        cancelScheduledNotificationAsync(item.identifier).catch(() => {}),
       ),
   );
 
@@ -197,10 +206,10 @@ async function applyBillDueReminders(
   );
   if (dated.length === 0) return "none";
 
-  const existing = await Notifications.getPermissionsAsync();
+  const existing = await getPermissionsAsync();
   let status = existing.status;
   if (status !== "granted") {
-    const requested = await Notifications.requestPermissionsAsync();
+    const requested = await requestPermissionsAsync();
     status = requested.status;
   }
   if (status !== "granted") return "denied";
@@ -209,14 +218,14 @@ async function applyBillDueReminders(
   const prefs = await loadReminderPrefs();
 
   for (const bill of dated) {
-    await Notifications.scheduleNotificationAsync({
+    await scheduleNotificationAsync({
       identifier: `${BILL_DUE_PREFIX}${bill.id}`,
       content: {
         title: "Flux — payment due",
         body: `${bill.label} is due today.`,
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+        type: SchedulableTriggerInputTypes.MONTHLY,
         day: bill.dueDay,
         hour: prefs.hour,
         minute: prefs.minute,

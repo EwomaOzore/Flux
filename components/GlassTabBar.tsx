@@ -11,10 +11,12 @@ import Colors from "@/constants/Colors";
 import { radii, spacing } from "@/constants/theme";
 import { typeface } from "@/constants/typography";
 import type { TourTargetId } from "@/src/lib/tourSteps";
+import {
+  TAB_BAR_HEIGHT,
+  TAB_FLOAT_ABOVE_HOME,
+  TAB_SIDE_INSET,
+} from "@/src/tour/tabSpotlight";
 
-const BAR_HEIGHT = 58;
-const SIDE_INSET = 14;
-const FLOAT_ABOVE_HOME = 8;
 const CLEAR_ABOVE_PILL = 12;
 
 function tabTourId(routeName: string): TourTargetId | null {
@@ -45,8 +47,8 @@ export function GlassTabBar(props: Readonly<TabBarProps>) {
   const palette = Colors[colorScheme ?? "light"];
   const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
 
-  const bottom = Math.max(insets.bottom, spacing.sm) + FLOAT_ABOVE_HOME;
-  const reservedHeight = bottom + BAR_HEIGHT + CLEAR_ABOVE_PILL;
+  const bottom = Math.max(insets.bottom, spacing.sm) + TAB_FLOAT_ABOVE_HOME;
+  const reservedHeight = bottom + TAB_BAR_HEIGHT + CLEAR_ABOVE_PILL;
 
   useLayoutEffect(() => {
     onHeightChange?.(reservedHeight);
@@ -69,10 +71,10 @@ export function GlassTabBar(props: Readonly<TabBarProps>) {
           style={[
             styles.pillShadow,
             {
-              left: SIDE_INSET,
-              right: SIDE_INSET,
+              left: TAB_SIDE_INSET,
+              right: TAB_SIDE_INSET,
               bottom,
-              height: BAR_HEIGHT,
+              height: TAB_BAR_HEIGHT,
               borderColor: glassBorderColor(dark),
               backgroundColor: dark ? palette.tabBarBackground : "#FFFFFF",
             },

@@ -12,6 +12,7 @@ import {
   type TourTargetId,
 } from "@/src/lib/tourSteps";
 import { useTourStore } from "@/src/state/tourStore";
+import { tabSpotlightRect } from "@/src/tour/tabSpotlight";
 import {
   useTourTargetRegistry,
   type TourRect,
@@ -86,10 +87,13 @@ export function AppTourOverlay({ pathname }: Props) {
 
   const readHole = useCallback(async () => {
     if (!spotlightId || sheetOpen) return null;
+    if (spotlightId === "tab-plan" || spotlightId === "tab-home") {
+      return tabSpotlightRect(spotlightId, winW, winH, insets.bottom);
+    }
     const rect = await registry.measure(spotlightId);
     if (!rect) return null;
     return placeOnScreen(rect, winW);
-  }, [registry, sheetOpen, spotlightId, winW]);
+  }, [insets.bottom, registry, sheetOpen, spotlightId, winH, winW]);
 
   const remMeasure = useCallback(async () => {
     setHole(await readHole());

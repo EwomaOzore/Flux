@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "build:android": "npx eas build --profile production --platform android",
+    "build:ios": "npx eas build --profile production --platform ios",
+    "build:stores": "npx eas build --profile production --platform all",
     "submit:android": "npx eas submit --profile production --platform android --latest",
+    "submit:ios": "npx eas submit --profile production --platform ios --latest",
+    "submit:stores": "npx eas submit --profile production --platform all --latest",
     "update:prod": "npx eas update --channel production --environment production --auto"
   },
   "dependencies": {

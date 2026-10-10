@@ -18,7 +18,31 @@ import {
 } from "@/src/tour/TourTargetContext";
 
 const PAD = 8;
+const HOLE_RADIUS = 20;
 const DIM = "rgba(28,24,20,0.72)";
+
+/** Dim the screen with a rounded cutout. A thick border is the shade; its inner edge is the hole. */
+function roundedCutout(
+  hx: number,
+  hy: number,
+  hw: number,
+  hh: number,
+  winW: number,
+  winH: number,
+) {
+  const bleed = Math.ceil(Math.max(winW, winH));
+  return {
+    position: "absolute" as const,
+    left: hx - bleed,
+    top: hy - bleed,
+    width: hw + bleed * 2,
+    height: hh + bleed * 2,
+    borderWidth: bleed,
+    borderColor: DIM,
+    borderRadius: HOLE_RADIUS + bleed,
+    backgroundColor: "transparent",
+  };
+}
 
 /** Pager pages are laid out in a row, so a focused page can measure off-screen. */
 function placeOnScreen(rect: TourRect, winW: number): TourRect {
@@ -166,21 +190,31 @@ export function AppTourOverlay({ pathname }: Props) {
       {hasHole ? (
         <>
           <View
-            pointerEvents="auto"
-            style={[styles.dim, { top: 0, left: 0, right: 0, height: hy }]}
+            pointerEvents="none"
+            style={roundedCutout(hx, hy, hw, hh, winW, winH)}
           />
           <View
             pointerEvents="auto"
-            style={[styles.dim, { top: hy + hh, left: 0, right: 0, bottom: 0 }]}
-          />
-          <View
-            pointerEvents="auto"
-            style={[styles.dim, { top: hy, left: 0, width: hx, height: hh }]}
+            style={[styles.blocker, { top: 0, left: 0, right: 0, height: hy }]}
           />
           <View
             pointerEvents="auto"
             style={[
-              styles.dim,
+              styles.blocker,
+              { top: hy + hh, left: 0, right: 0, bottom: 0 },
+            ]}
+          />
+          <View
+            pointerEvents="auto"
+            style={[
+              styles.blocker,
+              { top: hy, left: 0, width: hx, height: hh },
+            ]}
+          />
+          <View
+            pointerEvents="auto"
+            style={[
+              styles.blocker,
               {
                 top: hy,
                 left: hx + hw,
@@ -199,6 +233,7 @@ export function AppTourOverlay({ pathname }: Props) {
                 width: hw,
                 height: hh,
                 borderColor: accent,
+                borderRadius: HOLE_RADIUS,
               },
             ]}
           />
@@ -262,9 +297,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     backgroundColor: DIM,
   },
+  blocker: {
+    position: "absolute",
+  },
   ring: {
     position: "absolute",
-    borderRadius: 14,
     borderWidth: 2,
   },
   tipWrap: {

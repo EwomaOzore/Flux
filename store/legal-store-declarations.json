@@ -35,7 +35,7 @@
     "or_if_form_allows": "The app does not provide any financial features — only if Play treats pure calculators as none; otherwise use Other with the description above."
   },
   "public_urls": {
-    "privacy": "https://flux-budget.expo.app/privacy",
-    "terms": "https://flux-budget.expo.app/terms"
+    "privacy": "https://fluxpayday.vercel.app/privacy",
+    "terms": "https://fluxpayday.vercel.app/terms"
   }
 }

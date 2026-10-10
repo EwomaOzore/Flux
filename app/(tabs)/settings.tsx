@@ -41,7 +41,6 @@ import {
   StyleSheet,
   Switch,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CARD_BORDER_LIGHT = "#E0DAD3";
 const brandLogo = require("../../assets/images/icon.png");
@@ -69,7 +68,6 @@ function appearanceSubtitle(preference: AppearancePreference): string {
 export default function SettingsScreen() {
   const { palette, colorScheme } = useFluxPalette();
   const dark = colorScheme === "dark";
-  const insets = useSafeAreaInsets();
   const [reminderPrefs, setReminderPrefs] =
     useState<ReminderPrefs>(defaultReminderPrefs);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -158,7 +156,6 @@ export default function SettingsScreen() {
 
   return (
     <ScreenScroll>
-      <RNView style={{ height: insets.top }} />
       <RNView style={styles.titleRow}>
         <Image source={brandLogo} style={styles.brandLogo} />
         <Text style={[styles.title, { color: palette.text }]}>Settings</Text>

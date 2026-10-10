@@ -20,6 +20,16 @@ import {
 const PAD = 8;
 const DIM = "rgba(28,24,20,0.72)";
 
+/** Pager pages are laid out in a row, so a focused page can measure off-screen. */
+function placeOnScreen(rect: TourRect, winW: number): TourRect {
+  if (winW <= 0) return rect;
+  const mostlyOffRight = rect.x >= winW - 8;
+  const mostlyOffLeft = rect.x + rect.width <= 8;
+  if (!mostlyOffRight && !mostlyOffLeft) return rect;
+  const pages = Math.floor(rect.x / winW);
+  return { ...rect, x: rect.x - pages * winW };
+}
+
 type Props = {
   readonly pathname: string;
 };
@@ -50,14 +60,16 @@ export function AppTourOverlay({ pathname }: Props) {
 
   const [hole, setHole] = useState<TourRect | null>(null);
 
-  const remMeasure = useCallback(async () => {
-    if (!spotlightId || sheetOpen) {
-      setHole(null);
-      return;
-    }
+  const readHole = useCallback(async () => {
+    if (!spotlightId || sheetOpen) return null;
     const rect = await registry.measure(spotlightId);
-    setHole(rect);
-  }, [registry, spotlightId, sheetOpen]);
+    if (!rect) return null;
+    return placeOnScreen(rect, winW);
+  }, [registry, sheetOpen, spotlightId, winW]);
+
+  const remMeasure = useCallback(async () => {
+    setHole(await readHole());
+  }, [readHole]);
 
   useEffect(() => {
     if (!active || sheetOpen) {
@@ -69,8 +81,10 @@ export function AppTourOverlay({ pathname }: Props) {
     let intervalId: ReturnType<typeof setInterval> | undefined;
 
     const run = async () => {
+      // Drop the previous step's hole so step 2 doesn't keep step 1's ring.
+      setHole(null);
       // Target may mount a frame after tab/step change — retry briefly.
-      for (let attempt = 0; attempt < 12 && !cancelled; attempt++) {
+      for (let attempt = 0; attempt < 16 && !cancelled; attempt++) {
         const scrolled = spotlightId
           ? await registry.ensureVisible(spotlightId)
           : false;
@@ -79,7 +93,7 @@ export function AppTourOverlay({ pathname }: Props) {
           await new Promise((r) => setTimeout(r, 320));
           if (cancelled) return;
         }
-        const rect = spotlightId ? await registry.measure(spotlightId) : null;
+        const rect = await readHole();
         if (rect) {
           setHole(rect);
           break;
@@ -107,6 +121,7 @@ export function AppTourOverlay({ pathname }: Props) {
     stepIndex,
     pathname,
     sheetOpen,
+    readHole,
     registry,
     spotlightId,
   ]);
@@ -133,18 +148,18 @@ export function AppTourOverlay({ pathname }: Props) {
   const hw = hole ? hole.width + PAD * 2 : 0;
   const hh = hole ? hole.height + PAD * 2 : 0;
   const hasHole = hole !== null && hw > 0 && hh > 0;
+  const onTabBar = spotlightId === "tab-plan" || spotlightId === "tab-home";
+  const targetInLowerHalf = hasHole && hy > winH * 0.45;
 
-  const tipAbove = hasHole ? hy > winH * 0.42 : true;
-  const tipStyle = hasHole
-    ? tipAbove
-      ? { bottom: winH - hy + spacing.sm }
-      : { top: hy + hh + spacing.sm }
-    : {
-        top: insets.top + spacing.xl,
-      };
+  // Keep the card off the control: below a top target, above a lower one.
+  const tipStyle =
+    onTabBar || targetInLowerHalf
+      ? { top: insets.top + spacing.md }
+      : { bottom: Math.max(insets.bottom, spacing.sm) + 76 };
 
   return (
     <View
+      collapsable={false}
       pointerEvents="box-none"
       style={[StyleSheet.absoluteFill, styles.root]}
     >

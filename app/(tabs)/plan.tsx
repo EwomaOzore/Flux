@@ -1,14 +1,3 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  Image,
-  Pressable,
-  View as RNView,
-  StyleSheet,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { BillsBottomSheet } from "@/components/BillsBottomSheet";
 import { IncomeStreamBottomSheet } from "@/components/IncomeStreamBottomSheet";
 import { MoneyText } from "@/components/MoneyText";
@@ -38,6 +27,15 @@ import { isPaidInMonth } from "@/src/domain/types";
 import type { TourTargetId } from "@/src/lib/tourSteps";
 import { useBudgetStore } from "@/src/state/budgetStore";
 import { useTourStore } from "@/src/state/tourStore";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Image,
+  Pressable,
+  View as RNView,
+  StyleSheet,
+} from "react-native";
 
 const CARD_BORDER = "#E0DAD3";
 const ADD_GREEN = "#48B872";
@@ -46,7 +44,6 @@ const brandLogo = require("../../assets/images/icon.png");
 
 export default function PlanScreen() {
   const { palette, colorScheme } = useFluxPalette();
-  const insets = useSafeAreaInsets();
   const dark = colorScheme === "dark";
   const borderColor = dark ? palette.cardBorder : CARD_BORDER;
 
@@ -137,7 +134,6 @@ export default function PlanScreen() {
   return (
     <>
       <ScreenScroll>
-        <RNView style={{ height: insets.top }} />
         <RNView style={styles.titleRow}>
           <Image source={brandLogo} style={styles.brandLogo} />
           <RNView style={styles.titleCol}>

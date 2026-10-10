@@ -22,7 +22,7 @@ export function TourTarget({ id, children, style }: Props) {
   useEffect(() => {
     if (!registry) return;
 
-    const measure = () =>
+    const measure = (relativeTo?: View | null) =>
       new Promise<{
         x: number;
         y: number;
@@ -39,7 +39,13 @@ export function TourTarget({ id, children, style }: Props) {
             resolve(null);
             return;
           }
-          resolve({ x, y, width, height });
+          if (!relativeTo) {
+            resolve({ x, y, width, height });
+            return;
+          }
+          relativeTo.measureInWindow((ox, oy) => {
+            resolve({ x: x - ox, y: y - oy, width, height });
+          });
         });
       });
 

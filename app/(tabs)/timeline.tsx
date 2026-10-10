@@ -1,5 +1,5 @@
 import { MoneyText } from "@/components/MoneyText";
-import { Text, View } from "@/components/Themed";
+import { Text } from "@/components/Themed";
 import { TimelineMonthDetailSheet } from "@/components/TimelineMonthDetailSheet";
 import { FluxTextInput } from "@/components/ui";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -12,8 +12,8 @@ import { formatMoney } from "@/src/lib/formatCurrency";
 import { computeRollups, useBudgetStore } from "@/src/state/budgetStore";
 import { useCurrencyStore } from "@/src/state/currencyStore";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { useBottomTabBarHeight } from "expo-router/tabs";
 import * as Haptics from "expo-haptics";
+import { useBottomTabBarHeight } from "expo-router/tabs";
 import { useMemo, useState } from "react";
 import {
   Alert,
@@ -197,7 +197,7 @@ export default function TimelineScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: palette.background }]}>
+    <RNView style={[styles.screen, { backgroundColor: palette.background }]}>
       <FlatList
         data={filteredRollups}
         keyExtractor={(r) => r.month}
@@ -206,11 +206,12 @@ export default function TimelineScreen() {
           styles.list,
           filteredRollups.length === 0 && styles.listEmpty,
           {
-            paddingTop: insets.top + spacing.md,
+            paddingTop: insets.top + 1,
             paddingBottom: Math.max(40, tabBarHeight + spacing.md),
           },
         ]}
         showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="never"
         ListHeaderComponent={
           <RNView style={styles.headerBlock}>
             <RNView style={styles.titleRow}>
@@ -279,7 +280,7 @@ export default function TimelineScreen() {
         bills={budgetForRollup.billItems}
         onClose={() => setSelectedMonthId(null)}
       />
-    </View>
+    </RNView>
   );
 }
 

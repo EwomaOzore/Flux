@@ -266,7 +266,7 @@ export default function HomeScreen() {
           contentContainerStyle={[
             styles.scroll,
             {
-              paddingTop: insets.top + spacing.md,
+              paddingTop: insets.top + 1,
               paddingBottom: Math.max(
                 spacing.xl + 72,
                 tabBarHeight + spacing.md,
@@ -274,6 +274,7 @@ export default function HomeScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="never"
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
         >
@@ -493,7 +494,9 @@ export default function HomeScreen() {
                           borderColor={palette.cardBorder}
                           fillColor={palette.tint}
                           onToggle={() => {
-                            const paidMonth = item.paid ? undefined : paydayMonth;
+                            const paidMonth = item.paid
+                              ? undefined
+                              : paydayMonth;
                             if (item.kind === "bill") {
                               updateBill(item.sourceId, { paidMonth });
                             } else {

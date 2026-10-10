@@ -95,15 +95,16 @@ export default function NextScreen() {
 
   return (
     <ScrollView
-      style={{ backgroundColor: palette.background }}
+      style={{ flex: 1, backgroundColor: palette.background }}
       contentContainerStyle={[
         styles.scroll,
         {
-          paddingTop: insets.top + spacing.md,
+          paddingTop: insets.top + 1,
           paddingBottom: Math.max(spacing.xl + 40, tabBarHeight + spacing.md),
         },
       ]}
       showsVerticalScrollIndicator={false}
+      contentInsetAdjustmentBehavior="never"
     >
       <RNView style={styles.titleRow}>
         <Image source={brandLogo} style={styles.brandLogo} />

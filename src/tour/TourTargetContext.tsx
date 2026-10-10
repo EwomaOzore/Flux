@@ -23,7 +23,7 @@ export type TourRect = {
   readonly height: number;
 };
 
-type MeasureFn = () => Promise<TourRect | null>;
+type MeasureFn = (relativeTo?: View | null) => Promise<TourRect | null>;
 type EnsureVisibleFn = () => Promise<boolean>;
 
 type TargetFns = {
@@ -37,7 +37,11 @@ type TourTargetContextValue = {
     measure: MeasureFn,
     ensureVisible?: EnsureVisibleFn,
   ) => () => void;
-  measure: (id: TourTargetId) => Promise<TourRect | null>;
+  /** Window coordinates, or overlay-local when `relativeTo` is the overlay. */
+  measure: (
+    id: TourTargetId,
+    relativeTo?: View | null,
+  ) => Promise<TourRect | null>;
   /** Scrolls the target into its parent ScreenScroll / tour scroll view if needed. */
   ensureVisible: (id: TourTargetId) => Promise<boolean>;
 };
@@ -49,8 +53,6 @@ export type TourScrollApi = {
 
 const TourTargetContext = createContext<TourTargetContextValue | null>(null);
 const TourScrollContext = createContext<TourScrollApi | null>(null);
-
-const EDGE_PAD = 48;
 
 export function TourTargetProvider({ children }: { children: ReactNode }) {
   const targets = useRef(new Map<TourTargetId, TargetFns>());
@@ -72,15 +74,18 @@ export function TourTargetProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const measure = useCallback(async (id: TourTargetId) => {
-    const fns = targets.current.get(id);
-    if (!fns) return null;
-    try {
-      return await fns.measure();
-    } catch {
-      return null;
-    }
-  }, []);
+  const measure = useCallback(
+    async (id: TourTargetId, relativeTo?: View | null) => {
+      const fns = targets.current.get(id);
+      if (!fns) return null;
+      try {
+        return await fns.measure(relativeTo);
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
 
   const ensureVisible = useCallback(async (id: TourTargetId) => {
     const fns = targets.current.get(id);
@@ -154,8 +159,8 @@ export function useTourScrollRegistration(
               resolve(false);
               return;
             }
-            const visibleTop = sy + EDGE_PAD;
-            const visibleBottom = sy + sh - EDGE_PAD;
+            const visibleTop = sy + 72;
+            const visibleBottom = sy + sh - 220;
             const targetTop = rect.y;
             const targetBottom = rect.y + rect.height;
 

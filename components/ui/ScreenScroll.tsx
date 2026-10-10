@@ -31,11 +31,12 @@ export function ScreenScroll({ children, onScroll, ...scrollProps }: Props) {
   const tabBarHeightContext = useContext(BottomTabBarHeightContext);
   const headerHeight = useContext(HeaderHeightContext) ?? 0;
   const insets = useSafeAreaInsets();
+  const inTabs = tabBarHeightContext !== undefined;
   /** Tab screens get measured bar height; stack-only screens (e.g. /backup) have no tab context. */
-  const bottomPad =
-    tabBarHeightContext !== undefined
-      ? tabBarHeightContext
-      : Math.max(insets.bottom, spacing.md);
+  const bottomPad = inTabs
+    ? tabBarHeightContext
+    : Math.max(insets.bottom, spacing.md);
+  const topPad = inTabs ? insets.top + 5 : spacing.md;
 
   const scrollRef = useRef<ScrollView>(null);
   const viewportRef = useRef<View>(null);
@@ -68,11 +69,14 @@ export function ScreenScroll({ children, onScroll, ...scrollProps }: Props) {
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
           {...scrollProps}
+          contentInsetAdjustmentBehavior="never"
           onScroll={handleScroll}
           scrollEventThrottle={scrollEventThrottle}
         >
           <TourScrollProvider api={scrollApi}>
-            <ThemedView style={styles.inner}>{children}</ThemedView>
+            <ThemedView style={[styles.inner, { paddingTop: topPad }]}>
+              {children}
+            </ThemedView>
           </TourScrollProvider>
         </ScrollView>
       </View>
@@ -91,7 +95,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   inner: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
     maxWidth: 560,
     width: "100%",
     alignSelf: "center",
